@@ -36,6 +36,11 @@ body {
   gap: 24px;
 }
 
+.hero__blocks {
+  display: grid;
+  gap: 24px;
+}
+
 .hero__content {
   background: linear-gradient(180deg, rgba(18, 26, 42, 0.92), rgba(11, 16, 27, 0.92));
   border: 1px solid var(--border);
@@ -77,10 +82,10 @@ h1 {
 }
 
 .hero__cta {
-  display: inline-flex;
+  display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 20px;
+  width: 100%;
   padding: 16px 24px;
   min-height: 58px;
   border-radius: 14px;
@@ -101,6 +106,7 @@ h1 {
 
 .hero__microcopy {
   margin: 9px 0 0;
+  text-align: center;
   color: #94a2bf;
   font-size: 0.88rem;
 }
@@ -154,8 +160,13 @@ h1 {
   }
 
   .hero {
-    grid-template-columns: 1fr 0.95fr;
+    grid-template-columns: 1fr;
     align-items: stretch;
+    gap: 28px;
+  }
+
+  .hero__blocks {
+    grid-template-columns: 1fr 0.95fr;
     gap: 28px;
   }
 
