@@ -3,60 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Блок 0</title>
+  <title>Квиз по знакомствам — Блок 0</title>
   <link rel="stylesheet" href="assets/styles.css">
 </head>
-<body data-page="landing">
-  <main class="container">
-    <section>
-      <h1>TODO_TITLE</h1>
-      <p>TODO_SUBTITLE</p>
-      <a class="btn" href="block-1.html" data-start-quiz>Start quiz</a>
-      <div class="hero-video">
-        <video autoplay muted loop playsinline>
+<body>
+  <main class="hero-page">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero__content">
+        <h1 id="hero-title">Пишешь девушкам первым, а в ответ — тишина?</h1>
+
+        <p class="hero__subtitle">“Привет, как дела?” — и диалог умирает? За 3 минуты покажем, на каком этапе общения всё ломается.</p>
+
+        <ul class="hero__list">
+          <li>Устаешь подбирать слова, а толку почти нет</li>
+          <li>Меняешь формулировки по кругу, но диалог все равно гаснет</li>
+          <li>Слишком вкладываешься в сообщения, а в ответ — тишина</li>
+          <li>Сил уходит много, а до встречи доходит редко</li>
+        </ul>
+
+        <p class="hero__note">Короткий тест покажет, где именно теряется интерес в диалоге</p>
+
+        <a class="hero__cta" href="block-1.html" data-hero-cta>Узнать за 3 минуты</a>
+        <p class="hero__microcopy">Без регистрации на старте</p>
+      </div>
+
+      <div class="hero__media">
+        <video class="hero__video" autoplay muted loop playsinline>
           <source src="assets/hero.mp4" type="video/mp4">
-          TODO_TEXT
         </video>
+        <div class="hero__fallback" aria-hidden="true">Видео недоступно в вашем браузере</div>
       </div>
-    </section>
-
-    <section>
-      <h2>How it works</h2>
-      <div class="grid">
-        <div class="card"><h3>TODO_TITLE</h3><p>TODO_TEXT</p></div>
-        <div class="card"><h3>TODO_TITLE</h3><p>TODO_TEXT</p></div>
-        <div class="card"><h3>TODO_TITLE</h3><p>TODO_TEXT</p></div>
-      </div>
-    </section>
-
-    <section>
-      <h2>Examples</h2>
-      <div class="grid">
-        <div class="card"><h3>TODO_TITLE</h3><p>TODO_TEXT</p></div>
-        <div class="card"><h3>TODO_TITLE</h3><p>TODO_TEXT</p></div>
-        <div class="card"><h3>TODO_TITLE</h3><p>TODO_TEXT</p></div>
-      </div>
-    </section>
-
-    <section>
-      <h2>FAQ</h2>
-      <div class="faq-item">
-        <button class="faq-trigger" type="button">TODO_QUESTION</button>
-        <div class="faq-content">TODO_TEXT</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-trigger" type="button">TODO_QUESTION</button>
-        <div class="faq-content">TODO_TEXT</div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-trigger" type="button">TODO_QUESTION</button>
-        <div class="faq-content">TODO_TEXT</div>
-      </div>
-    </section>
-
-    <section>
-      <h2>Disclaimer</h2>
-      <p>TODO_TEXT</p>
     </section>
   </main>
 
