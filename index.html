@@ -9,30 +9,34 @@
 <body>
   <main class="hero-page">
     <section class="hero" aria-labelledby="hero-title">
-      <div class="hero__content">
-        <h1 id="hero-title">Пишешь девушкам первым, а в ответ — тишина?</h1>
+      <h1 id="hero-title">Пишешь девушкам первым, а в ответ — тишина?</h1>
 
-        <p class="hero__subtitle">“Привет, как дела?” — и диалог умирает? За 3 минуты покажем, на каком этапе общения всё ломается.</p>
+      <div class="hero__blocks">
+        <div class="hero__content">
+          <p class="hero__subtitle">“Привет, как дела?” — и диалог умирает? За 3 минуты покажем, на каком этапе общения всё ломается.</p>
 
-        <ul class="hero__list">
-          <li>Устаешь подбирать слова, а толку почти нет</li>
-          <li>Меняешь формулировки по кругу, но диалог все равно гаснет</li>
-          <li>Слишком вкладываешься в сообщения, а в ответ — тишина</li>
-          <li>Сил уходит много, а до встречи доходит редко</li>
-        </ul>
 
-        <p class="hero__note">Короткий тест покажет, где именно теряется интерес в диалоге</p>
+          <ul class="hero__list">
+            <li>Устаешь подбирать слова, а толку почти нет</li>
+            <li>Меняешь формулировки по кругу, но диалог все равно гаснет</li>
+            <li>Слишком вкладываешься в сообщения, а в ответ — тишина</li>
+            <li>Сил уходит много, а до встречи доходит редко</li>
+          </ul>
 
-        <a class="hero__cta" href="block-1.html" data-hero-cta>Узнать за 3 минуты</a>
-        <p class="hero__microcopy">Без регистрации на старте</p>
+
+          <p class="hero__note">Короткий тест покажет, где именно теряется интерес в диалоге</p>
+        </div>
+
+        <div class="hero__media">
+          <video class="hero__video" autoplay muted loop playsinline>
+            <source src="assets/hero.mp4" type="video/mp4">
+          </video>
+          <div class="hero__fallback" aria-hidden="true">Видео недоступно в вашем браузере</div>
+        </div>
       </div>
 
-      <div class="hero__media">
-        <video class="hero__video" autoplay muted loop playsinline>
-          <source src="assets/hero.mp4" type="video/mp4">
-        </video>
-        <div class="hero__fallback" aria-hidden="true">Видео недоступно в вашем браузере</div>
-      </div>
+      <a class="hero__cta" href="block-1.html" data-hero-cta>Узнать за 3 минуты</a>
+      <p class="hero__microcopy">Без регистрации на старте</p>
     </section>
   </main>
 
