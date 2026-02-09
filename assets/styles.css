@@ -120,8 +120,8 @@ h1 {
   height: 100%;
   display: block;
   object-fit: cover;
-  object-position: 50% 0%;
-  transform: scale(1.2);
+  object-position: 50% 16%;
+  transform: scale(1.14);
   transform-origin: center top;
   min-height: 300px;
 }
