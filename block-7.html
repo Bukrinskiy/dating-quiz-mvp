@@ -3,29 +3,93 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Блок 7</title>
+  <title>Продажа</title>
   <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body data-page="block-7">
   <main class="container">
-    <section>
-      <p class="progress">Блок 7 из 8</p>
-      <div data-screens>
-        <article class="screen">
-          <h1>TODO_TITLE</h1>
-          <p>TODO_TEXT</p>
+    <section class="quiz-box block7" data-block7>
+      <div class="block7__screens" data-block7-screens>
+        <article class="block7-screen is-active" data-block7-screen="1" aria-live="polite">
+          <h1 class="block7__title" tabindex="-1">Почему в дейтинге ты почти всегда проигрываешь — и это подтверждено исследованиями</h1>
+          <p class="block7__text">Это не субъективное ощущение. Это математика дейтинга.</p>
+
+          <ul class="block7-facts" aria-label="Факты">
+            <li class="block7-fact">В дейтинг-приложениях мужчин около <strong>70–75%</strong> аудитории — конкуренция кратно выше.</li>
+            <li class="block7-fact">Социологические исследования онлайн-знакомств показывают, что женщины отвечают менее чем на <strong>20%</strong> входящих сообщений.</li>
+            <li class="block7-fact">Многие женщины перегружены количеством диалогов и просто не читают всё подряд.</li>
+          </ul>
+
+          <p class="block7__text">В таких условиях обычные сообщения не работают.<br>Если ты пишешь как все — ты просто теряешься в ленте.</p>
+
+          <div class="block7-conclusion">
+            <p class="block7-conclusion__label">Вывод:</p>
+            <p class="block7-conclusion__text">Без системы ты каждый раз играешь в лотерею. Иногда повезёт. В большинстве случаев — нет.</p>
+          </div>
+
+          <button type="button" class="btn" data-block7-next="2">Показать, что меняет результат</button>
         </article>
-        <article class="screen">
-          <h1>TODO_TITLE</h1>
-          <p>TODO_TEXT</p>
+
+        <article class="block7-screen hidden" data-block7-screen="2" aria-live="polite">
+          <h2 class="block7__title" tabindex="-1">Что происходит без системы — и что меняется с ней</h2>
+
+          <div class="block7-compare" aria-label="Сравнение без системы и с системой">
+            <section class="block7-compare__col block7-compare__col--muted">
+              <h3 class="block7-compare__title">Без нашего приложения (как у большинства):</h3>
+              <ul class="block7-list">
+                <li>100 начатых диалогов</li>
+                <li>1–3 доходят до встречи</li>
+                <li>Постоянные паузы и игнор</li>
+                <li>Гадание: что писать и когда</li>
+                <li>Результат нестабильный и выматывающий</li>
+              </ul>
+            </section>
+
+            <section class="block7-compare__col block7-compare__col--accent">
+              <h3 class="block7-compare__title">С нашим приложением (по нашей статистике):</h3>
+              <ul class="block7-list">
+                <li>100 начатых диалогов</li>
+                <li>40–60 доходят до встречи</li>
+                <li>Чёткий темп общения</li>
+                <li>Понятно, что и когда писать</li>
+                <li>Контроль вместо случайности</li>
+              </ul>
+            </section>
+          </div>
+
+          <p class="block7__text">Приложение не делает магию.<br>Оно убирает угадывание и даёт структуру:<br>- когда отвечать<br>- как удерживать интерес<br>- когда переводить общение в встречу</p>
+
+          <p class="block7__footer">Ты либо продолжаешь действовать вслепую,<br>либо используешь систему, которая уже работает у других.</p>
+
+          <button type="button" class="btn" data-block7-next="3">Хочу такой результат</button>
         </article>
-        <article class="screen">
-          <h1>TODO_TITLE</h1>
-          <p>TODO_TEXT</p>
-          <button type="button" data-result-cta>TODO_CTA</button>
+
+        <article class="block7-screen hidden" data-block7-screen="3" aria-live="polite">
+          <h2 class="block7__title" tabindex="-1">Либо ты дальше сливаешь диалоги.<br>Либо начинаешь получать результат.</h2>
+
+          <section class="block7-benefits">
+            <h3 class="block7-benefits__title">Что ты получаешь:</h3>
+            <ul class="block7-list block7-list--check">
+              <li>Подсказки, что писать прямо сейчас</li>
+              <li>Понимание, когда делать следующий шаг</li>
+              <li>Меньше напряжения и сомнений</li>
+              <li>Более стабильные встречи и близость</li>
+            </ul>
+          </section>
+
+          <p class="block7-price">Полный доступ — $X / месяц</p>
+
+          <button type="button" class="btn" data-block7-pay>Начать сейчас</button>
+
+          <section class="block7-guarantee">
+            <p>Если приложение не даст тебе заметно лучший результат,<br>просто напиши нам на почту — мы вернём деньги.</p>
+            <p>Без вопросов.<br>Без объяснений.</p>
+            <p class="block7-guarantee__email">support@yourdomain.com</p>
+          </section>
+
+          <p class="block7__note">Каждый день без системы —<br>это ещё десятки диалогов, которые ни к чему не приведут.</p>
         </article>
       </div>
-      <button type="button" data-next-screen>Продолжить</button>
     </section>
   </main>
 
