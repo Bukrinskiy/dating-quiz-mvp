@@ -9,28 +9,36 @@
 <body data-page="block-5">
   <main class="container">
     <section class="quiz-box">
-      <h1>TODO_TITLE</h1>
-      <p class="progress">Блок 5 из 8</p>
+      <p class="quiz-intro" data-block-intro>Выбери ответы о том, что ты уже пробовал и какой результат это приносило.</p>
 
       <div data-quiz>
         <article class="question-item" data-question="1">
-          <h2>TODO_QUESTION</h2>
-          <button type="button" data-answer="1">TODO_OPTION_1</button>
-          <button type="button" data-answer="2">TODO_OPTION_2</button>
-          <button type="button" data-answer="3">TODO_OPTION_3</button>
-          <button type="button" data-answer="4">TODO_OPTION_4</button>
+          <h2>Пробовал ли ты что-то менять в своём подходе к общению?</h2>
+          <button type="button" data-answer="different_tips">Да, пробовал разные советы и подходы</button>
+          <button type="button" data-answer="intuition">Да, что-то менял интуитивно</button>
+          <button type="button" data-answer="no_system">Пробовал, но без системы</button>
+          <button type="button" data-answer="not_really">Нет, особо не пробовал</button>
         </article>
 
-        <article class="question-item" data-question="2">
-          <h2>TODO_QUESTION</h2>
-          <button type="button" data-answer="1">TODO_OPTION_1</button>
-          <button type="button" data-answer="2">TODO_OPTION_2</button>
-          <button type="button" data-answer="3">TODO_OPTION_3</button>
-          <button type="button" data-answer="4">TODO_OPTION_4</button>
+        <article class="question-item hidden" data-question="2">
+          <h2>Был ли от этого стабильный результат?</h2>
+          <button type="button" data-answer="better">Да, стало заметно лучше</button>
+          <button type="button" data-answer="sometimes">Иногда срабатывало</button>
+          <button type="button" data-answer="rarely">Редко помогало</button>
+          <button type="button" data-answer="almost_no">Почти не помогло</button>
+        </article>
+
+        <article class="question-item hidden" data-question="3">
+          <h2>Насколько тебе сложно самому понимать, что и когда лучше писать?</h2>
+          <button type="button" data-answer="understand">Обычно понимаю</button>
+          <button type="button" data-answer="doubt">Иногда сомневаюсь</button>
+          <button type="button" data-answer="not_sure">Часто не уверен</button>
+          <button type="button" data-answer="guessing">Почти всегда гадаю</button>
         </article>
       </div>
 
-      <a class="btn" href="block-6.html" data-block-complete>Продолжить</a>
+      <p class="quiz-intro hidden" data-block-microcopy>Похоже, дело не в мотивации и не в количестве советов.</p>
+      <a class="btn hidden" href="block-6.html" data-block-complete>Продолжить</a>
     </section>
   </main>
 

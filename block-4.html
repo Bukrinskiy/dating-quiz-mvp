@@ -9,28 +9,36 @@
 <body data-page="block-4">
   <main class="container">
     <section class="quiz-box">
-      <h1>TODO_TITLE</h1>
-      <p class="progress">Блок 4 из 8</p>
+      <p class="quiz-intro" data-block-intro>Оцени, как часто это проявляется и как отражается на твоём состоянии.</p>
 
       <div data-quiz>
         <article class="question-item" data-question="1">
-          <h2>TODO_QUESTION</h2>
-          <button type="button" data-answer="1">TODO_OPTION_1</button>
-          <button type="button" data-answer="2">TODO_OPTION_2</button>
-          <button type="button" data-answer="3">TODO_OPTION_3</button>
-          <button type="button" data-answer="4">TODO_OPTION_4</button>
+          <h2>Как часто новые диалоги не доходят до встречи?</h2>
+          <button type="button" data-answer="rarely">Почти никогда</button>
+          <button type="button" data-answer="sometimes">Иногда</button>
+          <button type="button" data-answer="usually">Чаще всего</button>
+          <button type="button" data-answer="almost_always">Почти всегда</button>
         </article>
 
-        <article class="question-item" data-question="2">
-          <h2>TODO_QUESTION</h2>
-          <button type="button" data-answer="1">TODO_OPTION_1</button>
-          <button type="button" data-answer="2">TODO_OPTION_2</button>
-          <button type="button" data-answer="3">TODO_OPTION_3</button>
-          <button type="button" data-answer="4">TODO_OPTION_4</button>
+        <article class="question-item hidden" data-question="2">
+          <h2>Как это обычно на тебя влияет?</h2>
+          <button type="button" data-answer="no_impact">Почти никак</button>
+          <button type="button" data-answer="little_upset">Немного расстраивает</button>
+          <button type="button" data-answer="tired">Со временем устаю</button>
+          <button type="button" data-answer="drains">Сильно выматывает</button>
+        </article>
+
+        <article class="question-item hidden" data-question="3">
+          <h2>Замечал ли ты, что это влияет на уверенность в себе?</h2>
+          <button type="button" data-answer="no">Нет</button>
+          <button type="button" data-answer="sometimes">Иногда</button>
+          <button type="button" data-answer="yes">Да, чувствуется</button>
+          <button type="button" data-answer="strongly">Сильно влияет</button>
         </article>
       </div>
 
-      <a class="btn" href="block-5.html" data-block-complete>Продолжить</a>
+      <p class="quiz-intro hidden" data-block-microcopy>Когда одно и то же повторяется, это уже не случайность, а паттерн.</p>
+      <a class="btn hidden" href="block-5.html" data-block-complete>Продолжить</a>
     </section>
   </main>
 
