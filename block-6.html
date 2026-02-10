@@ -8,20 +8,59 @@
 </head>
 <body data-page="block-6">
   <main class="container">
-    <section>
-      <p class="progress">Блок 6 из 8</p>
-      <div data-screens>
-        <article class="screen">
-          <h1>TODO_TITLE</h1>
-          <p>TODO_TEXT</p>
+    <section class="quiz-box block6" data-block6>
+      <div class="block6__screens" data-block6-screens>
+        <article class="block6-screen is-active" data-block6-screen="0" aria-live="polite">
+          <h1 class="block6__title" tabindex="-1">Что происходит на самом деле</h1>
+
+          <!-- INSERT TEXT HERE -->
+          <p class="block6__text">По твоим ответам видно, что проблема не в одном конкретном сообщении.
+            <strong>Интерес теряется из-за того, как в целом складывается переписка.</strong>
+          </p>
+          <p class="block6__text">Обычно это выглядит так: диалог вроде бы начался нормально, но дальше появляется неуверенность —
+            что писать дальше, не рано ли, не поздно ли, не перегружаю ли я сейчас.</p>
+          <p class="block6__text">В один момент кажется, что нужно быть активнее. В другой — что лучше сделать паузу.
+            Иногда отвечают сухо, иногда — пропадают, и непонятно, это нормально или уже «конец».</p>
+          <p class="block6__text">В итоге переписка каждый раз идёт по-разному, а ощущение одно и то же:
+            приходится действовать наугад.</p>
+
+          <ul class="block6-anchors" aria-label="Ключевые состояния">
+            <!-- INSERT TEXT HERE -->
+            <li class="block6-anchor">Диалог начался, но дальше темп сбивается</li>
+            <li class="block6-anchor">Сомнения: писать сейчас или подождать</li>
+            <li class="block6-anchor">Реакции собеседницы читаются неоднозначно</li>
+            <li class="block6-anchor">Кажется, что всё происходит наугад</li>
+          </ul>
+
+          <button type="button" class="btn" data-block6-next>Дальше</button>
         </article>
-        <article class="screen">
-          <h1>TODO_TITLE</h1>
-          <p>TODO_TEXT</p>
+
+        <article class="block6-screen hidden" data-block6-screen="1" aria-live="polite">
+          <h1 class="block6__title" tabindex="-1">Почему это повторяется снова и снова</h1>
+
+          <!-- INSERT TEXT HERE -->
+          <p class="block6__text">Дело не в том, что ты «делаешь что-то не так».
+            <strong>Проблема в другом: в моменте переписки у тебя нет опоры.</strong>
+          </p>
+          <p class="block6__text">Когда ты внутри диалога, сложно одновременно держать темп, чувствовать подходящий момент
+            для следующего шага и трезво оценивать реакцию собеседницы.</p>
+          <p class="block6__text">Эмоции, ожидания и сомнения всегда вмешиваются. Поэтому одно и то же сообщение
+            в похожих ситуациях может казаться то уместным, то неудачным — уже задним числом.</p>
+          <p class="block6__text">Если продолжать действовать так же, результат, скорее всего, не изменится:
+            иногда будет получаться, но стабильности не появится.</p>
+
+          <ul class="block6-anchors" aria-label="Почему сложно исправить в одиночку">
+            <!-- INSERT TEXT HERE -->
+            <li class="block6-anchor">Нет внешней опоры во время диалога</li>
+            <li class="block6-anchor">Оценка ситуации искажается в моменте</li>
+            <li class="block6-anchor">Поведение повторяется по привычному сценарию</li>
+            <li class="block6-anchor">Без системы каждый диалог снова проходится вслепую</li>
+          </ul>
+
+          <p class="block6__text block6__text--conclusion">Окей, какое решение?</p>
+          <button type="button" class="btn" data-block6-finish>Продолжить</button>
         </article>
       </div>
-      <button type="button" data-next-screen>Продолжить</button>
-      <a class="btn hidden" href="block-7.html" data-finish-link data-block-complete>Продолжить</a>
     </section>
   </main>
 

@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   initQuizBlock();
+  initBlock6();
 });
 
 function initQuizBlock() {
@@ -67,4 +68,47 @@ function initQuizBlock() {
       });
     });
   });
+}
+
+
+function initBlock6() {
+  var block = document.querySelector('[data-block6]');
+  if (!block) {
+    return;
+  }
+
+  var screens = Array.prototype.slice.call(block.querySelectorAll('[data-block6-screen]'));
+  var nextButton = block.querySelector('[data-block6-next]');
+  var finishButton = block.querySelector('[data-block6-finish]');
+  var currentScreen = 0;
+  var BLOCK_7_URL = 'block-7.html';
+
+  function renderBlock6Screen(screenIndex) {
+    currentScreen = screenIndex;
+
+    screens.forEach(function (screen, index) {
+      var isActive = index === screenIndex;
+      screen.classList.toggle('hidden', !isActive);
+      screen.classList.toggle('is-active', isActive);
+    });
+
+    var activeHeading = screens[screenIndex] && screens[screenIndex].querySelector('.block6__title');
+    if (activeHeading) {
+      activeHeading.focus({ preventScroll: true });
+    }
+  }
+
+  if (nextButton) {
+    nextButton.addEventListener('click', function () {
+      if (currentScreen === 0) {
+        renderBlock6Screen(1);
+      }
+    });
+  }
+
+  if (finishButton) {
+    finishButton.addEventListener('click', function () {
+      window.location.href = BLOCK_7_URL;
+    });
+  }
 }
