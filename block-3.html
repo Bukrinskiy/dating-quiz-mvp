@@ -9,28 +9,44 @@
 <body data-page="block-3">
   <main class="container">
     <section class="quiz-box">
-      <h1>TODO_TITLE</h1>
-      <p class="progress">Блок 3 из 8</p>
+      <p class="quiz-intro" data-block-intro>Выбери варианты, которые больше похожи на твой обычный стиль общения.</p>
 
       <div data-quiz>
         <article class="question-item" data-question="1">
-          <h2>TODO_QUESTION</h2>
-          <button type="button" data-answer="1">TODO_OPTION_1</button>
-          <button type="button" data-answer="2">TODO_OPTION_2</button>
-          <button type="button" data-answer="3">TODO_OPTION_3</button>
-          <button type="button" data-answer="4">TODO_OPTION_4</button>
+          <h2>Как ты обычно пишешь сообщения?</h2>
+          <button type="button" data-answer="short">Коротко и по делу</button>
+          <button type="button" data-answer="detailed">Стараюсь писать развёрнуто и понятно</button>
+          <button type="button" data-answer="explain_more">Часто объясняю и дополняю мысль</button>
+          <button type="button" data-answer="depends">По-разному, зависит от ситуации</button>
         </article>
 
-        <article class="question-item" data-question="2">
-          <h2>TODO_QUESTION</h2>
-          <button type="button" data-answer="1">TODO_OPTION_1</button>
-          <button type="button" data-answer="2">TODO_OPTION_2</button>
-          <button type="button" data-answer="3">TODO_OPTION_3</button>
-          <button type="button" data-answer="4">TODO_OPTION_4</button>
+        <article class="question-item hidden" data-question="2">
+          <h2>Если девушка долго не отвечает, ты чаще всего…</h2>
+          <button type="button" data-answer="wait">Жду, пока ответит сама</button>
+          <button type="button" data-answer="remind">Пишу позже, чтобы напомнить о себе</button>
+          <button type="button" data-answer="doubt">Начинаю сомневаться, что написать</button>
+          <button type="button" data-answer="revive">Пишу ещё что-то, чтобы оживить диалог</button>
+        </article>
+
+        <article class="question-item hidden" data-question="3">
+          <h2>В переписке ты чаще…</h2>
+          <button type="button" data-answer="lead">Веду диалог и задаю направление</button>
+          <button type="button" data-answer="adapt">Подстраиваюсь под её стиль общения</button>
+          <button type="button" data-answer="wait_initiative">Жду инициативы с её стороны</button>
+          <button type="button" data-answer="change_approach">Постоянно меняю подход</button>
+        </article>
+
+        <article class="question-item hidden" data-question="4">
+          <h2>Насколько часто ты перечитываешь сообщение перед отправкой?</h2>
+          <button type="button" data-answer="almost_never">Почти никогда</button>
+          <button type="button" data-answer="sometimes">Иногда</button>
+          <button type="button" data-answer="often">Часто</button>
+          <button type="button" data-answer="almost_always">Почти всегда</button>
         </article>
       </div>
 
-      <a class="btn" href="block-4.html" data-block-complete>Продолжить</a>
+      <p class="quiz-intro hidden" data-block-microcopy>Тут уже видно не просто результат, а определённый стиль общения, который повторяется.</p>
+      <a class="btn hidden" href="block-4.html" data-block-complete>Продолжить</a>
     </section>
   </main>
 

@@ -9,28 +9,44 @@
 <body data-page="block-2">
   <main class="container">
     <section class="quiz-box">
-      <h1>TODO_TITLE</h1>
-      <p class="progress">Блок 2 из 8</p>
+      <p class="quiz-intro" data-block-intro>Выбери варианты, которые лучше всего описывают твою ситуацию в переписке.</p>
 
       <div data-quiz>
         <article class="question-item" data-question="1">
-          <h2>TODO_QUESTION</h2>
-          <button type="button" data-answer="1">TODO_OPTION_1</button>
-          <button type="button" data-answer="2">TODO_OPTION_2</button>
-          <button type="button" data-answer="3">TODO_OPTION_3</button>
-          <button type="button" data-answer="4">TODO_OPTION_4</button>
+          <h2>Как чаще всего заканчиваются новые диалоги?</h2>
+          <button type="button" data-answer="meeting">Доходим до встречи</button>
+          <button type="button" data-answer="fade_out">Общение тянется и затухает</button>
+          <button type="button" data-answer="no_reply">Девушка перестаёт отвечать</button>
+          <button type="button" data-answer="no_pattern">По-разному, без системы</button>
         </article>
 
-        <article class="question-item" data-question="2">
-          <h2>TODO_QUESTION</h2>
-          <button type="button" data-answer="1">TODO_OPTION_1</button>
-          <button type="button" data-answer="2">TODO_OPTION_2</button>
-          <button type="button" data-answer="3">TODO_OPTION_3</button>
-          <button type="button" data-answer="4">TODO_OPTION_4</button>
+        <article class="question-item hidden" data-question="2">
+          <h2>После какого момента чаще всего всё ломается?</h2>
+          <button type="button" data-answer="start">В самом начале общения</button>
+          <button type="button" data-answer="few_messages">После пары сообщений</button>
+          <button type="button" data-answer="before_meeting">Перед предложением встречи</button>
+          <button type="button" data-answer="varies">Всегда по-разному</button>
+        </article>
+
+        <article class="question-item hidden" data-question="3">
+          <h2>Насколько ты обычно понимаешь, почему диалог обрывается?</h2>
+          <button type="button" data-answer="understand">Обычно понимаю</button>
+          <button type="button" data-answer="guess_sometimes">Иногда догадываюсь</button>
+          <button type="button" data-answer="often_dont">Чаще не понимаю</button>
+          <button type="button" data-answer="almost_never">Почти никогда не понимаю</button>
+        </article>
+
+        <article class="question-item hidden" data-question="4">
+          <h2>Что ты обычно чувствуешь в процессе общения?</h2>
+          <button type="button" data-answer="calm">Спокойно, без напряга</button>
+          <button type="button" data-answer="doubts">Иногда сомневаюсь</button>
+          <button type="button" data-answer="tense">Часто напрягаюсь</button>
+          <button type="button" data-answer="overthink">Постоянно думаю, что написать</button>
         </article>
       </div>
 
-      <a class="btn" href="block-3.html" data-block-complete>Продолжить</a>
+      <p class="quiz-intro hidden" data-block-microcopy>Похоже, проблема повторяется не один раз. Давай посмотрим, что именно к этому приводит.</p>
+      <a class="btn hidden" href="block-3.html" data-block-complete>Продолжить</a>
     </section>
   </main>
 

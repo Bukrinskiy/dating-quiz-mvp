@@ -21,17 +21,14 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  var isBlockOne = document.body && document.body.dataset.page === 'block-1';
-  if (isBlockOne) {
-    initBlockOneQuiz();
-  }
+  initQuizBlock();
 });
 
-function initBlockOneQuiz() {
+function initQuizBlock() {
   var quiz = document.querySelector('[data-quiz]');
   var continueLink = document.querySelector('[data-block-complete]');
-  var completeMicrocopy = document.querySelector('[data-block1-microcopy]');
-  var introCopy = document.querySelector('[data-block1-intro]');
+  var completeMicrocopy = document.querySelector('[data-block-microcopy], [data-block1-microcopy]');
+  var introCopy = document.querySelector('[data-block-intro], [data-block1-intro]');
 
   if (!quiz || !continueLink) {
     return;
