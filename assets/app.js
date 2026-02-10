@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   initQuizBlock();
   initBlock6();
+  initBlock7();
 });
 
 function initQuizBlock() {
@@ -109,6 +110,58 @@ function initBlock6() {
   if (finishButton) {
     finishButton.addEventListener('click', function () {
       window.location.href = BLOCK_7_URL;
+    });
+  }
+}
+
+function initBlock7() {
+  var block = document.querySelector('[data-block7]');
+  if (!block) {
+    return;
+  }
+
+  var PAYWALL_URL = 'YOUR_PAYWALL_URL_HERE';
+  var screens = Array.prototype.slice.call(block.querySelectorAll('[data-block7-screen]'));
+  var screenButtons = block.querySelectorAll('[data-block7-next]');
+  var payButton = block.querySelector('[data-block7-pay]');
+  var container = block.querySelector('[data-block7-screens]');
+  var currentScreen = 1;
+
+  function setScreen(screenNumber) {
+    currentScreen = screenNumber;
+
+    screens.forEach(function (screen) {
+      var isActive = Number(screen.dataset.block7Screen) === screenNumber;
+      screen.classList.toggle('hidden', !isActive);
+      screen.classList.toggle('is-active', isActive);
+    });
+
+    var activeScreen = block.querySelector('[data-block7-screen="' + screenNumber + '"]');
+    var activeHeading = activeScreen && activeScreen.querySelector('.block7__title');
+
+    if (container) {
+      container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    if (activeHeading) {
+      activeHeading.focus({ preventScroll: true });
+    }
+  }
+
+  setScreen(currentScreen);
+
+  screenButtons.forEach(function (button) {
+    button.addEventListener('click', function () {
+      var nextScreen = Number(button.dataset.block7Next);
+      if (nextScreen) {
+        setScreen(nextScreen);
+      }
+    });
+  });
+
+  if (payButton) {
+    payButton.addEventListener('click', function () {
+      window.location.href = PAYWALL_URL;
     });
   }
 }
