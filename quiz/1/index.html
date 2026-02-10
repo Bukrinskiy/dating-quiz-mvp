@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dating Quiz — Блок 1</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/css/quiz.css">
+</head>
+<body>
+  <main class="quiz-page" data-quiz-block="1">
+    <section class="quiz-card" aria-live="polite">
+      <p class="quiz-card__progress" data-progress>Вопрос 1 из 4</p>
+      <h1 class="quiz-card__title" data-question-title></h1>
+
+      <div class="quiz-card__answers" data-answer-list></div>
+
+      <div class="quiz-card__footer">
+        <button type="button" class="quiz-nav quiz-nav--ghost" data-back>Назад</button>
+      </div>
+
+      <section class="quiz-complete" data-complete hidden>
+        <h2 class="quiz-complete__title">Блок 1 завершён</h2>
+        <p class="quiz-complete__text">Окей, уже видно, где именно у тебя теряется результат. Давай разберёмся, почему это происходит.</p>
+        <a class="quiz-nav quiz-nav--primary" href="/quiz/2/index.html" data-continue>Продолжить</a>
+      </section>
+    </section>
+  </main>
+
+  <script src="/assets/js/quiz-block-1.js"></script>
+</body>
+</html>
