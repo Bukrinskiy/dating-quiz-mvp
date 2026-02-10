@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', function () {
 function initBlockOneQuiz() {
   var quiz = document.querySelector('[data-quiz]');
   var continueLink = document.querySelector('[data-block-complete]');
+  var completeMicrocopy = document.querySelector('[data-block1-microcopy]');
 
   if (!quiz || !continueLink) {
     return;
@@ -56,6 +57,9 @@ function initBlockOneQuiz() {
         }
 
         if (Object.keys(answers).length === questions.length) {
+          if (completeMicrocopy) {
+            completeMicrocopy.classList.remove('hidden');
+          }
           continueLink.classList.remove('hidden');
         }
       });
