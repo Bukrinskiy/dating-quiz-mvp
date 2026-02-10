@@ -31,6 +31,7 @@ function initBlockOneQuiz() {
   var quiz = document.querySelector('[data-quiz]');
   var continueLink = document.querySelector('[data-block-complete]');
   var completeMicrocopy = document.querySelector('[data-block1-microcopy]');
+  var introCopy = document.querySelector('[data-block1-intro]');
 
   if (!quiz || !continueLink) {
     return;
@@ -54,6 +55,10 @@ function initBlockOneQuiz() {
         if (index < questions.length - 1) {
           question.classList.add('hidden');
           questions[index + 1].classList.remove('hidden');
+
+          if (introCopy) {
+            introCopy.classList.add('hidden');
+          }
         }
 
         if (Object.keys(answers).length === questions.length) {
