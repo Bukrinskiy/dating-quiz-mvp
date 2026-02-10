@@ -10,14 +10,14 @@
 <body>
   <main class="quiz-page" data-quiz-block="1">
     <section class="quiz-card" aria-live="polite">
-      <p class="quiz-card__progress" data-progress>Вопрос 1 из 4</p>
-      <h1 class="quiz-card__title" data-question-title></h1>
+      <header class="quiz-card__intro" data-intro>
+        <h1 class="quiz-card__intro-title">Старт переписки</h1>
+        <p class="quiz-card__intro-text">Выбери варианты, которые чаще всего используются — по итогам покажем, где теряется интерес в самом начале диалога.</p>
+      </header>
+
+      <h2 class="quiz-card__title" data-question-title></h2>
 
       <div class="quiz-card__answers" data-answer-list></div>
-
-      <div class="quiz-card__footer">
-        <button type="button" class="quiz-nav quiz-nav--ghost" data-back>Назад</button>
-      </div>
 
       <section class="quiz-complete" data-complete hidden>
         <h2 class="quiz-complete__title">Блок 1 завершён</h2>
