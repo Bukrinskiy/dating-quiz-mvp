@@ -47,32 +47,17 @@
   var currentQuestionIndex = 0;
   var answers = loadStoredAnswers();
 
-  var progressNode = document.querySelector('[data-progress]');
+  var introNode = document.querySelector('[data-intro]');
   var titleNode = document.querySelector('[data-question-title]');
   var answerListNode = document.querySelector('[data-answer-list]');
   var completeNode = document.querySelector('[data-complete]');
-  var backButton = document.querySelector('[data-back]');
 
-  if (!progressNode || !titleNode || !answerListNode || !completeNode || !backButton) {
+  if (!titleNode || !answerListNode || !completeNode) {
     return;
   }
 
   trackEvent('quiz_block_view', { block: 1 });
   renderQuestion(currentQuestionIndex);
-
-  backButton.addEventListener('click', function () {
-    if (currentQuestionIndex === 0) {
-      return;
-    }
-
-    trackEvent('quiz_back_click', {
-      block: 1,
-      from_question: currentQuestionIndex + 1
-    });
-
-    currentQuestionIndex -= 1;
-    renderQuestion(currentQuestionIndex);
-  });
 
   function loadStoredAnswers() {
     try {
@@ -115,12 +100,13 @@
     }
 
     completeNode.hidden = true;
-    progressNode.hidden = false;
     titleNode.hidden = false;
     answerListNode.hidden = false;
-    backButton.hidden = index === 0;
 
-    progressNode.textContent = 'Вопрос ' + (index + 1) + ' из ' + QUESTIONS.length;
+    if (introNode) {
+      introNode.hidden = index !== 0;
+    }
+
     titleNode.textContent = question.title;
 
     answerListNode.classList.add('is-changing');
@@ -185,11 +171,13 @@
   }
 
   function showCompleteScreen() {
-    progressNode.hidden = true;
     titleNode.hidden = true;
     answerListNode.hidden = true;
-    backButton.hidden = true;
     completeNode.hidden = false;
+
+    if (introNode) {
+      introNode.hidden = true;
+    }
 
     trackEvent('quiz_block_complete', {
       block: 1,
