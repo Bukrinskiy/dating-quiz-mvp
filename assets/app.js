@@ -43,7 +43,9 @@ function initSiteFooter() {
   footer.innerHTML =
     '<a href="' + prefix + 'terms.html">Пользовательское соглашение</a>' +
     '<span aria-hidden="true">•</span>' +
-    '<a href="' + prefix + 'refund-policy.html">Политика возврата</a>';
+    '<a href="' + prefix + 'refund-policy.html">Политика возврата</a>' +
+    '<span aria-hidden="true">•</span>' +
+    '<a href="' + prefix + 'privacy-policy.html">Политика конфиденциальности</a>';
 
   body.appendChild(footer);
 }
