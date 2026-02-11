@@ -3,6 +3,7 @@ function track(event) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+  initSiteFooter();
   track('hero_view');
 
   var cta = document.querySelector('[data-hero-cta]');
@@ -25,6 +26,27 @@ document.addEventListener('DOMContentLoaded', function () {
   initBlock6();
   initBlock7();
 });
+
+function initSiteFooter() {
+  var body = document.body;
+
+  if (!body || document.querySelector('[data-site-footer]')) {
+    return;
+  }
+
+  var inBlocksFolder = window.location.pathname.indexOf('/blocks/') !== -1;
+  var prefix = inBlocksFolder ? '../' : '';
+  var footer = document.createElement('footer');
+
+  footer.className = 'site-footer';
+  footer.setAttribute('data-site-footer', '');
+  footer.innerHTML =
+    '<a href="' + prefix + 'terms.html">Пользовательское соглашение</a>' +
+    '<span aria-hidden="true">•</span>' +
+    '<a href="' + prefix + 'refund-policy.html">Политика возврата</a>';
+
+  body.appendChild(footer);
+}
 
 function initQuizBlock() {
   var quiz = document.querySelector('[data-quiz]');
