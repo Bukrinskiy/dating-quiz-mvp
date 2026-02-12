@@ -2,7 +2,73 @@ function track(event) {
   console.log(event);
 }
 
+function getClickIdFromTokens() {
+  var tokens = window.tokens || {};
+  if (typeof tokens.clickid === 'string' && tokens.clickid) {
+    return tokens.clickid;
+  }
+  if (typeof tokens.bcid === 'string' && tokens.bcid) {
+    return tokens.bcid;
+  }
+
+  return null;
+}
+
+function getClickIdFromQuery() {
+  var params = new URLSearchParams(window.location.search);
+  return params.get('clickid') || params.get('bcid');
+}
+
+function getClickId() {
+  return getClickIdFromTokens() || getClickIdFromQuery();
+}
+
+function addClickIdToUrl(url, clickId) {
+  if (!clickId || !url) {
+    return url;
+  }
+
+  if (/^(mailto:|tel:|javascript:|#)/i.test(url)) {
+    return url;
+  }
+
+  var resolvedUrl;
+  try {
+    resolvedUrl = new URL(url, window.location.href);
+  } catch (error) {
+    return url;
+  }
+
+  resolvedUrl.searchParams.set('clickid', clickId);
+  return resolvedUrl.toString();
+}
+
+function propagateClickIdToLinks() {
+  var clickId = getClickId();
+  if (!clickId) {
+    return;
+  }
+
+  var links = document.querySelectorAll('a[href]');
+  links.forEach(function (link) {
+    var href = link.getAttribute('href');
+    var urlWithClickId = addClickIdToUrl(href, clickId);
+
+    if (urlWithClickId && urlWithClickId !== href) {
+      link.setAttribute('href', urlWithClickId);
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
+  propagateClickIdToLinks();
+
+  if (window.BPixelJS && typeof window.BPixelJS.useTokens === 'function') {
+    window.BPixelJS.useTokens(function () {
+      propagateClickIdToLinks();
+    });
+  }
+
   initSiteFooter();
   track('hero_view');
 
@@ -144,7 +210,7 @@ function initBlock7() {
     return;
   }
 
-  var PAYWALL_URL = 'YOUR_PAYWALL_URL_HERE';
+  var PAYWALL_URL = '../generate.php';
   var screens = Array.prototype.slice.call(block.querySelectorAll('[data-block7-screen]'));
   var screenButtons = block.querySelectorAll('[data-block7-next]');
   var payButton = block.querySelector('[data-block7-pay]');
@@ -185,7 +251,8 @@ function initBlock7() {
 
   if (payButton) {
     payButton.addEventListener('click', function () {
-      window.location.href = PAYWALL_URL;
+      var clickId = getClickId();
+      window.location.href = addClickIdToUrl(PAYWALL_URL, clickId);
     });
   }
 }
