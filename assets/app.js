@@ -199,7 +199,8 @@ function initBlock6() {
 
   if (finishButton) {
     finishButton.addEventListener('click', function () {
-      window.location.href = BLOCK_7_URL;
+      var clickId = getClickId();
+      window.location.href = addClickIdToUrl(BLOCK_7_URL, clickId);
     });
   }
 }
