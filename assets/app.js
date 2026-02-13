@@ -276,6 +276,12 @@ function initBlock7() {
       visibleCards: 1,
     };
 
+    function getVisibleCaseItems() {
+      return caseItems.filter(function (item) {
+        return item.style.display !== 'none';
+      });
+    }
+
     function setActiveDot(index) {
       if (!casesDots) {
         return;
@@ -306,7 +312,8 @@ function initBlock7() {
       var cardWidth = visibleCards > 1
         ? (containerWidth - gap * (visibleCards - 1)) / visibleCards
         : containerWidth;
-      var pages = Math.max(1, Math.ceil(caseItems.length / visibleCards));
+      var visibleCaseItems = getVisibleCaseItems();
+      var pages = Math.max(1, Math.ceil(visibleCaseItems.length / visibleCards));
 
       return { gap: gap, cardWidth: cardWidth, visibleCards: visibleCards, pages: pages };
     }
@@ -363,6 +370,10 @@ function initBlock7() {
     function syncCasesLayout() {
       var isTablet = window.matchMedia('(min-width: 720px)').matches;
       var isDesktop = window.matchMedia('(min-width: 1080px)').matches;
+
+      caseItems.forEach(function (item, index) {
+        item.style.display = isDesktop && index >= 3 ? 'none' : '';
+      });
 
       if (isDesktop) {
         casesTrack.style.gridAutoColumns = 'minmax(0, calc((100% - 20px) / 3))';
