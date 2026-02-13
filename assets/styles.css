@@ -335,6 +335,74 @@ h1 {
   margin-top: 14px;
 }
 
+.block6-panel {
+  margin-top: 22px;
+}
+
+.block6-panel--explanation .block6__text {
+  margin-top: 0;
+}
+
+.block6-panel--explanation .block6__text + .block6__text {
+  margin-top: 12px;
+}
+
+.block6-loop {
+  position: relative;
+  margin-top: 26px;
+  padding: clamp(18px, 3.5vw, 26px);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(125, 145, 198, 0.08);
+}
+
+.block6-loop__icon {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  color: rgba(217, 226, 246, 0.38);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.block6-loop__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.block6-loop__item {
+  color: #d9e2f6;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(151, 178, 238, 0.28);
+  background: rgba(28, 38, 66, 0.35);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.block6-loop__item:hover {
+  border-color: rgba(128, 167, 255, 0.46);
+  background: rgba(38, 52, 86, 0.42);
+}
+
+.block6-transition {
+  margin-top: 34px;
+}
+
+.block6-transition__title {
+  margin: 0;
+  color: #f3f7ff;
+  font-size: clamp(1.15rem, 2.8vw, 1.35rem);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.block6-transition .btn {
+  margin-top: 16px;
+}
+
 .block6-anchors {
   list-style: none;
   margin: 26px 0 0;
@@ -419,6 +487,12 @@ h1 {
 
 .block6 .btn {
   margin-top: 26px;
+}
+
+@media (min-width: 700px) {
+  .block6-loop {
+    max-width: 520px;
+  }
 }
 
 .block6__text--conclusion {
