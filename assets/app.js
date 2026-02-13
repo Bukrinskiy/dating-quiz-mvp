@@ -257,6 +257,7 @@ function initBlock7() {
   var payButton = block.querySelector('[data-block7-pay]');
   var container = block.querySelector('[data-block7-screens]');
   var casesTrack = block.querySelector('[data-block7-cases]');
+  var casesDots = block.querySelector('[data-block7-cases-dots]');
   var currentScreen = 1;
 
   function initCasesSlider() {
@@ -269,12 +270,105 @@ function initBlock7() {
       return;
     }
 
+    var sliderState = {
+      activeIndex: 0,
+      pages: 1,
+      visibleCards: 1,
+    };
+
+    function setActiveDot(index) {
+      if (!casesDots) {
+        return;
+      }
+
+      var dots = casesDots.querySelectorAll('.block7-cases-dot');
+      dots.forEach(function (dot, dotIndex) {
+        var isActive = dotIndex === index;
+        dot.classList.toggle('is-active', isActive);
+        dot.setAttribute('aria-current', isActive ? 'true' : 'false');
+      });
+    }
+
+    function getSliderMetrics() {
+      var trackStyle = window.getComputedStyle(casesTrack);
+      var gap = parseFloat(trackStyle.columnGap || trackStyle.gap || '0') || 0;
+      var containerWidth = casesTrack.clientWidth;
+      var cardWidth = caseItems[0] ? caseItems[0].clientWidth : containerWidth;
+      var visibleCards = Math.max(1, Math.floor((containerWidth + gap) / (cardWidth + gap)));
+      var pages = Math.max(1, caseItems.length - visibleCards + 1);
+
+      return { gap: gap, cardWidth: cardWidth, visibleCards: visibleCards, pages: pages };
+    }
+
+    function getClosestIndex() {
+      var metrics = getSliderMetrics();
+      var step = metrics.cardWidth + metrics.gap;
+      if (!step) {
+        return 0;
+      }
+
+      return Math.max(0, Math.min(metrics.pages - 1, Math.round(casesTrack.scrollLeft / step)));
+    }
+
+    function scrollToIndex(index) {
+      var metrics = getSliderMetrics();
+      var nextIndex = Math.max(0, Math.min(metrics.pages - 1, index));
+      var step = metrics.cardWidth + metrics.gap;
+
+      casesTrack.scrollTo({ left: step * nextIndex, behavior: 'smooth' });
+      sliderState.activeIndex = nextIndex;
+      setActiveDot(nextIndex);
+    }
+
+    function buildDots() {
+      if (!casesDots) {
+        return;
+      }
+
+      var metrics = getSliderMetrics();
+      sliderState.pages = metrics.pages;
+      sliderState.visibleCards = metrics.visibleCards;
+      sliderState.activeIndex = Math.min(sliderState.activeIndex, metrics.pages - 1);
+
+      casesDots.innerHTML = '';
+
+      for (var index = 0; index < metrics.pages; index += 1) {
+        var dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'block7-cases-dot';
+        dot.setAttribute('aria-label', 'Показать кейс ' + (index + 1));
+        dot.setAttribute('aria-current', index === sliderState.activeIndex ? 'true' : 'false');
+        dot.addEventListener('click', (function (dotIndex) {
+          return function () {
+            scrollToIndex(dotIndex);
+          };
+        })(index));
+        casesDots.appendChild(dot);
+      }
+
+      setActiveDot(sliderState.activeIndex);
+    }
+
     function syncCasesLayout() {
       var isDesktop = window.matchMedia('(min-width: 720px)').matches;
       casesTrack.style.gridAutoColumns = isDesktop ? 'minmax(0, calc((100% - 20px) / 3))' : '100%';
+
+      buildDots();
+      scrollToIndex(sliderState.activeIndex);
+    }
+
+    function onTrackScroll() {
+      var closestIndex = getClosestIndex();
+      if (closestIndex === sliderState.activeIndex) {
+        return;
+      }
+
+      sliderState.activeIndex = closestIndex;
+      setActiveDot(closestIndex);
     }
 
     syncCasesLayout();
+    casesTrack.addEventListener('scroll', onTrackScroll, { passive: true });
     window.addEventListener('resize', syncCasesLayout, { passive: true });
   }
 
