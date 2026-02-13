@@ -258,6 +258,7 @@ function initBlock7() {
   var container = block.querySelector('[data-block7-screens]');
   var casesTrack = block.querySelector('[data-block7-cases]');
   var casesDots = block.querySelector('[data-block7-cases-dots]');
+  var casesToggleButton = block.querySelector('[data-block7-cases-toggle]');
   var currentScreen = 1;
 
   function initCasesSlider() {
@@ -274,6 +275,7 @@ function initBlock7() {
       activeIndex: 0,
       pages: 1,
       visibleCards: 1,
+      isExpandedDesktop: false,
     };
 
     function getVisibleCaseItems() {
@@ -371,8 +373,9 @@ function initBlock7() {
       var isTablet = window.matchMedia('(min-width: 720px)').matches;
       var isDesktop = window.matchMedia('(min-width: 1080px)').matches;
 
-      caseItems.forEach(function (item) {
-        item.style.display = '';
+      caseItems.forEach(function (item, itemIndex) {
+        var shouldShow = !isDesktop || sliderState.isExpandedDesktop || itemIndex < 3;
+        item.style.display = shouldShow ? '' : 'none';
       });
 
       if (isDesktop) {
@@ -384,6 +387,19 @@ function initBlock7() {
       }
 
       casesTrack.style.overflowX = isDesktop ? 'hidden' : 'auto';
+
+      if (casesToggleButton) {
+        if (isDesktop && !sliderState.isExpandedDesktop) {
+          casesToggleButton.hidden = false;
+          casesToggleButton.textContent = 'Показать ещё 2 отзыва';
+        } else {
+          casesToggleButton.hidden = true;
+        }
+      }
+
+      if (sliderState.activeIndex >= sliderState.pages) {
+        sliderState.activeIndex = Math.max(0, sliderState.pages - 1);
+      }
 
       buildDots();
       scrollToIndex(sliderState.activeIndex);
@@ -397,6 +413,14 @@ function initBlock7() {
 
       sliderState.activeIndex = closestIndex;
       setActiveDot(closestIndex);
+    }
+
+    if (casesToggleButton) {
+      casesToggleButton.hidden = true;
+      casesToggleButton.addEventListener('click', function () {
+        sliderState.isExpandedDesktop = true;
+        syncCasesLayout();
+      });
     }
 
     syncCasesLayout();
