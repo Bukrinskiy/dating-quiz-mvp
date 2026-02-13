@@ -301,14 +301,14 @@ function initBlock7() {
         visibleCards = Math.min(3, visibleCards);
       }
 
-      var pages = Math.max(1, caseItems.length - visibleCards + 1);
+      var pages = Math.max(1, Math.ceil(caseItems.length / visibleCards));
 
       return { gap: gap, cardWidth: cardWidth, visibleCards: visibleCards, pages: pages };
     }
 
     function getClosestIndex() {
       var metrics = getSliderMetrics();
-      var step = metrics.cardWidth + metrics.gap;
+      var step = (metrics.cardWidth + metrics.gap) * metrics.visibleCards;
       if (!step) {
         return 0;
       }
@@ -319,7 +319,7 @@ function initBlock7() {
     function scrollToIndex(index) {
       var metrics = getSliderMetrics();
       var nextIndex = Math.max(0, Math.min(metrics.pages - 1, index));
-      var step = metrics.cardWidth + metrics.gap;
+      var step = (metrics.cardWidth + metrics.gap) * metrics.visibleCards;
 
       casesTrack.scrollTo({ left: step * nextIndex, behavior: 'smooth' });
       sliderState.activeIndex = nextIndex;
@@ -342,7 +342,7 @@ function initBlock7() {
         var dot = document.createElement('button');
         dot.type = 'button';
         dot.className = 'block7-cases-dot';
-        dot.setAttribute('aria-label', 'Показать кейс ' + (index + 1));
+        dot.setAttribute('aria-label', 'Показать слайд с кейсами ' + (index + 1));
         dot.setAttribute('aria-current', index === sliderState.activeIndex ? 'true' : 'false');
         dot.addEventListener('click', (function (dotIndex) {
           return function () {
