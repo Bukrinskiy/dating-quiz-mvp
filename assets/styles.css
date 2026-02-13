@@ -743,6 +743,35 @@ h1 {
   line-height: 1.5;
 }
 
+.block7-cases-dots {
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.block7-cases-dot {
+  width: 8px;
+  height: 8px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  background: rgba(195, 209, 247, 0.42);
+  transition: transform 0.2s ease, background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.block7-cases-dot.is-active {
+  transform: scale(1.15);
+  background: #aabfff;
+}
+
+.block7-cases-dot:focus-visible {
+  outline: 2px solid rgba(171, 191, 255, 0.75);
+  outline-offset: 2px;
+}
+
 
 .block7-sale {
   width: 100%;
