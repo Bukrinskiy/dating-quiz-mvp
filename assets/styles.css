@@ -573,6 +573,12 @@ h1 {
   line-height: 1.25;
 }
 
+.block7__title--accent {
+  color: #f7fbff;
+  font-weight: 800;
+  text-shadow: 0 0 24px rgba(125, 158, 255, 0.35);
+}
+
 .block7-copy {
   margin-top: 14px;
   max-width: 58ch;
