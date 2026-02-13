@@ -295,6 +295,12 @@ function initBlock7() {
       var containerWidth = casesTrack.clientWidth;
       var cardWidth = caseItems[0] ? caseItems[0].clientWidth : containerWidth;
       var visibleCards = Math.max(1, Math.floor((containerWidth + gap) / (cardWidth + gap)));
+      var isDesktop = window.matchMedia('(min-width: 1080px)').matches;
+
+      if (isDesktop) {
+        visibleCards = Math.min(3, visibleCards);
+      }
+
       var pages = Math.max(1, caseItems.length - visibleCards + 1);
 
       return { gap: gap, cardWidth: cardWidth, visibleCards: visibleCards, pages: pages };
