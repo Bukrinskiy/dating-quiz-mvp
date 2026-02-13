@@ -545,16 +545,21 @@ h1 {
    ========================= */
 .block7 {
   padding: clamp(22px, 5vw, 38px);
+  overflow-x: hidden;
 }
 
 .block7__layout {
   width: min(100%, 680px);
+  max-width: 100%;
   margin: 0 auto;
   display: grid;
   gap: clamp(18px, 4vw, 28px);
 }
 
 .block7-section {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: clamp(16px, 3.6vw, 22px);
   border-radius: 16px;
   border: 1px solid var(--border);
@@ -593,10 +598,15 @@ h1 {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 12px;
+  min-width: 0;
   padding: 12px;
   border-radius: 14px;
   border: 1px solid rgba(206, 216, 255, 0.14);
   background: rgba(8, 11, 18, 0.36);
+}
+
+.block7-step__content {
+  min-width: 0;
 }
 
 .block7-step__badge {
@@ -638,6 +648,7 @@ h1 {
 }
 
 .block7-compare__col {
+  min-width: 0;
   border-radius: 14px;
   border: 1px solid rgba(206, 216, 255, 0.16);
   padding: 13px;
@@ -670,7 +681,7 @@ h1 {
   margin-top: 14px;
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(220px, 74%);
+  grid-auto-columns: minmax(0, 74%);
   gap: 10px;
   overflow-x: auto;
   padding-bottom: 4px;
@@ -686,6 +697,7 @@ h1 {
 }
 
 .block7-case {
+  min-width: 0;
   scroll-snap-align: start;
   padding: 13px;
   border-radius: 14px;
@@ -705,6 +717,9 @@ h1 {
 }
 
 .block7-sale {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: clamp(18px, 4vw, 26px);
   border-radius: 18px;
   border: 1px solid rgba(160, 177, 255, 0.3);
@@ -743,7 +758,7 @@ h1 {
   }
 
   .block7-cases {
-    grid-auto-columns: minmax(220px, 31%);
+    grid-auto-columns: minmax(0, 31%);
   }
 }
 
