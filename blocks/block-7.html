@@ -9,86 +9,102 @@
 <body data-page="block-7">
   <main class="container">
     <section class="quiz-box block7" data-block7>
-      <div class="block7__screens" data-block7-screens>
-        <article class="block7-screen is-active" data-block7-screen="1" aria-live="polite">
-          <h1 class="block7__title" tabindex="-1">Почему в дейтинге ты почти всегда проигрываешь — и это подтверждено исследованиями</h1>
-          <p class="block7__text">Это не субъективное ощущение. Это математика дейтинга.</p>
-
-          <ul class="block7-facts" aria-label="Факты">
-            <li class="block7-fact">В дейтинг-приложениях мужчин около <strong>70–75%</strong> аудитории — конкуренция кратно выше.</li>
-            <li class="block7-fact">Социологические исследования онлайн-знакомств показывают, что женщины отвечают менее чем на <strong>20%</strong> входящих сообщений.</li>
-            <li class="block7-fact">Многие женщины перегружены количеством диалогов и просто не читают всё подряд.</li>
-          </ul>
-
-          <p class="block7__text">В таких условиях обычные сообщения не работают.<br>Если ты пишешь как все — ты просто теряешься в ленте.</p>
-
-          <div class="block7-conclusion">
-            <p class="block7-conclusion__label">Вывод:</p>
-            <p class="block7-conclusion__text">Без системы ты каждый раз играешь в лотерею. Иногда повезёт. В большинстве случаев — нет.</p>
+      <div class="block7__layout">
+        <section class="block7-section block7-section--offer" aria-labelledby="block7-offer-title">
+          <h2 class="block7__title" id="block7-offer-title">Мы предлагаем помощника для переписки</h2>
+          <div class="block7-copy">
+            <p>Это инструмент, который подсказывает, что писать прямо сейчас, когда ты не уверен, как двигаться дальше.</p>
+            <p>Он не меняет тебя и не учит «быть другим человеком». Он помогает не сливать диалоги и держать переписку под контролем от первого сообщения до встречи.</p>
           </div>
+        </section>
 
-          <button type="button" class="btn" data-block7-next="2">Показать, что меняет результат</button>
-        </article>
+        <section class="block7-section" aria-labelledby="block7-work-title">
+          <h2 class="block7__title" id="block7-work-title">Как работает наш помощник</h2>
+          <ol class="block7-steps">
+            <li class="block7-step">
+              <div class="block7-step__badge" aria-hidden="true">1</div>
+              <div class="block7-step__content">
+                <h3>Ты выбираешь ситуацию</h3>
+                <p>Начать диалог, ответить на сообщение или понять, что делать дальше.</p>
+                <p>Не абстрактно «что написать», а конкретно — где ты сейчас застрял.</p>
+              </div>
+            </li>
+            <li class="block7-step">
+              <div class="block7-step__badge" aria-hidden="true">2</div>
+              <div class="block7-step__content">
+                <h3>Ты просто описываешь, что происходит</h3>
+                <p>Что она написала, как давно был ответ, что уже было в переписке.</p>
+                <p>Можно написать пару слов или просто наговорить голосом — как есть, без формулировок.</p>
+                <p>Даже в стиле: «ну напиши ей что-нибудь нормальное» — этого достаточно.</p>
+              </div>
+            </li>
+            <li class="block7-step">
+              <div class="block7-step__badge" aria-hidden="true">3</div>
+              <div class="block7-step__content">
+                <h3>Ты выбираешь, как должен звучать ответ</h3>
+                <p>Спокойно, уверенно, с лёгким флиртом или нейтрально — по ситуации.</p>
+              </div>
+            </li>
+            <li class="block7-step">
+              <div class="block7-step__badge" aria-hidden="true">4</div>
+              <div class="block7-step__content">
+                <h3>Помощник предлагает готовый вариант сообщения</h3>
+                <p>Текст, который подходит под момент и не ломает диалог.</p>
+                <p>Без угадываний. Без «а вдруг не так». Без лишнего напряжения.</p>
+              </div>
+            </li>
+          </ol>
+          <p class="block7__hint">Не нужно уметь красиво писать. Важен смысл — формулировку помощник берёт на себя.</p>
+        </section>
 
-        <article class="block7-screen hidden" data-block7-screen="2" aria-live="polite">
-          <h2 class="block7__title" tabindex="-1">Что происходит без системы — и что меняется с ней</h2>
-
-          <div class="block7-compare" aria-label="Сравнение без системы и с системой">
-            <section class="block7-compare__col block7-compare__col--muted">
-              <h3 class="block7-compare__title">Без нашего приложения (как у большинства):</h3>
+        <section class="block7-section" aria-labelledby="block7-compare-title">
+          <h2 class="block7__title" id="block7-compare-title">Без помощника / С помощником</h2>
+          <div class="block7-compare" aria-label="Сравнение форматов переписки">
+            <article class="block7-compare__col block7-compare__col--muted">
+              <h3 class="block7-compare__title">Без помощника:</h3>
               <ul class="block7-list">
-                <li>100 начатых диалогов</li>
-                <li>1–3 доходят до встречи</li>
-                <li>Постоянные паузы и игнор</li>
-                <li>Гадание: что писать и когда</li>
-                <li>Результат нестабильный и выматывающий</li>
+                <li>каждый раз приходится гадать</li>
+                <li>зависаешь над ответами</li>
+                <li>диалоги часто обрываются</li>
+                <li>результат нестабильный</li>
               </ul>
-            </section>
-
-            <section class="block7-compare__col block7-compare__col--accent">
-              <h3 class="block7-compare__title">С нашим приложением (по нашей статистике):</h3>
+            </article>
+            <article class="block7-compare__col block7-compare__col--accent">
+              <h3 class="block7-compare__title">С помощником:</h3>
               <ul class="block7-list">
-                <li>100 начатых диалогов</li>
-                <li>40–60 доходят до встречи</li>
-                <li>Чёткий темп общения</li>
-                <li>Понятно, что и когда писать</li>
-                <li>Контроль вместо случайности</li>
+                <li>понятно, что писать и когда</li>
+                <li>меньше напряжения</li>
+                <li>диалоги доходят дальше</li>
+                <li>появляется контроль вместо случайности</li>
               </ul>
-            </section>
+            </article>
           </div>
+        </section>
 
-          <p class="block7__text">Приложение не делает магию.<br>Оно убирает угадывание и даёт структуру:<br>- когда отвечать<br>- как удерживать интерес<br>- когда переводить общение в встречу</p>
+        <section class="block7-section" aria-labelledby="block7-cases-title">
+          <h2 class="block7__title" id="block7-cases-title">Как это выглядит у других</h2>
+          <div class="block7-cases" aria-label="Короткие кейсы" tabindex="0">
+            <article class="block7-case">
+              <h3>Иван</h3>
+              <p>Перестал зависать над сообщениями — диалоги стали доходить до встреч.</p>
+            </article>
+            <article class="block7-case">
+              <h3>Пётр</h3>
+              <p>Понял, как не терять интерес после первых сообщений.</p>
+            </article>
+            <article class="block7-case">
+              <h3>Ираклий</h3>
+              <p>Перестал сливаться и стал стабильно ходить на свидания.</p>
+            </article>
+          </div>
+        </section>
 
-          <p class="block7__footer">Ты либо продолжаешь действовать вслепую,<br>либо используешь систему, которая уже работает у других.</p>
-
-          <button type="button" class="btn" data-block7-next="3">Хочу такой результат</button>
-        </article>
-
-        <article class="block7-screen hidden" data-block7-screen="3" aria-live="polite">
-          <h2 class="block7__title" tabindex="-1">Либо ты дальше сливаешь диалоги.<br>Либо начинаешь получать результат.</h2>
-
-          <section class="block7-benefits">
-            <h3 class="block7-benefits__title">Что ты получаешь:</h3>
-            <ul class="block7-list block7-list--check">
-              <li>Подсказки, что писать прямо сейчас</li>
-              <li>Понимание, когда делать следующий шаг</li>
-              <li>Меньше напряжения и сомнений</li>
-              <li>Более стабильные встречи и близость</li>
-            </ul>
-          </section>
-
-          <p class="block7-price">Полный доступ — 9,99 долларов в месяц</p>
-
-          <button type="button" class="btn" data-block7-pay>Начать сейчас</button>
-
-          <section class="block7-guarantee">
-            <p>Если приложение не даст тебе заметно лучший результат,<br>просто напиши нам на почту — мы вернём деньги.</p>
-            <p>Без вопросов.<br>Без объяснений.</p>
-            <p class="block7-guarantee__email">ivanmarokv@gmail.com</p>
-          </section>
-
-          <p class="block7__note">Каждый день без системы —<br>это ещё десятки диалогов, которые ни к чему не приведут.</p>
-        </article>
+        <section class="block7-sale" aria-labelledby="block7-sale-title">
+          <h2 class="block7-sale__title" id="block7-sale-title">Хочешь такой же результат?</h2>
+          <p class="block7-sale__price">Полный доступ — 9,99 $ в месяц</p>
+          <button type="button" class="btn block7-sale__btn" data-block7-pay>Начать сейчас</button>
+          <p class="block7-sale__note">Если помощник не даст тебе заметно лучший результат — просто напиши нам, и мы вернём деньги. Без вопросов.</p>
+        </section>
       </div>
     </section>
   </main>
