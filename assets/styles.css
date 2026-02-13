@@ -681,7 +681,7 @@ h1 {
   margin-top: 14px;
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 74%);
+  grid-auto-columns: 100%;
   gap: 10px;
   overflow-x: auto;
   padding-bottom: 4px;
@@ -743,58 +743,6 @@ h1 {
   line-height: 1.5;
 }
 
-.block7-cases-nav {
-  margin-top: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.block7-cases-nav__btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  border: 1px solid rgba(166, 185, 255, 0.45);
-  background: rgba(125, 145, 198, 0.1);
-  color: #e5ecff;
-  font-size: 1rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.block7-cases-nav__btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.block7-cases-nav__dots {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: center;
-  flex: 1;
-}
-
-.block7-cases-nav__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(166, 185, 255, 0.35);
-  padding: 0;
-}
-
-.block7-cases-nav__dot.is-active {
-  background: rgba(194, 210, 255, 0.95);
-}
-
-.block7-cases-note {
-  margin: 10px 0 0;
-  color: var(--muted);
-  font-size: 0.86rem;
-  line-height: 1.45;
-}
 
 .block7-sale {
   width: 100%;
@@ -838,7 +786,7 @@ h1 {
   }
 
   .block7-cases {
-    grid-auto-columns: minmax(0, 31%);
+    grid-auto-columns: minmax(0, calc((100% - 20px) / 3));
   }
 }
 
