@@ -128,12 +128,34 @@ function initQuizBlock() {
 
   var questions = Array.prototype.slice.call(quiz.querySelectorAll('.question-item'));
   var answers = {};
+  var isTransitioning = false;
+  var quizUx = window.QuizUX && typeof window.QuizUX.create === 'function'
+    ? window.QuizUX.create({ quiz: quiz, questions: questions })
+    : null;
+
+  function setQuestionButtonsState(question, disabled) {
+    if (!question) {
+      return;
+    }
+
+    var questionButtons = question.querySelectorAll('[data-answer]');
+    questionButtons.forEach(function (questionButton) {
+      questionButton.disabled = disabled;
+    });
+  }
 
   questions.forEach(function (question, index) {
     var buttons = question.querySelectorAll('[data-answer]');
 
     buttons.forEach(function (button) {
       button.addEventListener('click', function () {
+        if (isTransitioning) {
+          return;
+        }
+
+        isTransitioning = true;
+        setQuestionButtonsState(question, true);
+
         buttons.forEach(function (item) {
           item.classList.remove('is-selected');
         });
@@ -141,21 +163,39 @@ function initQuizBlock() {
         button.classList.add('is-selected');
         answers[index] = button.dataset.answer;
 
-        if (index < questions.length - 1) {
-          question.classList.add('hidden');
-          questions[index + 1].classList.remove('hidden');
-
-          if (introCopy) {
-            introCopy.classList.add('hidden');
-          }
+        if (introCopy) {
+          introCopy.classList.add('hidden');
         }
 
-        if (Object.keys(answers).length === questions.length) {
-          if (completeMicrocopy) {
-            completeMicrocopy.classList.remove('hidden');
+        var runTransition = quizUx && typeof quizUx.transitionToQuestion === 'function'
+          ? quizUx.transitionToQuestion(question, questions[index + 1])
+          : Promise.resolve();
+
+        var showMicroFeedback = quizUx && typeof quizUx.showMicroFeedback === 'function'
+          ? quizUx.showMicroFeedback()
+          : Promise.resolve();
+
+        showMicroFeedback.then(function () {
+          if (index < questions.length - 1) {
+            runTransition.then(function () {
+              isTransitioning = false;
+            });
+            return;
           }
-          continueLink.classList.remove('hidden');
-        }
+
+          if (Object.keys(answers).length === questions.length) {
+            if (completeMicrocopy) {
+              completeMicrocopy.classList.remove('hidden');
+            }
+            continueLink.classList.remove('hidden');
+          }
+
+          if (quizUx && typeof quizUx.markCurrentBlockCompleted === 'function') {
+            quizUx.markCurrentBlockCompleted();
+          }
+
+          isTransitioning = false;
+        });
       });
     });
   });
