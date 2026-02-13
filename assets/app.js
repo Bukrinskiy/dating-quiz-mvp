@@ -292,15 +292,20 @@ function initBlock7() {
     function getSliderMetrics() {
       var trackStyle = window.getComputedStyle(casesTrack);
       var gap = parseFloat(trackStyle.columnGap || trackStyle.gap || '0') || 0;
-      var containerWidth = casesTrack.clientWidth;
-      var cardWidth = caseItems[0] ? caseItems[0].clientWidth : containerWidth;
-      var visibleCards = Math.max(1, Math.floor((containerWidth + gap) / (cardWidth + gap)));
+      var isTablet = window.matchMedia('(min-width: 720px)').matches;
       var isDesktop = window.matchMedia('(min-width: 1080px)').matches;
+      var visibleCards = 1;
 
       if (isDesktop) {
-        visibleCards = Math.min(3, visibleCards);
+        visibleCards = 3;
+      } else if (isTablet) {
+        visibleCards = 2;
       }
 
+      var containerWidth = casesTrack.clientWidth;
+      var cardWidth = visibleCards > 1
+        ? (containerWidth - gap * (visibleCards - 1)) / visibleCards
+        : containerWidth;
       var pages = Math.max(1, Math.ceil(caseItems.length / visibleCards));
 
       return { gap: gap, cardWidth: cardWidth, visibleCards: visibleCards, pages: pages };
@@ -366,6 +371,8 @@ function initBlock7() {
       } else {
         casesTrack.style.gridAutoColumns = '100%';
       }
+
+      casesTrack.style.overflowX = isDesktop ? 'hidden' : 'auto';
 
       buildDots();
       scrollToIndex(sliderState.activeIndex);
