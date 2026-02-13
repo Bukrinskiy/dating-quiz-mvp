@@ -371,8 +371,8 @@ function initBlock7() {
       var isTablet = window.matchMedia('(min-width: 720px)').matches;
       var isDesktop = window.matchMedia('(min-width: 1080px)').matches;
 
-      caseItems.forEach(function (item, index) {
-        item.style.display = isDesktop && index >= 3 ? 'none' : '';
+      caseItems.forEach(function (item) {
+        item.style.display = '';
       });
 
       if (isDesktop) {
