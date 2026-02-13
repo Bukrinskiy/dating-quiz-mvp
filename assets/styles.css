@@ -232,6 +232,18 @@ h1 {
   text-align: center;
 }
 
+.quiz-pattern-note {
+  margin: 16px 0 8px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(206, 216, 255, 0.28);
+  background: rgba(125, 145, 198, 0.16);
+  backdrop-filter: blur(4px);
+  color: #e8efff;
+  text-align: left;
+  line-height: 1.55;
+}
+
 .progress {
   margin: 0 0 16px;
   color: #c5d0e8;
