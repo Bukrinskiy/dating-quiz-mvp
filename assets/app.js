@@ -258,7 +258,6 @@ function initBlock7() {
   var container = block.querySelector('[data-block7-screens]');
   var casesTrack = block.querySelector('[data-block7-cases]');
   var casesDots = block.querySelector('[data-block7-cases-dots]');
-  var casesToggleButton = block.querySelector('[data-block7-cases-toggle]');
   var currentScreen = 1;
 
   function initCasesSlider() {
@@ -275,8 +274,31 @@ function initBlock7() {
       activeIndex: 0,
       pages: 1,
       visibleCards: 1,
-      isExpandedDesktop: false,
     };
+
+    function getShuffledCaseItems() {
+      var items = caseItems.slice();
+      for (var i = items.length - 1; i > 0; i -= 1) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = items[i];
+        items[i] = items[j];
+        items[j] = temp;
+      }
+      return items;
+    }
+
+    function applyDesktopRandomOrder() {
+      var desktopCases = getShuffledCaseItems().slice(0, 3);
+      var orderedCases = desktopCases.concat(caseItems.filter(function (item) {
+        return desktopCases.indexOf(item) === -1;
+      }));
+
+      orderedCases.forEach(function (item) {
+        casesTrack.appendChild(item);
+      });
+
+      caseItems = Array.prototype.slice.call(casesTrack.querySelectorAll('.block7-case'));
+    }
 
     function getVisibleCaseItems() {
       return caseItems.filter(function (item) {
@@ -374,7 +396,7 @@ function initBlock7() {
       var isDesktop = window.matchMedia('(min-width: 1080px)').matches;
 
       caseItems.forEach(function (item, itemIndex) {
-        var shouldShow = !isDesktop || sliderState.isExpandedDesktop || itemIndex < 3;
+        var shouldShow = !isDesktop || itemIndex < 3;
         item.style.display = shouldShow ? '' : 'none';
       });
 
@@ -388,17 +410,12 @@ function initBlock7() {
 
       casesTrack.style.overflowX = isDesktop ? 'hidden' : 'auto';
 
-      if (casesToggleButton) {
-        if (isDesktop && !sliderState.isExpandedDesktop) {
-          casesToggleButton.hidden = false;
-          casesToggleButton.textContent = 'Показать ещё 2 отзыва';
-        } else {
-          casesToggleButton.hidden = true;
-        }
-      }
-
       if (sliderState.activeIndex >= sliderState.pages) {
         sliderState.activeIndex = Math.max(0, sliderState.pages - 1);
+      }
+
+      if (casesDots) {
+        casesDots.hidden = isDesktop;
       }
 
       buildDots();
@@ -415,14 +432,7 @@ function initBlock7() {
       setActiveDot(closestIndex);
     }
 
-    if (casesToggleButton) {
-      casesToggleButton.hidden = true;
-      casesToggleButton.addEventListener('click', function () {
-        sliderState.isExpandedDesktop = true;
-        syncCasesLayout();
-      });
-    }
-
+    applyDesktopRandomOrder();
     syncCasesLayout();
     casesTrack.addEventListener('scroll', onTrackScroll, { passive: true });
     window.addEventListener('resize', syncCasesLayout, { passive: true });
