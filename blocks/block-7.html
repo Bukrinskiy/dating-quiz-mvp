@@ -83,20 +83,35 @@
 
         <section class="block7-section" aria-labelledby="block7-cases-title">
           <h2 class="block7__title" id="block7-cases-title">Как это выглядит у других</h2>
-          <div class="block7-cases" aria-label="Короткие кейсы" tabindex="0">
+          <div class="block7-cases" aria-label="Короткие кейсы" tabindex="0" data-block7-cases>
             <article class="block7-case">
-              <h3>Иван</h3>
+              <div class="block7-case__head">
+                <div class="block7-avatar" aria-hidden="true">И</div>
+                <h3>Иван</h3>
+              </div>
               <p>Перестал зависать над сообщениями — диалоги стали доходить до встреч.</p>
             </article>
             <article class="block7-case">
-              <h3>Пётр</h3>
+              <div class="block7-case__head">
+                <div class="block7-avatar" aria-hidden="true">П</div>
+                <h3>Пётр</h3>
+              </div>
               <p>Понял, как не терять интерес после первых сообщений.</p>
             </article>
             <article class="block7-case">
-              <h3>Ираклий</h3>
+              <div class="block7-case__head">
+                <div class="block7-avatar" aria-hidden="true">И</div>
+                <h3>Ираклий</h3>
+              </div>
               <p>Перестал сливаться и стал стабильно ходить на свидания.</p>
             </article>
           </div>
+          <div class="block7-cases-nav" aria-label="Навигация по кейсам">
+            <button class="block7-cases-nav__btn" type="button" data-block7-cases-prev aria-label="Предыдущий кейс">←</button>
+            <div class="block7-cases-nav__dots" data-block7-cases-dots aria-hidden="true"></div>
+            <button class="block7-cases-nav__btn" type="button" data-block7-cases-next aria-label="Следующий кейс">→</button>
+          </div>
+          <p class="block7-cases-note">Для реальных фото можно заменить блок <code>.block7-avatar</code> на <code>&lt;img class="block7-avatar__img" src="..." alt="Аватар"&gt;</code>.</p>
         </section>
 
         <section class="block7-sale" aria-labelledby="block7-sale-title">

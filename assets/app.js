@@ -256,7 +256,96 @@ function initBlock7() {
   var screenButtons = block.querySelectorAll('[data-block7-next]');
   var payButton = block.querySelector('[data-block7-pay]');
   var container = block.querySelector('[data-block7-screens]');
+  var casesTrack = block.querySelector('[data-block7-cases]');
+  var casesPrev = block.querySelector('[data-block7-cases-prev]');
+  var casesNext = block.querySelector('[data-block7-cases-next]');
+  var casesDots = block.querySelector('[data-block7-cases-dots]');
   var currentScreen = 1;
+
+  function initCasesSlider() {
+    if (!casesTrack) {
+      return;
+    }
+
+    var caseItems = Array.prototype.slice.call(casesTrack.querySelectorAll('.block7-case'));
+    if (!caseItems.length) {
+      return;
+    }
+
+    var activeIndex = 0;
+    var dots = [];
+
+    function scrollToCase(index) {
+      var boundedIndex = Math.max(0, Math.min(index, caseItems.length - 1));
+      var targetCase = caseItems[boundedIndex];
+
+      if (!targetCase) {
+        return;
+      }
+
+      casesTrack.scrollTo({
+        left: targetCase.offsetLeft,
+        behavior: 'smooth'
+      });
+    }
+
+    function syncByScroll() {
+      var closestIndex = 0;
+      var minDistance = Number.POSITIVE_INFINITY;
+      var trackLeft = casesTrack.scrollLeft;
+
+      caseItems.forEach(function (item, index) {
+        var distance = Math.abs(item.offsetLeft - trackLeft);
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestIndex = index;
+        }
+      });
+
+      activeIndex = closestIndex;
+
+      dots.forEach(function (dot, index) {
+        dot.classList.toggle('is-active', index === activeIndex);
+      });
+
+      if (casesPrev) {
+        casesPrev.disabled = activeIndex === 0;
+      }
+
+      if (casesNext) {
+        casesNext.disabled = activeIndex === caseItems.length - 1;
+      }
+    }
+
+    if (casesDots) {
+      caseItems.forEach(function (_, index) {
+        var dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'block7-cases-nav__dot';
+        dot.setAttribute('aria-label', 'Кейс ' + (index + 1));
+        dot.addEventListener('click', function () {
+          scrollToCase(index);
+        });
+        casesDots.appendChild(dot);
+        dots.push(dot);
+      });
+    }
+
+    if (casesPrev) {
+      casesPrev.addEventListener('click', function () {
+        scrollToCase(activeIndex - 1);
+      });
+    }
+
+    if (casesNext) {
+      casesNext.addEventListener('click', function () {
+        scrollToCase(activeIndex + 1);
+      });
+    }
+
+    casesTrack.addEventListener('scroll', syncByScroll, { passive: true });
+    syncByScroll();
+  }
 
   function setScreen(screenNumber) {
     currentScreen = screenNumber;
@@ -296,4 +385,6 @@ function initBlock7() {
       window.location.href = addClickIdToUrl(PAYWALL_URL, clickId);
     });
   }
+
+  initCasesSlider();
 }
