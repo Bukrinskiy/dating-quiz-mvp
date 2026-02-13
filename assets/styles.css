@@ -344,25 +344,77 @@ h1 {
 }
 
 .block6-anchor {
-  position: relative;
-  padding: 12px 14px 12px 24px;
-  border-radius: 12px;
-  background: rgba(125, 145, 198, 0.08);
-  border: 1px solid rgba(206, 216, 255, 0.18);
-  color: #ebf1ff;
-  line-height: 1.5;
+  padding: 0;
+  background: transparent;
+  border: 0;
 }
 
-.block6-anchor::before {
-  content: '';
-  position: absolute;
-  left: 11px;
-  top: 50%;
-  width: 7px;
-  height: 7px;
+.result-timeline {
+  gap: 12px;
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  column-gap: 12px;
+  align-items: start;
+}
+
+.timeline-icon-wrap {
+  position: relative;
+  width: 30px;
+  display: flex;
+  justify-content: center;
+  padding-bottom: 12px;
+}
+
+.timeline-icon {
+  width: 30px;
+  height: 30px;
   border-radius: 999px;
-  transform: translateY(-50%);
-  background: linear-gradient(135deg, #7f5cff, #6b9dff);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.timeline-icon svg {
+  display: block;
+}
+
+.timeline-line {
+  position: absolute;
+  left: 50%;
+  top: 30px;
+  bottom: 0;
+  width: 1px;
+  transform: translateX(-50%);
+  background: var(--border);
+}
+
+.timeline-item:last-child .timeline-icon-wrap {
+  padding-bottom: 0;
+}
+
+.timeline-item:last-child .timeline-line {
+  display: none;
+}
+
+.timeline-text {
+  color: var(--muted);
+  line-height: 1.5;
+  padding-top: 4px;
+}
+
+.timeline-item:hover .timeline-icon,
+.timeline-item:hover .timeline-text {
+  color: var(--accent);
+}
+
+.timeline-item:hover .timeline-icon {
+  border-color: var(--accent);
 }
 
 .block6 .btn {
