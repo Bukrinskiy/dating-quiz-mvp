@@ -704,7 +704,9 @@ h1 {
   border: 1px solid rgba(206, 216, 255, 0.15);
   background: rgba(8, 11, 18, 0.36);
   display: grid;
-  gap: 8px;
+  gap: 10px;
+  align-content: start;
+  min-height: 100%;
 }
 
 .block7-case__head {
@@ -714,8 +716,8 @@ h1 {
 }
 
 .block7-avatar {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   border-radius: 12px;
   display: inline-flex;
   align-items: center;
@@ -731,6 +733,7 @@ h1 {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center top;
   border-radius: 11px;
 }
 
@@ -753,7 +756,7 @@ h1 {
 .block7-case p {
   margin: 0;
   color: #d4def2;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .block7-cases-dots {
@@ -828,7 +831,24 @@ h1 {
   }
 
   .block7-cases {
+    grid-auto-columns: minmax(0, calc((100% - 10px) / 2));
+    align-items: stretch;
+  }
+
+  .block7-avatar {
+    width: 72px;
+    height: 72px;
+  }
+}
+
+@media (min-width: 1080px) {
+  .block7-cases {
     grid-auto-columns: minmax(0, calc((100% - 20px) / 3));
+  }
+
+  .block7-avatar {
+    width: 78px;
+    height: 78px;
   }
 }
 
