@@ -7,8 +7,6 @@
       { id: 'block-4', questionIds: [1, 2, 3] },
       { id: 'block-5', questionIds: [1, 2, 3] }
     ],
-    microMessages: ['Поняли 👌', 'Записали', 'Окей, важно', 'Принято', 'Есть'],
-    messageDurationMs: 520,
     fadeOutMs: 230,
     fadeInMs: 230
   };
@@ -60,10 +58,6 @@
     message.setAttribute('data-ux-message', '');
     message.setAttribute('aria-live', 'polite');
     return message;
-  }
-
-  function pickRandomMessage() {
-    return UX_CONFIG.microMessages[Math.floor(Math.random() * UX_CONFIG.microMessages.length)];
   }
 
   window.QuizUX = {
@@ -118,12 +112,10 @@
             return Promise.resolve();
           }
 
-          messageNode.textContent = pickRandomMessage();
-          messageNode.classList.add('is-visible');
+          messageNode.textContent = '';
+          messageNode.classList.remove('is-visible');
 
-          return wait(UX_CONFIG.messageDurationMs).then(function () {
-            messageNode.classList.remove('is-visible');
-          });
+          return Promise.resolve();
         },
         markCurrentBlockCompleted: function () {
           setProgressState(progressNode, Math.min(currentBlockIndex + 1, UX_CONFIG.blocks.length - 1));
