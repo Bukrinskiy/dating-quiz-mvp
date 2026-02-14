@@ -23,6 +23,30 @@ function getClickId() {
   return getClickIdFromTokens() || getClickIdFromQuery();
 }
 
+function sendStartQuizConversion() {
+  var clickId = getClickId();
+
+  if (!clickId) {
+    return;
+  }
+
+  var conversionUrl = new URL('https://mobi-slon.com/index.php');
+  conversionUrl.searchParams.set('cnv_id', clickId);
+  conversionUrl.searchParams.set('payout', '0');
+  conversionUrl.searchParams.set('cnv_status', 'start_quiz');
+
+  var requestUrl = conversionUrl.toString();
+
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon(requestUrl);
+    return;
+  }
+
+  var ping = new Image();
+  ping.referrerPolicy = 'no-referrer-when-downgrade';
+  ping.src = requestUrl;
+}
+
 function addClickIdToUrl(url, clickId) {
   if (!clickId || !url) {
     return url;
@@ -79,6 +103,7 @@ document.addEventListener('DOMContentLoaded', function () {
   if (cta) {
     cta.addEventListener('click', function () {
       track('hero_cta_click');
+      sendStartQuizConversion();
     });
   }
 
