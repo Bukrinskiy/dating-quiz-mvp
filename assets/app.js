@@ -24,8 +24,15 @@ function getClickId() {
 }
 
 function sendStartQuizConversion() {
-  var clickId = getClickId();
+  sendPostbackConversion('start_quiz');
+}
 
+function sendPostbackConversion(status) {
+  if (!status) {
+    return;
+  }
+
+  var clickId = getClickId();
   if (!clickId) {
     return;
   }
@@ -33,7 +40,7 @@ function sendStartQuizConversion() {
   var conversionUrl = new URL('https://mobi-slon.com/index.php');
   conversionUrl.searchParams.set('cnv_id', clickId);
   conversionUrl.searchParams.set('payout', '0');
-  conversionUrl.searchParams.set('cnv_status', 'start_quiz');
+  conversionUrl.searchParams.set('cnv_status', status);
 
   var requestUrl = conversionUrl.toString();
 
@@ -45,6 +52,31 @@ function sendStartQuizConversion() {
   var ping = new Image();
   ping.referrerPolicy = 'no-referrer-when-downgrade';
   ping.src = requestUrl;
+}
+
+function sendPostbackOnce(status) {
+  if (!status) {
+    return;
+  }
+
+  var dedupeKey = 'postback_sent_' + status;
+  try {
+    if (window.sessionStorage && sessionStorage.getItem(dedupeKey) === '1') {
+      return;
+    }
+  } catch (error) {
+    // Ignore sessionStorage limitations and still try to send a postback.
+  }
+
+  sendPostbackConversion(status);
+
+  try {
+    if (window.sessionStorage) {
+      sessionStorage.setItem(dedupeKey, '1');
+    }
+  } catch (error) {
+    // Ignore sessionStorage limitations.
+  }
 }
 
 function addClickIdToUrl(url, clickId) {
@@ -150,6 +182,20 @@ function initQuizBlock() {
   if (!quiz || !continueLink) {
     return;
   }
+
+  var statusMap = {
+    'block-1': 'block1_completed',
+    'block-2': 'block2_completed',
+    'block-3': 'block3_completed',
+    'block-4': 'block4_completed',
+    'block-5': 'block5_completed',
+  };
+  var pageName = document.body && document.body.dataset ? document.body.dataset.page : null;
+  var blockCompleteStatus = statusMap[pageName];
+
+  continueLink.addEventListener('click', function () {
+    sendPostbackOnce(blockCompleteStatus);
+  });
 
   var questions = Array.prototype.slice.call(quiz.querySelectorAll('.question-item'));
   var answers = {};
@@ -264,6 +310,7 @@ function initBlock6() {
 
   if (finishButton) {
     finishButton.addEventListener('click', function () {
+      sendPostbackOnce('block6_completed');
       var clickId = getClickId();
       window.location.href = addClickIdToUrl(BLOCK_7_URL, clickId);
     });
@@ -497,6 +544,7 @@ function initBlock7() {
 
   if (payButton) {
     payButton.addEventListener('click', function () {
+      sendPostbackOnce('transition_to_payment');
       var clickId = getClickId();
       window.location.href = addClickIdToUrl(PAYWALL_URL, clickId);
     });
