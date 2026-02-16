@@ -685,9 +685,8 @@ h1 {
 
 .block7-cases {
   margin-top: 14px;
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 100%;
+  display: flex;
+  align-items: stretch;
   gap: 10px;
   overflow-x: auto;
   padding-bottom: 4px;
@@ -704,6 +703,7 @@ h1 {
 
 .block7-case {
   min-width: 0;
+  flex: 0 0 100%;
   scroll-snap-align: start;
   padding: 13px;
   border-radius: 14px;
@@ -858,9 +858,8 @@ h1 {
     grid-template-columns: 1fr 1fr;
   }
 
-  .block7-cases {
-    grid-auto-columns: minmax(0, calc((100% - 10px) / 2));
-    align-items: stretch;
+  .block7-case {
+    flex-basis: calc((100% - 10px) / 2);
   }
 
   .block7-avatar {
@@ -870,8 +869,8 @@ h1 {
 }
 
 @media (min-width: 1080px) {
-  .block7-cases {
-    grid-auto-columns: minmax(0, calc((100% - 20px) / 3));
+  .block7-case {
+    flex-basis: calc((100% - 20px) / 3);
   }
 
   .block7-avatar {

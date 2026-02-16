@@ -464,30 +464,10 @@ function initBlock7() {
     }
 
     function syncCasesLayout() {
-      var isTablet = window.matchMedia('(min-width: 720px)').matches;
-      var isDesktop = window.matchMedia('(min-width: 1080px)').matches;
-
-      caseItems.forEach(function (item, itemIndex) {
-        var shouldShow = !isDesktop || itemIndex < 3;
-        item.style.display = shouldShow ? '' : 'none';
-      });
-
-      if (isDesktop) {
-        casesTrack.style.gridAutoColumns = 'minmax(0, calc((100% - 20px) / 3))';
-      } else if (isTablet) {
-        casesTrack.style.gridAutoColumns = 'minmax(0, calc((100% - 10px) / 2))';
-      } else {
-        casesTrack.style.gridAutoColumns = '100%';
-      }
-
-      casesTrack.style.overflowX = isDesktop ? 'hidden' : 'auto';
+      casesTrack.style.overflowX = 'auto';
 
       if (sliderState.activeIndex >= sliderState.pages) {
         sliderState.activeIndex = Math.max(0, sliderState.pages - 1);
-      }
-
-      if (casesDots) {
-        casesDots.hidden = isDesktop;
       }
 
       buildDots();
