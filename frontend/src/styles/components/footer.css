@@ -1,0 +1,21 @@
+.site-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 auto;
+  padding: 0 16px 20px;
+  color: #8f9ab4;
+  font-size: 0.78rem;
+}
+
+.site-footer a {
+  color: #aeb8cc;
+  text-decoration: none;
+}
+
+.site-footer a:hover {
+  color: #d5dcf1;
+  text-decoration: underline;
+}

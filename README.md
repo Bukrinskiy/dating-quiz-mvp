@@ -1,61 +1,109 @@
-# Dating Quiz MVP (HTML/CSS/JS)
+# Dating Quiz MVP (React + FastAPI + Docker Compose)
 
-Это MVP-структура квиза только на HTML, CSS и vanilla JavaScript.
+Минимальный стек проекта:
+- `frontend`: React + TypeScript + Vite (в Docker сборка через `pnpm`, раздача через Nginx)
+- `backend`: FastAPI (зависимости и запуск через `uv`)
+- `docker-compose`: поднимает оба сервиса
 
-## Как открыть
+## Быстрый старт
 
-1. Откройте `index.html` двойным кликом в браузере.
-2. Никакие серверы и сборка не нужны.
+1. Создайте файл окружения:
 
-## Переходы по блокам
+```bash
+cp .env.template .env
+```
 
-- `index.html` → `block-1.html`
-- `block-1.html` → `block-2.html`
-- `block-2.html` → `block-3.html`
-- `block-3.html` → `block-4.html`
-- `block-4.html` → `block-5.html`
-- `block-5.html` → `block-6.html`
-- `block-6.html` → `block-7.html`
+2. Заполните значения в `.env` (`FK_MERCHANT_ID`, `FK_SECRET_1`, и т.д.).
 
-Внутри `block-6.html` и `block-7.html` экраны переключаются через JavaScript без смены URL.
+3. Запустите проект:
 
-## Что входит в MVP
+```bash
+make up
+```
 
-- 8 HTML-страниц с заглушками контента.
-- Общие стили в `assets/styles.css`.
-- Минимальная логика в `assets/app.js`:
-  - переключение экранов;
-  - показ вопросов по одному;
-  - FAQ-аккордеон;
-  - заглушка трекинга событий.
-## Reference Block (Golden Standard)
+4. Откройте приложение:
+- `http://localhost/`
 
-Блок 1 квиза (“Старт переписки”) является ЭТАЛОННЫМ блоком проекта.
+Остановка:
 
-Все последующие блоки (Блоки 2–8) должны полностью повторять:
-- логику
-- UX-поведение
-- структуру экранов
-- навигацию
-- ограничения
+```bash
+make down
+```
 
-Разрешено менять ТОЛЬКО:
-- количество вопросов в блоке
-- тексты вопросов и вариантов ответов
+## Dev-режим: backend в Docker, frontend локально
 
-Запрещено менять без отдельного решения:
-- добавлять кнопку «Назад»
-- добавлять промежуточные экраны между вопросами
-- добавлять повторяющиеся заголовки блоков
-- добавлять прогресс “Блок X из 8”
-- добавлять отдельный стартовый экран (intro всегда встроен в первый вопрос)
+1. Поднять backend в dev-контейнере:
 
-### Обязательные правила блока:
-- один экран = один вопрос
-- навигация только вперёд
-- intro-текст показывается ТОЛЬКО перед первым вопросом блока
-- после последнего вопроса блока показывается экран подтверждения с кнопкой “Продолжить”
-- страница не перезагружается, управление через JS state
+```bash
+make dev-up
+```
 
-Блок 1 считается финальным и доведённым до идеала.
-Использовать его как reference при реализации всех следующих блоков.
+2. Запустить frontend локально (в отдельном терминале):
+
+```bash
+make dev-frontend
+```
+
+Открыть:
+- `http://localhost:5173/` — frontend (Vite HMR, локальный процесс)
+- `http://localhost:8000/health` — backend (uvicorn --reload в Docker)
+
+Остановка backend dev-контейнера:
+
+```bash
+make dev-down
+```
+
+Логи backend dev:
+
+```bash
+make dev-logs
+make dev-logs-backend
+```
+
+В этом режиме:
+- frontend работает локально и обновляется через Vite HMR;
+- backend работает в Docker и перезапускается через `--reload`;
+- `/api/*` на frontend проксируется в backend сервис.
+
+## Оплата
+
+Frontend отправляет пользователя на:
+- `/api/payment/redirect?clickid=<id>`
+
+Backend:
+- валидирует и санитизирует `clickid`
+- считает подпись Free-Kassa
+- возвращает `302` redirect на `https://pay.fk.money/...`
+
+## Полезные команды
+
+```bash
+make help
+make build
+make logs
+make test-backend
+```
+
+Локально backend через `uv`:
+
+```bash
+cd backend
+uv sync --dev
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Локально frontend через `pnpm`:
+
+```bash
+cd frontend
+corepack enable
+pnpm install
+pnpm dev
+```
+
+## Структура
+
+- `/Users/tema/my/dating-quiz-mvp/frontend` — React SPA
+- `/Users/tema/my/dating-quiz-mvp/backend` — FastAPI
+- `/Users/tema/my/dating-quiz-mvp/docker-compose.yml`
