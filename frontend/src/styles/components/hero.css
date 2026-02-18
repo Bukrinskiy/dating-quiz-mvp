@@ -166,3 +166,32 @@
     object-position: 50% 70%;
   }
 }
+
+.hero__loader {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 50%, rgba(18, 26, 42, 0.45), rgba(11, 16, 27, 0.72));
+  pointer-events: none;
+}
+
+.hero__loader::after {
+  content: "";
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 3px solid rgba(166, 191, 238, 0.35);
+  border-top-color: #79aaff;
+  animation: hero-spin 0.9s linear infinite;
+}
+
+@keyframes hero-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.hero__media.is-fallback .hero__loader {
+  display: none;
+}

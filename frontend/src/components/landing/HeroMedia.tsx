@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 type HeroMediaProps = {
   fallbackText: string;
   fallback: boolean;
@@ -5,6 +7,13 @@ type HeroMediaProps = {
 };
 
 export const HeroMedia = ({ fallbackText, fallback, onError }: HeroMediaProps) => {
+  const [loading, setLoading] = useState(true);
+
+  const handleError = () => {
+    setLoading(false);
+    onError();
+  };
+
   return (
     <div className={`hero__media ${fallback ? "is-fallback" : ""}`}>
       <video
@@ -14,13 +23,12 @@ export const HeroMedia = ({ fallbackText, fallback, onError }: HeroMediaProps) =
         loop
         playsInline
         preload="metadata"
-        poster="/assets/hero-poster.jpg"
-        onError={onError}
+        onCanPlay={() => setLoading(false)}
+        onError={handleError}
       >
-        <source src="/assets/hero-remotion.webm" type="video/webm" />
-        <source src="/assets/hero-remotion.mp4" type="video/mp4" />
         <source src="/assets/hero.mp4" type="video/mp4" />
       </video>
+      {loading && !fallback ? <div className="hero__loader" aria-hidden="true" /> : null}
       <div className="hero__fallback" aria-hidden="true">
         {fallbackText}
       </div>

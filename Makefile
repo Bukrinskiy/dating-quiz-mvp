@@ -104,7 +104,7 @@ dev-logs-backend:
 	$(DEV_COMPOSE) logs -f --tail=200 backend
 
 dev-frontend:
-	cd frontend && corepack enable && pnpm install --no-frozen-lockfile && pnpm dev --host 0.0.0.0 --port 5173
+	cd frontend && pnpm install --no-frozen-lockfile && pnpm dev --host 0.0.0.0 --port 5173
 
 docker-login:
 	@set -a; . ./.env; set +a; \
