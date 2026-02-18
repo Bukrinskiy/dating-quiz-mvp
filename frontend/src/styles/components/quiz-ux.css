@@ -1,0 +1,54 @@
+.quiz-ux-progress {
+  display: grid;
+  grid-template-columns: repeat(var(--segments, 5), minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 0 14px;
+}
+
+.quiz-ux-progress__segment {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(206, 216, 255, 0.18);
+  transition: background-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.quiz-ux-progress__segment-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--accent), #4d88ff);
+  transition: width 0.25s ease;
+}
+
+.quiz-ux-progress__segment.is-active {
+  box-shadow: 0 0 0 1px rgba(127, 92, 255, 0.45);
+}
+
+.question-item.quiz-ux-question-leave {
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.23s ease, transform 0.23s ease;
+}
+
+.question-item.quiz-ux-question-enter {
+  opacity: 0;
+  transform: translateY(6px);
+  animation: quizFadeIn 0.23s ease forwards;
+}
+
+@keyframes quizFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
