@@ -19,7 +19,7 @@ echo "Push failed for $(1) after $(PUSH_RETRIES) attempts" >&2; \
 exit 1
 endef
 
-.PHONY: help up down restart build rebuild ps logs logs-frontend logs-backend test-backend test-backend-local frontend-build backend-build dev-up dev-down dev-restart dev-logs dev-logs-backend dev-ps dev-frontend docker-login push-backend-image push-frontend-image push-images
+.PHONY: help up down restart build rebuild ps logs logs-frontend logs-backend test-backend test-backend-local frontend-build backend-build dev-up dev-down dev-restart dev-logs dev-logs-backend dev-ps dev-frontend docker-login push-backend-image push-frontend-image push-images deploy
 
 help:
 	@echo "Available targets:"
@@ -47,6 +47,7 @@ help:
 	@echo "  make push-backend-image - Build+push backend image ($(BUILD_PLATFORM))"
 	@echo "  make push-frontend-image- Build+push frontend image ($(BUILD_PLATFORM))"
 	@echo "  make push-images        - Login and push both backend and frontend images"
+	@echo "  make deploy             - Push images and restart remote app on clario-landing"
 
 up:
 	$(COMPOSE) up -d --build
@@ -117,7 +118,16 @@ push-backend-image:
 	@$(call docker_push_retry,$(BACKEND_IMAGE))
 
 push-frontend-image:
-	docker build --platform "$(BUILD_PLATFORM)" -f frontend/Dockerfile -t "$(FRONTEND_IMAGE)" .
+	@set -a; . ./.env; set +a; \
+	docker build --platform "$(BUILD_PLATFORM)" \
+		--build-arg VITE_MOBI_SLON_URL="$$VITE_MOBI_SLON_URL" \
+		--build-arg VITE_MOBI_SLON_CAMPAIGN_KEY="$$VITE_MOBI_SLON_CAMPAIGN_KEY" \
+		--build-arg VITE_FB_PIXEL_ID="$$VITE_FB_PIXEL_ID" \
+		--build-arg VITE_TRACKING_DEBUG="$$VITE_TRACKING_DEBUG" \
+		-f frontend/Dockerfile -t "$(FRONTEND_IMAGE)" .
 	@$(call docker_push_retry,$(FRONTEND_IMAGE))
 
 push-images: docker-login push-backend-image push-frontend-image
+
+deploy: push-images
+	ssh clario-landing 'cd /opt/seranking-app && docker compose up -d'

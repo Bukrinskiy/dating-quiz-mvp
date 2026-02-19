@@ -13,7 +13,11 @@
 cp .env.template .env
 ```
 
-2. Заполните значения в `.env` (`FK_MERCHANT_ID`, `FK_SECRET_1`, и т.д.).
+2. Заполните значения в `.env`:
+- backend: при текущей конфигурации платежи отключены, `FK_*` можно не заполнять
+- frontend tracking: `VITE_MOBI_SLON_URL`, `VITE_MOBI_SLON_CAMPAIGN_KEY`, `VITE_FB_PIXEL_ID`, `VITE_TRACKING_DEBUG` (`true/false` или `1/0`)
+
+Для frontend tracking переменные читаются из env контейнера и применяются при старте nginx (runtime), поэтому `VITE_TRACKING_DEBUG` можно переключать без пересборки frontend-образа.
 
 3. Запустите проект:
 
@@ -68,13 +72,9 @@ make dev-logs-backend
 
 ## Оплата
 
-Frontend отправляет пользователя на:
-- `/api/payment/redirect?clickid=<id>`
+Платежная система сейчас отключена.
 
-Backend:
-- валидирует и санитизирует `clickid`
-- считает подпись Free-Kassa
-- возвращает `302` redirect на `https://pay.fk.money/...`
+Frontend показывает сообщение о недоступности оплаты на маршруте `/pay`, а backend endpoint `/api/payment/redirect` возвращает `503 Payment system is not connected`.
 
 ## Полезные команды
 

@@ -6,8 +6,9 @@ export const ruMessages: AppMessages = {
     langEn: "EN",
     continue: "Продолжить",
     questionLabel: "Вопрос",
-    payWait: "Перенаправляем на оплату...",
-    payError: "Не удалось начать оплату: отсутствует clickid.",
+    payWait: "Оплата временно недоступна",
+    payError: "Не удалось перейти к оплате.",
+    payUnavailable: "Платежная система не подключена. Попробуйте позже.",
   },
   hero: {
     title: "Пишешь девушкам первым, а в ответ - тишина?",
@@ -23,6 +24,7 @@ export const ruMessages: AppMessages = {
     cta: "Узнать за 3 минуты",
     microcopy: "Без регистрации на старте",
     fallback: "Видео недоступно в вашем браузере",
+    videoSrc: "/assets/hero.mp4",
   },
   footer: {
     terms: "Пользовательское соглашение",

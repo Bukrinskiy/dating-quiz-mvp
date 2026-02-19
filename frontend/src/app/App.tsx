@@ -1,4 +1,5 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Block6Page } from "../pages/Block6Page";
 import { Block7Page } from "../pages/Block7Page";
 import { LandingPage } from "../pages/LandingPage";
@@ -6,9 +7,50 @@ import { LegalPage } from "../pages/LegalPage";
 import { PayRedirectPage } from "../pages/PayRedirectPage";
 import { QuizBlockPage } from "../pages/QuizBlockPage";
 import { useI18n } from "../features/i18n/I18nProvider";
+import { propagateClickIdToLinks } from "../shared/lib/clickid";
+import { logTracking } from "../shared/lib/trackingLogger";
 
 export const App = () => {
   const { copy } = useI18n();
+  const location = useLocation();
+  const didSendInitialPageViewRef = useRef(false);
+
+  useEffect(() => {
+    const rafId = window.requestAnimationFrame(() => {
+      propagateClickIdToLinks(location.search);
+      logTracking("links", "propagateClickIdToLinks called", { pathname: location.pathname, search: location.search });
+    });
+    return () => window.cancelAnimationFrame(rafId);
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    if (!didSendInitialPageViewRef.current) {
+      didSendInitialPageViewRef.current = true;
+      return;
+    }
+
+    const fbq = (window as Window & { fbq?: (...args: unknown[]) => void }).fbq;
+    if (typeof fbq === "function") {
+      fbq("track", "PageView");
+      logTracking("facebook", "PageView tracked on route change", { pathname: location.pathname, search: location.search });
+      return;
+    }
+    logTracking("facebook", "fbq is not available on route change", { pathname: location.pathname }, "warn");
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    const bPixel = (window as Window & { BPixelJS?: { useTokens?: (fn: () => void) => void } }).BPixelJS;
+    if (!bPixel?.useTokens) {
+      logTracking("mobi-slon", "BPixelJS.useTokens is not available", undefined, "warn");
+      return;
+    }
+
+    logTracking("mobi-slon", "BPixelJS.useTokens callback registered");
+    bPixel.useTokens(() => {
+      propagateClickIdToLinks(window.location.search);
+      logTracking("mobi-slon", "BPixelJS.useTokens callback fired");
+    });
+  }, []);
 
   return (
     <Routes>
