@@ -41,6 +41,7 @@ export type AppMessages = {
     questionLabel: string;
     payWait: string;
     payError: string;
+    payUnavailable: string;
   };
   hero: {
     title: string;
@@ -50,6 +51,7 @@ export type AppMessages = {
     cta: string;
     microcopy: string;
     fallback: string;
+    videoSrc: string;
   };
   footer: {
     terms: string;

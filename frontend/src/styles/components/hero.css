@@ -14,6 +14,10 @@
   gap: 24px;
 }
 
+.hero__blocks.hero__blocks--no-media {
+  grid-template-columns: 1fr;
+}
+
 .hero__content {
   background: linear-gradient(180deg, rgba(18, 26, 42, 0.92), rgba(11, 16, 27, 0.92));
   border: 1px solid var(--border);
@@ -149,6 +153,10 @@
   .hero__blocks {
     grid-template-columns: 1fr 0.95fr;
     gap: 28px;
+  }
+
+  .hero__blocks.hero__blocks--no-media {
+    grid-template-columns: 1fr;
   }
 
   .hero__content {

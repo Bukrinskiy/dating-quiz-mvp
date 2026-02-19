@@ -6,8 +6,9 @@ export const enMessages: AppMessages = {
     langEn: "EN",
     continue: "Continue",
     questionLabel: "Question",
-    payWait: "Redirecting to payment...",
-    payError: "Unable to start payment: clickid is missing.",
+    payWait: "Payment is temporarily unavailable",
+    payError: "Unable to open payment.",
+    payUnavailable: "Payment system is not connected. Please try again later.",
   },
   hero: {
     title: "You text first... and still get left on read?",
@@ -23,6 +24,7 @@ export const enMessages: AppMessages = {
     cta: "Find out in 3 minutes",
     microcopy: "No sign-up needed to start",
     fallback: "Video is not available in your browser",
+    videoSrc: "",
   },
   footer: {
     terms: "Terms of Use",

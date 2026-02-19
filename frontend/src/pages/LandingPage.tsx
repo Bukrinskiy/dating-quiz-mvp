@@ -12,6 +12,7 @@ export const LandingPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [videoFallback, setVideoFallback] = useState(false);
+  const heroVideoSrc = copy.hero.videoSrc.trim();
 
   useEffect(() => {
     track("hero_view");
@@ -32,6 +33,7 @@ export const LandingPage = () => {
           subtitle={copy.hero.subtitle}
           list={copy.hero.list}
           note={copy.hero.note}
+          videoSrc={heroVideoSrc}
           cta={copy.hero.cta}
           microcopy={copy.hero.microcopy}
           fallbackText={copy.hero.fallback}

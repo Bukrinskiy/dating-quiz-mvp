@@ -6,6 +6,7 @@ type HeroSectionProps = {
   subtitle: string;
   list: string[];
   note: string;
+  videoSrc: string;
   cta: string;
   microcopy: string;
   fallbackText: string;
@@ -19,6 +20,7 @@ export const HeroSection = ({
   subtitle,
   list,
   note,
+  videoSrc,
   cta,
   microcopy,
   fallbackText,
@@ -26,10 +28,12 @@ export const HeroSection = ({
   onCtaClick,
   onVideoError,
 }: HeroSectionProps) => {
+  const hasVideo = videoSrc.trim().length > 0;
+
   return (
     <section className="hero" aria-labelledby="hero-title">
       <h1 id="hero-title">{title}</h1>
-      <div className="hero__blocks">
+      <div className={`hero__blocks ${hasVideo ? "" : "hero__blocks--no-media"}`}>
         <div className="hero__content">
           <p className="hero__subtitle">{subtitle}</p>
           <ul className="hero__list">
@@ -39,7 +43,9 @@ export const HeroSection = ({
           </ul>
           <p className="hero__note">{note}</p>
         </div>
-        <HeroMedia fallbackText={fallbackText} fallback={fallback} onError={onVideoError} />
+        {hasVideo ? (
+          <HeroMedia videoSrc={videoSrc} fallbackText={fallbackText} fallback={fallback} onError={onVideoError} />
+        ) : null}
       </div>
       <HeroCTA text={cta} onClick={onCtaClick} />
       <p className="hero__microcopy">{microcopy}</p>
