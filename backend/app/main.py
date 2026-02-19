@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import RedirectResponse
 
-app = FastAPI(title="dating-quiz-backend")
+app = FastAPI(title="quiz-backend")
 
 SAFE_CLICK_ID_RE = re.compile(r"[^a-zA-Z0-9_.-]")
 
