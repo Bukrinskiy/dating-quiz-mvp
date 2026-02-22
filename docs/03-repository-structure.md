@@ -3,9 +3,10 @@
 ## Верхний уровень
 - `frontend/` — основной SPA клиент.
 - `backend/` — FastAPI backend.
+- `bot/` — aiogram Telegram-бот (отдельный сервис).
 - `docker-compose.yml` — prod-like запуск из готовых image.
 - `docker-compose.test.yml` — локальная сборка и запуск обоих сервисов.
-- `docker-compose.dev.yml` — backend dev-контейнер с hot reload.
+- `docker-compose.dev.yml` — dev-контур (backend + frontend + bot).
 - `Makefile` — унифицированные команды запуска/тестов/деплоя.
 - `.env.template` — шаблон переменных окружения.
 - `README.md` — базовый quick-start.
@@ -20,9 +21,15 @@
 - `frontend/nginx.conf` — SPA fallback + `/api` proxy.
 
 ## Backend
-- `backend/app/main.py` — FastAPI приложение с endpoint-ами `/health` и `/api/payment/redirect`.
-- `backend/tests/test_payment_redirect.py` — unit/integration-like проверки redirect endpoint.
+- `backend/app/main.py` — FastAPI приложение с payment + bot internal API.
+- `backend/tests/test_payment_redirect.py` — backend unit/integration-like тесты.
 - `backend/pyproject.toml` / `backend/uv.lock` — зависимости и lock для `uv`.
+
+## Bot
+- `bot/app/main.py` — entrypoint, переключение `polling|webhook`.
+- `bot/app/handlers/*` — `/start`, `/restore`, `/premium`.
+- `bot/app/middlewares/access_gate.py` — gate для платного доступа.
+- `bot/app/client/backend_api.py` — HTTP клиент к FastAPI.
 
 ## Legacy/Static артефакты в корне
 - `index.html`, `blocks/*.html`, `assets/*`, `terms.html`, `privacy-policy.html`, `refund-policy.html`.

@@ -13,11 +13,29 @@
     </script>
     <script>
       var APP_CONFIG = window.__APP_CONFIG__ || {};
-      BPixelJS.config({
-        url: APP_CONFIG.VITE_MOBI_SLON_URL || "%VITE_MOBI_SLON_URL%",
-        campaignKey: APP_CONFIG.VITE_MOBI_SLON_CAMPAIGN_KEY || "%VITE_MOBI_SLON_CAMPAIGN_KEY%",
-      });
-      BPixelJS.run();
+      var normalizeEnvValue = function (value) {
+        if (!value) {
+          return "";
+        }
+        if (/^%VITE_[A-Z0-9_]+%$/.test(value)) {
+          return "";
+        }
+        return value;
+      };
+      var mobiSlonUrl = normalizeEnvValue(APP_CONFIG.VITE_MOBI_SLON_URL || "%VITE_MOBI_SLON_URL%");
+      var mobiSlonCampaignKey = normalizeEnvValue(APP_CONFIG.VITE_MOBI_SLON_CAMPAIGN_KEY || "%VITE_MOBI_SLON_CAMPAIGN_KEY%");
+      if (mobiSlonUrl && mobiSlonCampaignKey) {
+        BPixelJS.config({
+          url: mobiSlonUrl,
+          campaignKey: mobiSlonCampaignKey,
+        });
+        BPixelJS.run();
+      } else {
+        console.warn("[mobi-debug] BPixelJS disabled: missing VITE_MOBI_SLON_URL or VITE_MOBI_SLON_CAMPAIGN_KEY", {
+          mobiSlonUrl: !!mobiSlonUrl,
+          mobiSlonCampaignKey: !!mobiSlonCampaignKey,
+        });
+      }
     </script>
     <script>
       !function(f,b,e,v,n,t,s)
@@ -28,8 +46,11 @@
       t.src=v;s=b.getElementsByTagName(e)[0];
       s.parentNode.insertBefore(t,s)}(window, document,'script',
       'https://connect.facebook.net/en_US/fbevents.js');
-      fbq('init', (window.__APP_CONFIG__ && window.__APP_CONFIG__.VITE_FB_PIXEL_ID) || '%VITE_FB_PIXEL_ID%');
-      fbq('track', 'PageView');
+      var fbPixelId = (window.__APP_CONFIG__ && window.__APP_CONFIG__.VITE_FB_PIXEL_ID) || '';
+      if (fbPixelId) {
+        fbq('init', fbPixelId);
+        fbq('track', 'PageView');
+      }
     </script>
   </head>
   <body>
@@ -38,7 +59,7 @@
         height="1"
         width="1"
         style="display: none"
-        src="https://www.facebook.com/tr?id=%VITE_FB_PIXEL_ID%&ev=PageView&noscript=1"
+        src="https://www.facebook.com/tr?id=&ev=PageView&noscript=1"
       />
     </noscript>
     <div id="root"></div>

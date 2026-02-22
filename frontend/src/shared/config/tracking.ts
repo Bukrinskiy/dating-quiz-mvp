@@ -24,8 +24,5 @@ const getConfigValue = (key: keyof WindowAppConfig, fallback?: string): string |
 };
 
 export const trackingConfig = {
-  mobiSlonUrl: getConfigValue("VITE_MOBI_SLON_URL", import.meta.env.VITE_MOBI_SLON_URL) || "https://mobi-slon.com/index.php",
-  mobiSlonCampaignKey: getConfigValue("VITE_MOBI_SLON_CAMPAIGN_KEY", import.meta.env.VITE_MOBI_SLON_CAMPAIGN_KEY) || "",
-  fbPixelId: getConfigValue("VITE_FB_PIXEL_ID", import.meta.env.VITE_FB_PIXEL_ID) || "",
   isTrackingDebug: parseBooleanEnv(getConfigValue("VITE_TRACKING_DEBUG", import.meta.env.VITE_TRACKING_DEBUG)),
 };
