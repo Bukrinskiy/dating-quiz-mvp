@@ -1,39 +1,31 @@
 # 05. Testing Strategy
 
-## Цели тестирования
-- Подтвердить корректность критичных API-контрактов backend.
-- Предотвратить регрессии в маршрутизации и пользовательском потоке frontend.
-- Проверять соответствие runtime-конфигурации окружениям.
-
-## Backend Tests
-Текущие тесты (`backend/tests/test_payment_redirect.py`) проверяют:
-- `503` для `/api/payment/redirect?clickid=test123`.
-- `422` для пустого `clickid`.
-- `400` для невалидного `clickid` после sanitization.
+## Backend tests
+Текущие тесты покрывают:
+- legacy endpoint (`410`)
+- checkout session для `one_time` и `subscription`
+- webhook идемпотентность
+- статус оплаты после webhook
+- restore flow (request + invalid OTP)
+- internal bot API auth (`X-Internal-Token`)
+- bot access status (`paid/unpaid`) после активации
 
 Команды:
 - `make test-backend`
 - `make test-backend-local`
 
-## Frontend Smoke (ручной)
-Минимальный smoke после изменений UI/роутинга:
-1. Открыть `/`.
-2. Пройти `/block-1` ... `/block-7`.
-3. Проверить `/pay` (ожидаемо показывает недоступность оплаты).
-4. Проверить `/terms.html`, `/privacy-policy.html`, `/refund-policy.html`.
-5. Проверить, что query-параметры (`clickid` и др.) пробрасываются по ссылкам воронки.
+## Manual smoke
+1. `make up`
+2. `GET /health` -> `200`
+3. `POST /api/payment/checkout-session`
+4. Stripe webhook в `POST /api/stripe/webhook`
+5. `GET /api/payment/session-status`
+6. `/pay`, `/pay/success`, `/pay/cancel`, `/pay/manage`
+7. Telegram: `/start <token>` -> `/premium` доступен
+8. Telegram: `/restore` (FSM email -> OTP)
 
-## Integration/Runtime Smoke
-- `make up`
-- Проверка:
-  - `GET /health` -> `{"status": "ok"}`
-  - `GET /api/payment/redirect?clickid=test123` -> `503 Payment system is not connected`
-
-## Gaps / TBD
-| Область | Текущий статус | TBD |
-|---|---|---|
-| Frontend unit/e2e | Формальных тестов не обнаружено | Определить стек (например Playwright/Vitest) и покрыть критический маршрут квиза |
-| Contract tests frontend-backend | Нет | Добавить API contract smoke для `/api/payment/redirect` |
-| CI quality gates | Явная CI-конфигурация в репо не обнаружена | Зафиксировать обязательные проверки в CI и protected branch policy |
-
-См. также: [11-troubleshooting](./11-troubleshooting.md), [12-glossary-and-decisions](./12-glossary-and-decisions.md).
+## Security checks
+- invalid webhook signature -> `400`
+- webhook replay -> duplicate=true
+- restore rate limit -> `429`
+- bot internal auth missing/invalid token -> `401`

@@ -127,32 +127,39 @@
   outline-offset: 1px;
 }
 
-.question-progress {
-  margin: 0 0 16px;
-  padding: 10px 10px 8px;
-  border: 1px solid rgba(206, 216, 255, 0.2);
-  border-radius: 10px;
-  background: rgba(125, 145, 198, 0.04);
-}
-
-.question-progress__meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  color: #cdd8f0;
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-
-.question-progress [data-accent-color] {
-  --accent-indicator: linear-gradient(135deg, var(--accent), #4d88ff);
-}
-
 .quiz-complete-group {
   margin-top: 34px;
 }
 
 .hidden {
   display: none !important;
+}
+
+.pay-copy {
+  margin: 12px 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.pay-field {
+  display: block;
+  margin-top: 8px;
+  margin-bottom: 6px;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.pay-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(125, 145, 198, 0.08);
+  color: var(--text);
+  padding: 11px 12px;
+}
+
+.pay-error {
+  margin-top: 10px;
+  color: #ff9191;
+  font-size: 0.92rem;
 }

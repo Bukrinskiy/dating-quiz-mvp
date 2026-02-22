@@ -1,23 +1,28 @@
 # Dating Quiz MVP (React + FastAPI + Docker Compose)
 
 Минимальный стек проекта:
-- `frontend`: React + TypeScript + Vite (в Docker сборка через `pnpm`, раздача через Nginx)
-- `backend`: FastAPI (зависимости и запуск через `uv`)
-- `docker-compose`: поднимает оба сервиса
+- `frontend`: React + TypeScript + Vite
+- `backend`: FastAPI + Stripe + PostgreSQL
+- `bot`: aiogram (Telegram), отдельный контейнер
+- `docker-compose`: frontend + backend + bot + postgres
 
 ## Быстрый старт
 
-1. Создайте файл окружения:
+1. Создайте окружение:
 
 ```bash
 cp .env.template .env
 ```
 
-2. Заполните значения в `.env`:
-- backend: при текущей конфигурации платежи отключены, `FK_*` можно не заполнять
-- frontend tracking: `VITE_MOBI_SLON_URL`, `VITE_MOBI_SLON_CAMPAIGN_KEY`, `VITE_FB_PIXEL_ID`, `VITE_TRACKING_DEBUG` (`true/false` или `1/0`)
-
-Для frontend tracking переменные читаются из env контейнера и применяются при старте nginx (runtime), поэтому `VITE_TRACKING_DEBUG` можно переключать без пересборки frontend-образа.
+2. Заполните в `.env` минимум:
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `ACCESS_TOKEN_SECRET`
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_BOT_USERNAME`
+- `BOT_INTERNAL_TOKEN`
+- `SMTP_PASSWORD` (Gmail app password)
+- `DATABASE_URL` (по умолчанию postgres service в compose)
 
 3. Запустите проект:
 
@@ -25,85 +30,46 @@ cp .env.template .env
 make up
 ```
 
-4. Откройте приложение:
-- `http://localhost/`
+4. Проверка:
+- `http://localhost:8080/`
+- `http://localhost:8000/health`
 
-Остановка:
+## Payment MVP flow
+
+1. Frontend вызывает `POST /api/payment/checkout-session`.
+2. Backend создает Stripe Checkout Session (`one_time` или `subscription`).
+3. Stripe шлет webhook в `POST /api/stripe/webhook`.
+4. Backend подтверждает оплату, создает activation token и обновляет `orders` в PostgreSQL.
+5. Email отключен в MVP: вместо отправки backend пишет `email_delivery_skipped` в лог.
+6. Telegram restore: `/restore` -> `POST /api/auth/restore/request|confirm`.
+
+## API
+
+- `POST /api/payment/checkout-session`
+- `POST /api/stripe/webhook`
+- `GET /api/payment/session-status?session_id=...`
+- `POST /api/payment/customer-portal`
+- `POST /api/access/activate`
+- `POST /api/auth/restore/request`
+- `POST /api/auth/restore/confirm`
+- `POST /api/bot/access/status` (internal)
+- `POST /api/bot/access/activate` (internal)
+- `POST /api/bot/restore/request` (internal)
+- `POST /api/bot/restore/confirm` (internal)
+- `GET /api/payment/redirect` -> `410` (legacy)
+
+## Тесты
 
 ```bash
-make down
+make test-backend
 ```
 
-## Dev-режим: backend в Docker, frontend локально
-
-1. Поднять backend в dev-контейнере:
+## Dev-режим
 
 ```bash
 make dev-up
 ```
 
-2. Запустить frontend локально (в отдельном терминале):
-
-```bash
-make dev-frontend
-```
-
-Открыть:
-- `http://localhost:5173/` — frontend (Vite HMR, локальный процесс)
-- `http://localhost:8000/health` — backend (uvicorn --reload в Docker)
-
-Остановка backend dev-контейнера:
-
-```bash
-make dev-down
-```
-
-Логи backend dev:
-
-```bash
-make dev-logs
-make dev-logs-backend
-```
-
-В этом режиме:
-- frontend работает локально и обновляется через Vite HMR;
-- backend работает в Docker и перезапускается через `--reload`;
-- `/api/*` на frontend проксируется в backend сервис.
-
-## Оплата
-
-Платежная система сейчас отключена.
-
-Frontend показывает сообщение о недоступности оплаты на маршруте `/pay`, а backend endpoint `/api/payment/redirect` возвращает `503 Payment system is not connected`.
-
-## Полезные команды
-
-```bash
-make help
-make build
-make logs
-make test-backend
-```
-
-Локально backend через `uv`:
-
-```bash
-cd backend
-uv sync --dev
-uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-Локально frontend через `pnpm`:
-
-```bash
-cd frontend
-corepack enable
-pnpm install
-pnpm dev
-```
-
-## Структура
-
-- `/Users/tema/my/dating-quiz-mvp/frontend` — React SPA
-- `/Users/tema/my/dating-quiz-mvp/backend` — FastAPI
-- `/Users/tema/my/dating-quiz-mvp/docker-compose.yml`
+- frontend: `http://localhost:5173/`
+- backend: `http://localhost:8000/health`
+- bot: polling mode (без внешнего порта в dev)

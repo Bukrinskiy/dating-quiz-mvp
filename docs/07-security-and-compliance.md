@@ -1,33 +1,23 @@
 # 07. Security and Compliance
 
-## Базовые принципы
-- Секреты не хранятся в коде и документации.
-- `.env.template` используется как эталон структуры переменных.
-- Реальные `.env` значения не публикуются в PR, issue и docs.
+## Secrets policy
+- Не коммитить `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`.
+- Не коммитить `BOT_INTERNAL_TOKEN`, `BOT_WEBHOOK_PATH_SECRET`.
+- Не коммитить `SMTP_PASSWORD`.
+- Хранить секреты только в окружении/secret manager.
 
-## Secret Handling Policy
-- `docker_token`, `FK_SECRET_1` и аналогичные параметры — только в защищенных хранилищах секретов.
-- Логи не должны содержать секретные значения query/body/header.
-- При ротации секретов обновляются окружения и runbook эксплуатации.
+## Payment security rules
+1. Оплата подтверждается только webhook событием.
+2. Подпись webhook обязательна.
+3. Повторные webhook события должны быть идемпотентны.
+4. Internal bot endpoints (`/api/bot/*`) разрешены только с `X-Internal-Token`.
 
-## Runtime Security Notes
-- Compose-файлы публикуют сервисы на `127.0.0.1`, что снижает внешнюю экспозицию на хосте.
-- Backend input hygiene:
-  - `clickid` обрабатывается через sanitization (`[^a-zA-Z0-9_.-]` удаляются).
-- Nginx проксирует `/api/*` только к внутреннему сервису `backend:8000`.
+## Access security rules
+- Activation token одноразовый.
+- После активации токен немедленно инвалидируется.
+- Restore требует OTP.
 
-## Compliance/Governance (MVP)
-Текущее состояние не содержит формализованной compliance-матрицы (GDPR/PII/data retention) в репозитории.
-
-`TBD`:
-- Зафиксировать policy хранения и удаления пользовательских данных.
-- Зафиксировать legal basis для tracking пикселей по юрисдикциям.
-- Добавить чеклист security review для релизов.
-
-Как проверить:
-1. Согласовать с legal/security владельцами.
-2. Создать отдельный compliance документ и добавить ссылку в [AGENTS.md](../AGENTS.md).
-
-## Related
-- [06-deployment-and-environments](./06-deployment-and-environments.md)
-- [08-observability-and-operations](./08-observability-and-operations.md)
+## MVP exception
+- Email delivery отключена (`EMAIL_DELIVERY_MODE=log_only`).
+- OTP может логироваться только в non-prod (`LOG_OTP_IN_NONPROD=true`).
+- В prod использовать `LOG_OTP_IN_NONPROD=false`.

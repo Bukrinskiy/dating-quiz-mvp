@@ -1,40 +1,27 @@
 # 08. Observability and Operations
 
-## Runtime checks
-Базовые проверки доступности:
-- Frontend: `GET /` (HTTP 200, загрузка SPA).
-- Backend: `GET /health` -> `{"status":"ok"}`.
-- Payment API: `GET /api/payment/redirect?clickid=test123` -> ожидаемо `503`.
+## Key log events
+- `email_delivery_skipped`
+- `otp_delivery_skipped`
+- `telegram_send_failed`
+- `stripe_event_ignored`
+- `mobi_slon_relay_request`
+- `mobi_slon_postback_attempt`
+- `mobi_slon_postback_failed`
+- `bot_access_check`
+- `bot_activation_attempt`
+- `bot_restore_request`
+- `bot_restore_confirm`
 
-## Operational commands
-- `make ps` — статус контейнеров.
-- `make logs` — общие логи.
-- `make logs-frontend` — логи frontend.
-- `make logs-backend` — логи backend.
-- `make dev-logs` / `make dev-logs-backend` — dev backend.
+## Monitoring checklist
+1. Проверять долю webhook ошибок (4xx/5xx).
+2. Проверять рост `duplicate=true` (replay rate).
+3. Проверять restore rate limit и OTP fail rate.
+4. Проверять `fulfillment_status=partial`.
+5. Проверять ошибки `401` на `/api/bot/*` (token mismatch).
 
-## Tracking diagnostics
-Frontend содержит диагностический логгер (`frontend/src/shared/lib/trackingLogger.ts`) и флаг `VITE_TRACKING_DEBUG`.
-
-Практика:
-- Для отладки включать `VITE_TRACKING_DEBUG=true`.
-- Для production по умолчанию держать `false`, если нет активного расследования.
-
-## Incidents (MVP runbook)
-1. Проверить контейнеры `make ps`.
-2. Проверить backend health `curl http://localhost:8000/health`.
-3. Проверить frontend endpoint `curl -I http://localhost/`.
-4. Проверить логи `make logs-backend` и `make logs-frontend`.
-5. Если проблема в payment, помнить что `503` сейчас штатное поведение.
-
-## Monitoring gaps / TBD
-- Нет формализованных SLI/SLO.
-- Нет описанных алертов и внешней APM-интеграции.
-- Нет структурированного error budget процесса.
-
-Как проверить и закрыть:
-- Зафиксировать целевые SLI/SLO по availability/latency.
-- Подключить централизованный сбор логов и метрик.
-- Добавить alert routing и on-call policy.
-
-См. также: [11-troubleshooting](./11-troubleshooting.md).
+## Ops actions
+- Если webhook не доходит: проверить `STRIPE_WEBHOOK_SECRET` и forwarding URL.
+- Если Telegram не отправляет: проверить `TELEGRAM_BOT_TOKEN` и `TELEGRAM_BOT_USERNAME`.
+- Если bot не активирует доступ: проверить `BOT_INTERNAL_TOKEN` и `BOT_BACKEND_BASE_URL`.
+- Если prod webhook Telegram не ходит: проверить Apache proxy для `/tg/webhook/<secret>`.

@@ -1,63 +1,64 @@
 # 06. Deployment and Environments
 
-## Compose profiles
+## Compose services
+- `postgres` (`postgres:17-alpine`)
+- `backend` (FastAPI + Stripe)
+- `bot` (aiogram Telegram service)
+- `frontend` (Nginx + SPA)
 
-### `docker-compose.yml`
-Назначение: prod-like runtime из уже собранных image.
-- Backend image: `${DOCKER_REPO}:backend-${IMAGE_TAG}`
-- Frontend image: `${DOCKER_REPO}:frontend-${IMAGE_TAG}`
-- `pull_policy: always`
-- Порты ограничены на localhost (`127.0.0.1:*`)
+## Core env
+- `DATABASE_URL`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `ACCESS_TOKEN_SECRET`
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_BOT_USERNAME`
+- `EMAIL_DELIVERY_MODE=smtp`
+- `SMTP_HOST` (`smtp.gmail.com`)
+- `SMTP_PORT` (`587`)
+- `SMTP_USE_TLS=true`
+- `SMTP_LOGIN` (`support@seranking.store`)
+- `SMTP_PASSWORD` (Gmail app password)
+- `SMTP_FROM_EMAIL`
+- `BOT_MODE` (`polling|webhook`)
+- `BOT_PORT`
+- `BOT_INTERNAL_TOKEN`
+- `BOT_BACKEND_BASE_URL`
+- `BOT_WEBHOOK_PATH_SECRET`
+- `APP_PUBLIC_BASE_URL`
+- `BOT_ALLOWED_PUBLIC_COMMANDS`
+- `EMAIL_DELIVERY_MODE=log_only`
+- `LOG_OTP_IN_NONPROD=true`
 
-### `docker-compose.test.yml`
-Назначение: локальная сборка и запуск обеих сервисов из текущего репозитория.
-- `build.context: .` для backend/frontend
-- `pull_policy: always`
-- Порты аналогично `docker-compose.yml`
+## Pricing env (backend authority)
+- `PAY_ONE_TIME_BASIC_AMOUNT_MINOR`
+- `PAY_ONE_TIME_BASIC_CURRENCY`
+- `PAY_SUB_MONTHLY_AMOUNT_MINOR`
+- `PAY_SUB_MONTHLY_CURRENCY`
+- `PAY_SUB_MONTHLY_INTERVAL`
 
-### `docker-compose.dev.yml`
-Назначение: быстрый backend development.
-- Только backend сервис
-- Команда запуска `uvicorn ... --reload --reload-dir /app/app`
-- Volume: `./backend/app:/app/app`
-- Порт `8000:8000`
+## Runtime notes
+- Backend применяет Alembic миграции на старте (`run_migrations`).
+- Email отправка выполняется по SMTP (Gmail STARTTLS).
+- Prod webhook для Telegram: Apache reverse proxy
+  - `https://<domain>/tg/webhook/<secret>` -> `http://bot:8081/webhook/<secret>`
+- Bot health endpoint: `GET /health` на `BOT_PORT` (polling и webhook режимы).
 
-## Frontend runtime model
-1. На build-этапе Vite формирует static bundle (`pnpm build`).
-2. На runtime Nginx раздает `/usr/share/nginx/html`.
-3. Перед стартом Nginx скрипт `40-runtime-config.sh` генерирует `runtime-config.js` с `VITE_*`.
-4. Клиент читает конфиг из `window.__APP_CONFIG__`.
+## Apache webhook example
+Пример для виртуального хоста Apache:
 
-## Backend runtime model
-- `FastAPI` приложение в `backend/app/main.py`.
-- Runtime endpoint-ы:
-  - `GET /health`
-  - `GET /api/payment/redirect?clickid=...`
+```apache
+ProxyPreserveHost On
+RequestHeader set X-Forwarded-Proto "https"
 
-## Config / Env Variables
-| Переменная | Где используется | Пример безопасного значения | Примечание |
-|---|---|---|---|
-| `BACKEND_PORT` | compose port mapping | `8000` | Дефолт `8000` |
-| `FRONTEND_PORT` | compose port mapping | `8080` | Дефолт `8080` |
-| `DOCKER_REPO` | Makefile deploy/push | `acme/dating-quiz` | Имя реестра/репозитория |
-| `IMAGE_TAG` | Makefile deploy/push | `staging-2026-02-19` | Тег образов |
-| `VITE_MOBI_SLON_URL` | frontend tracking runtime | `https://mobi-slon.com/index.php` | Безопасный публичный URL |
-| `VITE_MOBI_SLON_CAMPAIGN_KEY` | frontend tracking runtime | `demo-campaign-key` | Не хранить реальные production ключи в docs |
-| `VITE_FB_PIXEL_ID` | frontend tracking runtime | `1234567890` | Публичный идентификатор пикселя |
-| `VITE_TRACKING_DEBUG` | frontend tracking runtime | `true` | `true/false` или `1/0` |
-| `docker_login` | `make docker-login` | `ci-bot` | Секретные значения только в защищенном хранилище |
-| `docker_token` | `make docker-login` | `***` | Никогда не коммитить |
-| `FK_MERCHANT_ID` | `.env.template` | `YOUR_MERCHANT_ID` | Сейчас платежи backend-ом не подключены |
-| `FK_SECRET_1` | `.env.template` | `***` | Секрет |
-| `FK_CURRENCY` | `.env.template` | `USD` | Параметр платежей |
-| `FK_PAY_URL` | `.env.template` | `https://pay.fk.money/` | Параметр платежей |
-| `FK_AMOUNT` | `.env.template` | `9.99` | Параметр платежей |
+# Замените secret в обоих путях на BOT_WEBHOOK_PATH_SECRET
+<Location "/tg/webhook/replace_me_with_secret">
+    <LimitExcept POST>
+        Require all denied
+    </LimitExcept>
+    ProxyPass "http://127.0.0.1:8081/webhook/replace_me_with_secret"
+    ProxyPassReverse "http://127.0.0.1:8081/webhook/replace_me_with_secret"
+</Location>
+```
 
-## Deploy flow (текущее состояние)
-`make deploy`:
-1. `make push-images`.
-2. `ssh clario-landing 'cd /opt/seranking-app && docker compose up -d'`.
-
-`TBD`: rollout policy, health-check gates и rollback-автоматизация на remote host.
-
-См. также: [02-architecture](./02-architecture.md), [07-security-and-compliance](./07-security-and-compliance.md), [08-observability-and-operations](./08-observability-and-operations.md).
+Если проксируете без localhost, используйте адрес/alias контейнера `bot` в сети docker.

@@ -4,7 +4,10 @@ import { Block6Page } from "../pages/Block6Page";
 import { Block7Page } from "../pages/Block7Page";
 import { LandingPage } from "../pages/LandingPage";
 import { LegalPage } from "../pages/LegalPage";
+import { PayCancelPage } from "../pages/PayCancelPage";
+import { PayManagePage } from "../pages/PayManagePage";
 import { PayRedirectPage } from "../pages/PayRedirectPage";
+import { PaySuccessPage } from "../pages/PaySuccessPage";
 import { QuizBlockPage } from "../pages/QuizBlockPage";
 import { useI18n } from "../features/i18n/I18nProvider";
 import { propagateClickIdToLinks } from "../shared/lib/clickid";
@@ -63,6 +66,9 @@ export const App = () => {
       <Route path="/block-4" element={<QuizBlockPage key="block-4" blockId={4} />} />
       <Route path="/block-5" element={<QuizBlockPage key="block-5" blockId={5} />} />
       <Route path="/pay" element={<PayRedirectPage />} />
+      <Route path="/pay/success" element={<PaySuccessPage />} />
+      <Route path="/pay/cancel" element={<PayCancelPage />} />
+      <Route path="/pay/manage" element={<PayManagePage />} />
       <Route path="/terms.html" element={<LegalPage document={copy.legal.terms} />} />
       <Route path="/privacy-policy.html" element={<LegalPage document={copy.legal.privacy} />} />
       <Route path="/refund-policy.html" element={<LegalPage document={copy.legal.refund} />} />

@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Block7Sections } from "../components/block7/Block7Sections";
 import { useI18n } from "../features/i18n/I18nProvider";
 import { addClickIdToPath } from "../shared/lib/clickid";
+import { MobiSlonEvent } from "../shared/lib/mobiSlonEvents";
 import { sendPostbackOnce } from "../shared/lib/tracking";
 import { Container } from "../shared/ui/Container";
 import { LanguageSwitcher } from "../shared/ui/LanguageSwitcher";
@@ -14,7 +15,7 @@ export const Block7Page = () => {
   const navigate = useNavigate();
 
   const onPay = () => {
-    sendPostbackOnce("transition_to_payment", location.search);
+    sendPostbackOnce(MobiSlonEvent.BLOCK7_COMPLETED, location.search);
     navigate(addClickIdToPath("/pay", location.search));
   };
 

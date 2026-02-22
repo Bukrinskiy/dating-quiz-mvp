@@ -42,6 +42,21 @@ export type AppMessages = {
     payWait: string;
     payError: string;
     payUnavailable: string;
+    payEmailLabel: string;
+    payEmailPlaceholder: string;
+    payModeOneTime: string;
+    payModeSubscription: string;
+    payStart: string;
+    payStarting: string;
+    paySuccessTitle: string;
+    paySuccessPending: string;
+    paySuccessDone: string;
+    payCancelTitle: string;
+    payCancelBody: string;
+    payManageTitle: string;
+    payManageButton: string;
+    payRestoreHint: string;
+    payOpenBot: string;
   };
   hero: {
     title: string;

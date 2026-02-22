@@ -4,6 +4,7 @@ import { Block6ScreenOne } from "../components/block6/Block6ScreenOne";
 import { Block6ScreenTwo } from "../components/block6/Block6ScreenTwo";
 import { useI18n } from "../features/i18n/I18nProvider";
 import { addClickIdToPath } from "../shared/lib/clickid";
+import { MobiSlonEvent } from "../shared/lib/mobiSlonEvents";
 import { sendPostbackOnce } from "../shared/lib/tracking";
 import { Container } from "../shared/ui/Container";
 import { LanguageSwitcher } from "../shared/ui/LanguageSwitcher";
@@ -17,7 +18,7 @@ export const Block6Page = () => {
   const navigate = useNavigate();
 
   const onFinish = () => {
-    sendPostbackOnce("block6_completed", location.search);
+    sendPostbackOnce(MobiSlonEvent.BLOCK6_COMPLETED, location.search);
     navigate(addClickIdToPath("/block-7", location.search));
   };
 

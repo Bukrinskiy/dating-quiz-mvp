@@ -1,39 +1,41 @@
 # 11. Troubleshooting
 
-## Проблема: frontend не открывается
-Проверки:
-1. `make ps` — контейнер frontend должен быть `Up`.
-2. Проверить порт `FRONTEND_PORT` в `.env`.
-3. `make logs-frontend` — проверить ошибки Nginx/runtime-config.
+## `/api/payment/checkout-session` returns `502 Stripe error`
+- Проверьте `STRIPE_SECRET_KEY`.
+- Проверьте корректность payload (`mode`, `plan`, `email`, `clickid`).
 
-## Проблема: backend недоступен
-Проверки:
-1. `make logs-backend`.
-2. `curl http://localhost:8000/health`.
-3. Для dev-режима: `make dev-logs`.
+## `/api/stripe/webhook` returns `400 Invalid webhook`
+- Проверьте `stripe-signature`.
+- Проверьте `STRIPE_WEBHOOK_SECRET`.
 
-## Проблема: `/api/payment/redirect` возвращает 503
-Это ожидаемое текущие поведение.
-- Сообщение: `Payment system is not connected`.
-- Проверка тестом: `make test-backend`.
+## `/api/payment/session-status` returns `404`
+- Проверьте `session_id` из success URL.
 
-## Проблема: tracking не срабатывает
-Проверки:
-1. Убедиться, что заданы `VITE_*` переменные.
-2. Проверить `runtime-config.js` в frontend контейнере (должен быть с подставленными значениями).
-3. Включить `VITE_TRACKING_DEBUG=true` и проверить console-логи.
+## `/api/bot/*` returns `401 Unauthorized`
+- Проверьте header `X-Internal-Token`.
+- Проверьте совпадение `BOT_INTERNAL_TOKEN` в bot и backend окружении.
 
-## Проблема: `/api` не проксируется в локальном frontend dev
-Проверки:
-1. Запущен backend (`make dev-up` или локально на `8000`).
-2. В `frontend/vite.config.ts` proxy target: `VITE_API_PROXY_TARGET` или default `http://localhost:8000`.
+## Telegram bot does not receive updates in prod
+- Проверьте `BOT_MODE=webhook`.
+- Проверьте `APP_PUBLIC_BASE_URL` и `BOT_WEBHOOK_PATH_SECRET`.
+- Проверьте Apache route:
+  - `https://<domain>/tg/webhook/<secret>` -> `http://bot:8081/webhook/<secret>`
 
-## Проблема: конфликты между SPA и legacy HTML
-Симптом:
-- Разные страницы по одинаковым бизнес-сценариям.
+## Telegram bot does not receive updates locally
+- Проверьте `BOT_MODE=polling`.
+- Проверьте `TELEGRAM_BOT_TOKEN`.
+- Проверьте health endpoint бота: `curl http://localhost:8081/health` (если порт опубликован).
 
-Действие:
-- Для активной разработки использовать `frontend/` и SPA маршруты.
-- Legacy файлы считать архивным/совместимым слоем до решения по деактивации.
+## Restore OTP issues
+- `429` -> превышен rate limit (`RESTORE_RATE_LIMIT_PER_HOUR`).
+- `400 OTP expired` -> перезапросить `/api/auth/restore/request`.
+- `400 Invalid OTP` -> проверить OTP из non-prod логов.
+- `502 Failed to send OTP email` -> проверьте SMTP vars и Gmail app password (`SMTP_PASSWORD`).
 
-См. также: [03-repository-structure](./03-repository-structure.md), [08-observability-and-operations](./08-observability-and-operations.md).
+## Access email is not delivered
+- Проверьте `EMAIL_DELIVERY_MODE=smtp`.
+- Проверьте `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`, `SMTP_USE_TLS=true`.
+- Для Gmail требуется app password, обычный account password не подойдет.
+
+## Legacy endpoint
+- `GET /api/payment/redirect` now returns `410 Gone` by design.

@@ -1,14 +1,54 @@
 services:
+  postgres:
+    image: postgres:17-alpine
+    pull_policy: always
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dating_quiz}
+      POSTGRES_USER: ${POSTGRES_USER:-dating_quiz}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dating_quiz}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dating_quiz} -d ${POSTGRES_DB:-dating_quiz}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   backend:
     image: ${DOCKER_REPO:-artyom85/seranking-server}:backend-${IMAGE_TAG:-latest}
     pull_policy: always
     env_file:
       - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     expose:
       - "8000"
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+
+  bot:
+    image: ${DOCKER_REPO:-artyom85/seranking-server}:bot-${IMAGE_TAG:-latest}
+    pull_policy: always
+    env_file:
+      - .env
+    environment:
+      BOT_MODE: ${BOT_MODE:-webhook}
+      BOT_BACKEND_BASE_URL: http://backend:8000
+    depends_on:
+      backend:
+        condition: service_started
+    restart: unless-stopped
+    expose:
+      - "${BOT_PORT:-8081}"
+    ports:
+      - "127.0.0.1:${BOT_PORT:-8081}:${BOT_PORT:-8081}"
 
   frontend:
     image: ${DOCKER_REPO:-artyom85/seranking-server}:frontend-${IMAGE_TAG:-latest}
@@ -20,3 +60,6 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-8080}:80"
+
+volumes:
+  postgres_data:
