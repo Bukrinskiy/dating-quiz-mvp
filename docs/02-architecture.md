@@ -51,3 +51,11 @@ flowchart LR
 - [06-deployment-and-environments](./06-deployment-and-environments.md)
 - [09-api-and-integrations](./09-api-and-integrations.md)
 - [10-frontend-journeys-and-routing](./10-frontend-journeys-and-routing.md)
+
+## Bot guided-flow (v1)
+- `bot` сервис (aiogram) реализует команды `/advice` и `/reset` поверх internal API backend.
+- Backend хранит guided-сессии в PostgreSQL (`bot_sessions`, `bot_context_assets`, `bot_generation_runs`).
+- Модель сессии: `collecting_context -> awaiting_context_confirmation -> ready_to_generate -> awaiting_refinement -> closed`.
+- Для media ingestion bot скачивает файл из Telegram API, кодирует в base64 и передает в backend.
+- Backend выполняет OCR/STT через OpenAI (`/responses`, `/audio/transcriptions`) и сохраняет только extracted text + metadata (без сырых bytes).
+- В v1 не используется RAG; генерация и refine идут только через OpenAI и RU prompt'ы.

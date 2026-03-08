@@ -3,12 +3,13 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 import logging
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit, urlunsplit
 
 from aiogram import BaseMiddleware
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, TelegramObject
 
 from app.client.backend_api import BackendApiClient
+from app.utils.thinking import send_with_thinking
 
 logger = logging.getLogger("quiz.bot")
 
@@ -32,6 +33,13 @@ class AccessGateMiddleware(BaseMiddleware):
         self._public_commands = {cmd.lower() for cmd in public_commands}
         self._pay_url = pay_url
 
+    @staticmethod
+    def _pay_url_for_user(pay_url: str, telegram_user_id: str) -> str:
+        parsed = urlsplit(pay_url)
+        query_params = dict(parse_qsl(parsed.query, keep_blank_values=True))
+        query_params["tg_chat_id"] = telegram_user_id
+        return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, urlencode(query_params), parsed.fragment))
+
     async def __call__(
         self,
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
@@ -46,7 +54,7 @@ class AccessGateMiddleware(BaseMiddleware):
         state = data.get("state")
         if state is not None:
             state_name = await state.get_state()
-            if state_name and state_name.startswith("RestoreFlow:"):
+            if state_name and (state_name.startswith("RestoreFlow:") or state_name.startswith("SupportFlow:")):
                 return await handler(event, data)
 
         command = ""
@@ -64,7 +72,7 @@ class AccessGateMiddleware(BaseMiddleware):
             status = await self._backend.access_status(telegram_user_id)
         except Exception as exc:  # noqa: BLE001
             logger.warning("bot_access_check_failed", extra={"error": str(exc)})
-            await event.answer("Сервис временно недоступен, попробуйте еще раз через минуту.")
+            await send_with_thinking(event, "Сервис временно недоступен, попробуйте еще раз через минуту.")
             return None
 
         if status.is_paid or status.access_status == "grace_period":
@@ -79,13 +87,15 @@ class AccessGateMiddleware(BaseMiddleware):
         )
         keyboard: InlineKeyboardMarkup | None = None
         if _is_telegram_button_url(self._pay_url):
+            user_pay_url = self._pay_url_for_user(self._pay_url, telegram_user_id)
             keyboard = InlineKeyboardMarkup(
-                inline_keyboard=[[InlineKeyboardButton(text="Оплатить доступ", url=self._pay_url)]]
+                inline_keyboard=[[InlineKeyboardButton(text="Оплатить доступ", url=user_pay_url)]]
             )
         else:
             logger.warning("bot_pay_url_invalid_for_telegram url=%s", self._pay_url)
 
-        await event.answer(
+        await send_with_thinking(
+            event,
             "Доступ к этой команде открыт только после оплаты и активации. "
             "Оплатите доступ и вернитесь в бот, затем используйте /restore при необходимости.",
             reply_markup=keyboard,

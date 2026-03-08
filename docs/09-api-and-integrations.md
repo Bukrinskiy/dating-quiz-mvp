@@ -8,7 +8,7 @@
 ### `POST /api/payment/checkout-session`
 Request:
 - `mode`: `one_time | subscription`
-- `plan`: `one_time_basic | sub_monthly`
+- `plan`: `one_time_basic | sub_weekly | sub_monthly | sub_quarterly`
 - `email`: string
 - `clickid`: string
 - `locale`: optional string
@@ -21,6 +21,22 @@ Response:
 - `checkout_url`
 - `session_id`
 - `order_id`
+
+### `GET /api/payment/plans`
+- Public catalog for `/pay`.
+- Response fields:
+  - `code`
+  - `headline`
+  - `billing_period`
+  - `interval_unit`
+  - `interval_count`
+  - `price { amount_minor, currency }`
+  - `compare_at_price { amount_minor, currency } | null`
+  - `per_day_price { amount_minor, currency } | null`
+  - `badge`
+  - `is_default`
+  - `is_highlighted`
+- Catalog and merchandising are fully backend-configured through env vars.
 
 ### `POST /api/stripe/webhook`
 - Проверка подписи `stripe-signature` + `STRIPE_WEBHOOK_SECRET`.
@@ -99,6 +115,40 @@ MobiSлон event names (enum reference):
 ### `POST /api/bot/restore/confirm`
 - Request: `email`, `otp`, `telegram_user_id`
 - Response: `status`, `activation_link`, `access_granted`
+
+### `POST /api/bot/session/start`
+- Request: `telegram_user_id`, `mode(write_now|analyze_case)`
+- Response: `session_id`, `mode`, `state`, `next_step`
+- Behavior: закрывает предыдущую active-сессию пользователя.
+
+### `POST /api/bot/session/{session_id}/asset`
+- Request: `telegram_user_id`, `asset_type(text|forward|image|audio)`, `payload`, optional `telegram_message_id`
+- Response: `session_id`, `asset_id`, `state`, `needs_confirmation`, `summary_for_user`
+- Для `image/audio` обязательны `payload.media.mime_type` и `payload.media.content_base64`.
+
+### `POST /api/bot/session/{session_id}/batch/close`
+- Request: `telegram_user_id`
+- Response: `session_id`, `state`, `needs_confirmation`, `context_preview`
+
+### `POST /api/bot/session/{session_id}/confirm-context`
+- Request: `telegram_user_id`, `action(confirm:yes|confirm:edit)`, optional `edit_text`
+- Response: `session_id`, `state`, `confirmed`
+
+### `POST /api/bot/session/{session_id}/generate`
+- Request: `telegram_user_id`, optional `scenario/tone/constraints/tried_actions/target_outcome`
+- Response: `session_id`, `mode`, `state`, `next_step`, `llm_provider`, `model_name`, `ui_payload`
+
+### `POST /api/bot/session/{session_id}/refine`
+- Request: `telegram_user_id`, `command`
+- Response: generation payload + legacy fields (`primary_message`, `why`, `fallback_simple_version`, `next_step`, `alternatives`)
+
+### `POST /api/bot/session/{session_id}/reset`
+- Request: `telegram_user_id`
+- Response: `session_id`, `status=closed`
+
+### `POST /api/bot/media/transcribe`
+- Request: `asset_type(audio|image)` + `payload.media` (`mime_type`, `content_base64`, optional `file_name`)
+- Response: `text`
 
 ### Legacy
 ### `GET /api/payment/redirect`

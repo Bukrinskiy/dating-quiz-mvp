@@ -7,6 +7,7 @@ import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/components/hero.css";
 import "./styles/components/quiz.css";
+import "./styles/components/pay.css";
 import "./styles/components/quiz-ux.css";
 import "./styles/components/block6.css";
 import "./styles/components/block7.css";

@@ -14,10 +14,15 @@ export const PaySuccessPage = () => {
   const [error, setError] = useState<string | null>(null);
 
   const sessionId = new URLSearchParams(location.search).get("session_id") || "";
+  const botUrl =
+    window.__APP_CONFIG__?.VITE_TELEGRAM_BOT_URL?.trim() ||
+    new URLSearchParams(location.search).get("bot_url") ||
+    "";
 
   useEffect(() => {
     if (!sessionId) {
-      setError(copy.ui.payError);
+      setError(null);
+      setStatus(null);
       return;
     }
 
@@ -56,6 +61,7 @@ export const PaySuccessPage = () => {
   }, [copy.ui.payError, sessionId]);
 
   const isPaid = status?.payment_status === "paid";
+  const openBotHref = status?.activation_link || botUrl;
 
   return (
     <>
@@ -64,12 +70,12 @@ export const PaySuccessPage = () => {
         <QuizCard>
           <h1>{copy.ui.paySuccessTitle}</h1>
           <p className="pay-copy">{isPaid ? copy.ui.paySuccessDone : copy.ui.paySuccessPending}</p>
-          {status?.activation_link ? (
-            <a className="btn" href={status.activation_link} target="_blank" rel="noreferrer">
+          {openBotHref ? (
+            <a className="btn" href={openBotHref} target="_blank" rel="noreferrer">
               {copy.ui.payOpenBot}
             </a>
           ) : null}
-          {isPaid ? <p className="pay-copy">{copy.ui.payRestoreHint}</p> : null}
+          {isPaid || !sessionId ? <p className="pay-copy">{copy.ui.payRestoreHint}</p> : null}
           {error ? <p className="pay-error">{error}</p> : null}
         </QuizCard>
       </Container>

@@ -17,7 +17,10 @@ class BotSettings(BaseSettings):
     bot_webhook_path_secret: str = ""
     app_public_base_url: str = ""
     bot_pay_url: str = ""
-    bot_allowed_public_commands: str = "/start,/restore,/help"
+    bot_allowed_public_commands: str = "/start,/restore,/support"
+    bot_admin_ids: str = ""
+    bot_thinking_status_enabled: bool = True
+    bot_thinking_max_seconds: int = 300
 
     @property
     def normalized_mode(self) -> str:
@@ -38,7 +41,7 @@ class BotSettings(BaseSettings):
     @property
     def allowed_public_commands_set(self) -> set[str]:
         commands = {cmd.strip().lower() for cmd in self.bot_allowed_public_commands.split(",") if cmd.strip()}
-        return commands or {"/start", "/restore", "/help"}
+        return commands or {"/start", "/restore", "/support"}
 
     @property
     def pay_url(self) -> str:
@@ -49,6 +52,11 @@ class BotSettings(BaseSettings):
         if not base:
             return ""
         return f"{base}/pay"
+
+    @property
+    def admin_ids_list(self) -> list[str]:
+        values = [item.strip() for item in self.bot_admin_ids.split(",")]
+        return [item for item in values if item]
 
     def validate_required(self) -> None:
         if not self.telegram_bot_token:

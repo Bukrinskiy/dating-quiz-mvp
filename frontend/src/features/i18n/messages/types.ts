@@ -42,8 +42,28 @@ export type AppMessages = {
     payWait: string;
     payError: string;
     payUnavailable: string;
+    payPlansError: string;
+    payTitle: string;
+    paySubtitle: string;
     payEmailLabel: string;
     payEmailPlaceholder: string;
+    payEmailRequired: string;
+    payEmailInvalid: string;
+    payPlanLabel: string;
+    payPlanWeeklyTitle: string;
+    payPlanMonthlyTitle: string;
+    payPlanQuarterlyTitle: string;
+    payBillingWeekly: string;
+    payBillingMonthly: string;
+    payBillingQuarterly: string;
+    payPerDay: string;
+    payMostPopular: string;
+    paySecureCheckout: string;
+    paySupportAccess: string;
+    payCancelAnytime: string;
+    payMoneyBack: string;
+    paySelectPlanHint: string;
+    payStartSelected: string;
     payModeOneTime: string;
     payModeSubscription: string;
     payStart: string;
@@ -110,9 +130,7 @@ export type AppMessages = {
     casesTitleLines: [string, string];
     cases: CaseReview[];
     saleTitle: string;
-    salePrice: string;
     saleCta: string;
-    saleNote: string;
   };
   legal: {
     terms: LegalDocument;

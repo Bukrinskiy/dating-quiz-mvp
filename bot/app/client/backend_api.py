@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import json
 import logging
 import uuid
+from typing import Any
 
 import httpx
 
@@ -23,12 +24,12 @@ class BackendApiClient:
     def __init__(self, *, base_url: str, internal_token: str) -> None:
         self._base_url = base_url.rstrip("/")
         self._internal_token = internal_token
-        self._client = httpx.AsyncClient(timeout=10.0)
+        self._client = httpx.AsyncClient(timeout=20.0)
 
     async def close(self) -> None:
         await self._client.aclose()
 
-    async def _request(self, method: str, path: str, payload: dict[str, str]) -> dict:
+    async def _request(self, method: str, path: str, payload: dict[str, Any]) -> dict:
         headers = {
             "X-Internal-Token": self._internal_token,
             "X-Correlation-Id": str(uuid.uuid4()),
@@ -111,3 +112,59 @@ class BackendApiClient:
             "/api/bot/restore/confirm",
             {"email": email, "otp": otp, "telegram_user_id": telegram_user_id},
         )
+
+    async def session_start(self, *, telegram_user_id: str, mode: str) -> dict:
+        return await self._request("POST", "/api/bot/session/start", {"telegram_user_id": telegram_user_id, "mode": mode})
+
+    async def session_asset(
+        self,
+        *,
+        session_id: str,
+        telegram_user_id: str,
+        asset_type: str,
+        payload: dict[str, Any],
+        telegram_message_id: int | None,
+    ) -> dict:
+        return await self._request(
+            "POST",
+            f"/api/bot/session/{session_id}/asset",
+            {
+                "telegram_user_id": telegram_user_id,
+                "asset_type": asset_type,
+                "payload": payload,
+                "telegram_message_id": telegram_message_id,
+            },
+        )
+
+    async def session_batch_close(self, *, session_id: str, telegram_user_id: str) -> dict:
+        return await self._request(
+            "POST",
+            f"/api/bot/session/{session_id}/batch/close",
+            {"telegram_user_id": telegram_user_id},
+        )
+
+    async def session_confirm_context(self, *, session_id: str, telegram_user_id: str, action: str, edit_text: str | None = None) -> dict:
+        payload: dict[str, Any] = {"telegram_user_id": telegram_user_id, "action": action}
+        if edit_text is not None:
+            payload["edit_text"] = edit_text
+        return await self._request("POST", f"/api/bot/session/{session_id}/confirm-context", payload)
+
+    async def session_generate(self, *, session_id: str, telegram_user_id: str) -> dict:
+        return await self._request(
+            "POST",
+            f"/api/bot/session/{session_id}/generate",
+            {"telegram_user_id": telegram_user_id, "scenario": "standard", "constraints": [], "tried_actions": []},
+        )
+
+    async def session_refine(self, *, session_id: str, telegram_user_id: str, command: str) -> dict:
+        return await self._request(
+            "POST",
+            f"/api/bot/session/{session_id}/refine",
+            {"telegram_user_id": telegram_user_id, "command": command},
+        )
+
+    async def session_reset(self, *, session_id: str, telegram_user_id: str) -> dict:
+        return await self._request("POST", f"/api/bot/session/{session_id}/reset", {"telegram_user_id": telegram_user_id})
+
+    async def session_reset_active(self, *, telegram_user_id: str) -> dict:
+        return await self._request("POST", "/api/bot/session/reset-active", {"telegram_user_id": telegram_user_id})

@@ -1,8 +1,8 @@
 """init
 
-Revision ID: 3bf3381ee982
+Revision ID: b7871b2cd2c3
 Revises:
-Create Date: 2026-02-20 16:33:17.857766
+Create Date: 2026-02-24 13:43:50.292455
 
 """
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = "3bf3381ee982"
+revision: str = "b7871b2cd2c3"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -64,6 +64,98 @@ def upgrade() -> None:
         op.f("ix_seranking_access_tokens_order_id"),
         "access_tokens",
         ["order_id"],
+        unique=False,
+        schema="seranking",
+    )
+    op.create_table(
+        "bot_context_assets",
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("session_id", sa.String(length=36), nullable=False),
+        sa.Column("batch_no", sa.Integer(), nullable=False),
+        sa.Column("asset_type", sa.String(length=32), nullable=False),
+        sa.Column("source_kind", sa.String(length=32), nullable=False),
+        sa.Column("telegram_message_id", sa.Integer(), nullable=True),
+        sa.Column("extracted_text", sa.Text(), nullable=False),
+        sa.Column("parse_confidence", sa.Float(), nullable=False),
+        sa.Column("needs_confirmation", sa.Boolean(), nullable=False),
+        sa.Column("role_ambiguity", sa.Boolean(), nullable=False),
+        sa.Column("summary_for_user", sa.Text(), nullable=False),
+        sa.Column(
+            "extraction_meta",
+            postgresql.JSONB(astext_type=sa.Text()).with_variant(sa.JSON(), "sqlite"),
+            nullable=False,
+        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        schema="seranking",
+    )
+    op.create_index(
+        "ix_bot_context_assets_session_batch_created",
+        "bot_context_assets",
+        ["session_id", "batch_no", "created_at"],
+        unique=False,
+        schema="seranking",
+    )
+    op.create_index(
+        op.f("ix_seranking_bot_context_assets_session_id"),
+        "bot_context_assets",
+        ["session_id"],
+        unique=False,
+        schema="seranking",
+    )
+    op.create_table(
+        "bot_generation_runs",
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("session_id", sa.String(length=36), nullable=False),
+        sa.Column("kind", sa.String(length=16), nullable=False),
+        sa.Column(
+            "request_payload",
+            postgresql.JSONB(astext_type=sa.Text()).with_variant(sa.JSON(), "sqlite"),
+            nullable=False,
+        ),
+        sa.Column(
+            "response_payload",
+            postgresql.JSONB(astext_type=sa.Text()).with_variant(sa.JSON(), "sqlite"),
+            nullable=False,
+        ),
+        sa.Column("llm_provider", sa.String(length=32), nullable=False),
+        sa.Column("model_name", sa.String(length=128), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        schema="seranking",
+    )
+    op.create_index(
+        op.f("ix_seranking_bot_generation_runs_session_id"),
+        "bot_generation_runs",
+        ["session_id"],
+        unique=False,
+        schema="seranking",
+    )
+    op.create_table(
+        "bot_sessions",
+        sa.Column("id", sa.String(length=36), nullable=False),
+        sa.Column("telegram_user_id", sa.String(length=64), nullable=False),
+        sa.Column("mode", sa.String(length=32), nullable=False),
+        sa.Column("state", sa.String(length=64), nullable=False),
+        sa.Column("status", sa.String(length=32), nullable=False),
+        sa.Column("current_batch_no", sa.Integer(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("closed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.PrimaryKeyConstraint("id"),
+        schema="seranking",
+    )
+    op.create_index(
+        "ix_bot_sessions_user_status",
+        "bot_sessions",
+        ["telegram_user_id", "status"],
+        unique=False,
+        schema="seranking",
+    )
+    op.create_index(
+        op.f("ix_seranking_bot_sessions_telegram_user_id"),
+        "bot_sessions",
+        ["telegram_user_id"],
         unique=False,
         schema="seranking",
     )
@@ -177,6 +269,32 @@ def downgrade() -> None:
         op.f("ix_seranking_orders_email"), table_name="orders", schema="seranking"
     )
     op.drop_table("orders", schema="seranking")
+    op.drop_index(
+        op.f("ix_seranking_bot_sessions_telegram_user_id"),
+        table_name="bot_sessions",
+        schema="seranking",
+    )
+    op.drop_index(
+        "ix_bot_sessions_user_status", table_name="bot_sessions", schema="seranking"
+    )
+    op.drop_table("bot_sessions", schema="seranking")
+    op.drop_index(
+        op.f("ix_seranking_bot_generation_runs_session_id"),
+        table_name="bot_generation_runs",
+        schema="seranking",
+    )
+    op.drop_table("bot_generation_runs", schema="seranking")
+    op.drop_index(
+        op.f("ix_seranking_bot_context_assets_session_id"),
+        table_name="bot_context_assets",
+        schema="seranking",
+    )
+    op.drop_index(
+        "ix_bot_context_assets_session_batch_created",
+        table_name="bot_context_assets",
+        schema="seranking",
+    )
+    op.drop_table("bot_context_assets", schema="seranking")
     op.drop_index(
         op.f("ix_seranking_access_tokens_order_id"),
         table_name="access_tokens",
