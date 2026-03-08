@@ -23,7 +23,7 @@ echo "Push failed for $(1) after $(PUSH_RETRIES) attempts" >&2; \
 exit 1
 endef
 
-.PHONY: help up down restart build rebuild ps logs logs-frontend logs-backend logs-bot test-up test-down test-restart test-ps test-logs test-backend test-backend-local frontend-build backend-build bot-build backend-lint frontend-lint alembic-revision alembic-upgrade alembic-new dev-up dev-down dev-restart dev-logs dev-logs-backend dev-logs-frontend dev-logs-bot dev-ps dev-frontend docker-login push-backend-image push-frontend-image push-bot-image push-images deploy
+.PHONY: help up down restart build rebuild ps logs logs-frontend logs-backend logs-bot test-up test-down test-restart test-ps test-logs test-backend test-backend-local frontend-build backend-build bot-build backend-lint frontend-lint alembic-revision alembic-upgrade alembic-new dev-up dev-build dev-down dev-restart dev-logs dev-logs-backend dev-logs-frontend dev-logs-bot dev-ps dev-frontend docker-login push-backend-image push-frontend-image push-bot-image push-images deploy
 
 help:
 	@echo "Available targets:"
@@ -53,6 +53,7 @@ help:
 	@echo "  make alembic-new MSG='desc' - Generate new revision and apply it"
 	@echo "  make frontend-lint      - Run frontend lint/type checks"
 	@echo "  make dev-up             - Start backend+frontend+bot dev containers (with reload/HMR)"
+	@echo "  make dev-build          - Build backend+frontend+bot dev images"
 	@echo "  make dev-down           - Stop dev containers"
 	@echo "  make dev-restart        - Restart dev containers"
 	@echo "  make dev-ps             - Show dev service status"
@@ -147,8 +148,10 @@ frontend-lint:
 	cd frontend && pnpm lint
 
 dev-up:
+	$(DEV_COMPOSE) up -d
+
+dev-build:
 	$(DEV_COMPOSE) build $(FULL_BUILD_FLAGS)
-	$(DEV_COMPOSE) up -d --force-recreate
 
 dev-down:
 	$(DEV_COMPOSE) down

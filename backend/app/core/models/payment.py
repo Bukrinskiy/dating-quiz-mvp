@@ -3,12 +3,10 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import uuid
 
-from sqlalchemy import DateTime, Integer, MetaData, String, UniqueConstraint
+from sqlalchemy import DateTime, Index, Integer, MetaData, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.types import JSON
-
-
 
 from app.core.config import get_settings
 
@@ -92,4 +90,55 @@ class RestoreOTP(Base):
     max_attempts: Mapped[int] = mapped_column(Integer, default=5)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class BotSession(Base):
+    __tablename__ = "bot_sessions"
+    __table_args__ = (
+        Index("ix_bot_sessions_user_status", "telegram_user_id", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    telegram_user_id: Mapped[str] = mapped_column(String(64), index=True)
+    mode: Mapped[str] = mapped_column(String(32))
+    state: Mapped[str] = mapped_column(String(64), default="collecting_context")
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    current_batch_no: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class BotContextAsset(Base):
+    __tablename__ = "bot_context_assets"
+    __table_args__ = (
+        Index("ix_bot_context_assets_session_batch_created", "session_id", "batch_no", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    session_id: Mapped[str] = mapped_column(String(36), index=True)
+    batch_no: Mapped[int] = mapped_column(Integer, default=1)
+    asset_type: Mapped[str] = mapped_column(String(32))
+    source_kind: Mapped[str] = mapped_column(String(32), default="text")
+    telegram_message_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    extracted_text: Mapped[str] = mapped_column(Text, default="")
+    parse_confidence: Mapped[float] = mapped_column(nullable=False, default=1.0)
+    needs_confirmation: Mapped[bool] = mapped_column(nullable=False, default=False)
+    role_ambiguity: Mapped[bool] = mapped_column(nullable=False, default=False)
+    summary_for_user: Mapped[str] = mapped_column(Text, default="")
+    extraction_meta: Mapped[dict] = mapped_column(JSONB().with_variant(JSON, "sqlite"), default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class BotGenerationRun(Base):
+    __tablename__ = "bot_generation_runs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    session_id: Mapped[str] = mapped_column(String(36), index=True)
+    kind: Mapped[str] = mapped_column(String(16))
+    request_payload: Mapped[dict] = mapped_column(JSONB().with_variant(JSON, "sqlite"), default=dict)
+    response_payload: Mapped[dict] = mapped_column(JSONB().with_variant(JSON, "sqlite"), default=dict)
+    llm_provider: Mapped[str] = mapped_column(String(32), default="openai")
+    model_name: Mapped[str] = mapped_column(String(128), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

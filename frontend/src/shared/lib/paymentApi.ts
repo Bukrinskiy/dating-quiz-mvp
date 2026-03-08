@@ -1,5 +1,25 @@
 export type CheckoutMode = "one_time" | "subscription";
 
+export type MoneyAmount = {
+  amount_minor: number;
+  currency: string;
+};
+
+export type PublicPlan = {
+  code: string;
+  headline: string;
+  billing_period: string;
+  interval_unit: string;
+  interval_count: number;
+  price: MoneyAmount;
+  compare_at_price: MoneyAmount | null;
+  per_day_price: MoneyAmount | null;
+  compare_at_per_day_price: MoneyAmount | null;
+  badge: string | null;
+  is_default: boolean;
+  is_highlighted: boolean;
+};
+
 export type CheckoutSessionResponse = {
   checkout_url: string;
   session_id: string;
@@ -19,6 +39,7 @@ export const createCheckoutSession = async (payload: {
   email: string;
   clickid: string;
   locale?: string;
+  telegram_chat_id?: string;
 }): Promise<CheckoutSessionResponse> => {
   const response = await fetch("/api/payment/checkout-session", {
     method: "POST",
@@ -31,6 +52,14 @@ export const createCheckoutSession = async (payload: {
   }
 
   return response.json() as Promise<CheckoutSessionResponse>;
+};
+
+export const getPaymentPlans = async (): Promise<PublicPlan[]> => {
+  const response = await fetch("/api/payment/plans");
+  if (!response.ok) {
+    throw new Error(`Payment plans failed (${response.status})`);
+  }
+  return response.json() as Promise<PublicPlan[]>;
 };
 
 export const getPaymentSessionStatus = async (sessionId: string): Promise<PaymentSessionStatus> => {

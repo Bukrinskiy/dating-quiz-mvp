@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CaseReview } from "../../features/i18n/messages";
 import { CasesDots } from "./CasesDots";
 
@@ -16,21 +16,7 @@ const getVisibleCards = () => {
   return 1;
 };
 
-const shuffleForDesktopPriority = <T,>(items: T[]): T[] => {
-  const list = [...items];
-  for (let i = list.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const temp = list[i];
-    list[i] = list[j];
-    list[j] = temp;
-  }
-  const top = list.slice(0, 3);
-  const rest = items.filter((item) => !top.includes(item));
-  return [...top, ...rest];
-};
-
 export const CasesSlider = ({ cases }: CasesSliderProps) => {
-  const orderedCases = useMemo(() => shuffleForDesktopPriority(cases), [cases]);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [pages, setPages] = useState(1);
@@ -43,7 +29,7 @@ export const CasesSlider = ({ cases }: CasesSliderProps) => {
 
     const syncPages = () => {
       const visibleCards = getVisibleCards();
-      const nextPages = Math.max(1, Math.ceil(orderedCases.length / visibleCards));
+      const nextPages = Math.max(1, Math.ceil(cases.length / visibleCards));
       setPages(nextPages);
       setActiveIndex((prev) => Math.min(prev, nextPages - 1));
     };
@@ -54,7 +40,7 @@ export const CasesSlider = ({ cases }: CasesSliderProps) => {
     return () => {
       window.removeEventListener("resize", syncPages);
     };
-  }, [orderedCases.length]);
+  }, [cases.length]);
 
   useEffect(() => {
     const track = trackRef.current;
@@ -65,7 +51,7 @@ export const CasesSlider = ({ cases }: CasesSliderProps) => {
     const onScroll = () => {
       const visibleCards = getVisibleCards();
       const step = track.clientWidth;
-      const nextIndex = Math.max(0, Math.min(Math.ceil(orderedCases.length / visibleCards) - 1, Math.round(track.scrollLeft / step)));
+      const nextIndex = Math.max(0, Math.min(Math.ceil(cases.length / visibleCards) - 1, Math.round(track.scrollLeft / step)));
       setActiveIndex(nextIndex);
     };
 
@@ -73,7 +59,7 @@ export const CasesSlider = ({ cases }: CasesSliderProps) => {
     return () => {
       track.removeEventListener("scroll", onScroll);
     };
-  }, [orderedCases.length]);
+  }, [cases.length]);
 
   const onSelect = (index: number) => {
     const track = trackRef.current;
@@ -86,7 +72,7 @@ export const CasesSlider = ({ cases }: CasesSliderProps) => {
   return (
     <>
       <div ref={trackRef} className="block7-cases" tabIndex={0} data-block7-cases>
-        {orderedCases.map((item) => (
+        {cases.map((item) => (
           <article key={item.name} className="block7-case">
             <div className="block7-case__head">
               <div className="block7-avatar" aria-hidden="true">

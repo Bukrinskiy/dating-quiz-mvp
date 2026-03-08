@@ -29,3 +29,17 @@
 - webhook replay -> duplicate=true
 - restore rate limit -> `429`
 - bot internal auth missing/invalid token -> `401`
+
+## Bot guided-flow tests (v1)
+Автотесты backend дополнительно покрывают:
+- auth guard для новых internal endpoint'ов (`/api/bot/session/*`, `/api/bot/media/transcribe`)
+- lifecycle сессии: `start -> asset(text) -> batch/close -> generate -> refine -> reset`
+- schema/contract проверки response payload для `generate/refine`
+
+Manual smoke для бота (paid user):
+1. `/start <token>` -> доступ активирован.
+2. `/advice` -> выбрать режим.
+3. Отправить текст, фото и voice/audio.
+4. `Готово` -> при необходимости пройти confirm-context.
+5. Получить `generate` результат, выполнить минимум 1 `refine`.
+6. `/reset` или `Завершить` -> сессия закрыта.

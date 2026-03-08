@@ -18,6 +18,26 @@ class CheckoutSessionResponse(BaseModel):
     order_id: str
 
 
+class MoneyAmountResponse(BaseModel):
+    amount_minor: int
+    currency: str
+
+
+class PublicPlanResponse(BaseModel):
+    code: str
+    headline: str
+    billing_period: str
+    interval_unit: str
+    interval_count: int
+    price: MoneyAmountResponse
+    compare_at_price: MoneyAmountResponse | None = None
+    per_day_price: MoneyAmountResponse | None = None
+    compare_at_per_day_price: MoneyAmountResponse | None = None
+    badge: str | None = None
+    is_default: bool
+    is_highlighted: bool
+
+
 class CustomerPortalRequest(BaseModel):
     email: str
 

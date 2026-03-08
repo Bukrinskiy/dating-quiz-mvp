@@ -87,13 +87,7 @@ export const Block7Sections = ({ copy, onPay }: Block7SectionsProps) => {
         <CasesSlider cases={copy.cases} />
       </section>
 
-      <OfferCTA
-        title={copy.saleTitle}
-        price={copy.salePrice}
-        button={copy.saleCta}
-        note={copy.saleNote}
-        onPay={onPay}
-      />
+      <OfferCTA title={copy.saleTitle} button={copy.saleCta} onPay={onPay} />
     </>
   );
 };

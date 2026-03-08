@@ -36,15 +36,17 @@ make up
 
 ## Payment MVP flow
 
-1. Frontend вызывает `POST /api/payment/checkout-session`.
-2. Backend создает Stripe Checkout Session (`one_time` или `subscription`).
-3. Stripe шлет webhook в `POST /api/stripe/webhook`.
-4. Backend подтверждает оплату, создает activation token и обновляет `orders` в PostgreSQL.
-5. Email отключен в MVP: вместо отправки backend пишет `email_delivery_skipped` в лог.
-6. Telegram restore: `/restore` -> `POST /api/auth/restore/request|confirm`.
+1. Frontend открывает `/pay`, загружает каталог тарифов через `GET /api/payment/plans`.
+2. Пользователь выбирает weekly/monthly/quarterly plan, вводит email и frontend вызывает `POST /api/payment/checkout-session`.
+3. Backend создает Stripe Checkout Session (`one_time` или `subscription`) с backend-driven pricing.
+4. Stripe шлет webhook в `POST /api/stripe/webhook`.
+5. Backend подтверждает оплату, создает activation token и обновляет `orders` в PostgreSQL.
+6. Email отключен в MVP: вместо отправки backend пишет `email_delivery_skipped` в лог.
+7. Telegram restore: `/restore` -> `POST /api/auth/restore/request|confirm`.
 
 ## API
 
+- `GET /api/payment/plans`
 - `POST /api/payment/checkout-session`
 - `POST /api/stripe/webhook`
 - `GET /api/payment/session-status?session_id=...`
@@ -57,6 +59,13 @@ make up
 - `POST /api/bot/restore/request` (internal)
 - `POST /api/bot/restore/confirm` (internal)
 - `GET /api/payment/redirect` -> `410` (legacy)
+
+## Payment pricing config
+
+- Pricing and merchandising for `/pay` are controlled by backend env vars, not frontend hardcoded values.
+- Subscription catalog includes `sub_weekly`, `sub_monthly`, `sub_quarterly`.
+- For each subscription plan, `.env` can configure amount, currency, billing interval, interval count, product name, headline, badge, compare-at price, per-day price, visual highlighting, and sort order.
+- Exactly one subscription plan must have `*_IS_DEFAULT=true`.
 
 ## Тесты
 
@@ -73,3 +82,30 @@ make dev-up
 - frontend: `http://localhost:5173/`
 - backend: `http://localhost:8000/health`
 - bot: polling mode (без внешнего порта в dev)
+
+## Telegram bot guided-flow (v1)
+Команды:
+- `/start` — активация/проверка доступа
+- `/restore` — восстановление по email + OTP
+- `/advice` — запуск консультации (`write_now`/`analyze_case`)
+- `/reset` — закрытие активной guided-сессии
+- `/premium` — проверка paid-доступа (MVP заглушка)
+
+Новые internal API:
+- `POST /api/bot/session/start`
+- `POST /api/bot/session/{session_id}/asset`
+- `POST /api/bot/session/{session_id}/batch/close`
+- `POST /api/bot/session/{session_id}/confirm-context`
+- `POST /api/bot/session/{session_id}/generate`
+- `POST /api/bot/session/{session_id}/refine`
+- `POST /api/bot/session/{session_id}/reset`
+- `POST /api/bot/media/transcribe`
+
+OpenAI/media env (backend):
+- `OPENAI_API_BASE`
+- `OPENAI_API_KEY`
+- `BOT_OPENAI_MODEL_GENERATE`
+- `BOT_OPENAI_MODEL_STT`
+- `BOT_MEDIA_MAX_BYTES`
+- `BOT_OPENAI_TIMEOUT_SECONDS`
+- `BOT_OPENAI_RETRIES`

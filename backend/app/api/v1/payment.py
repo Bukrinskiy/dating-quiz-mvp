@@ -16,6 +16,7 @@ from app.schemas.payment import (
     CustomerPortalRequest,
     MobiSlonEventRequest,
     MobiSlonEventResponse,
+    PublicPlanResponse,
     RestoreConfirmRequest,
     RestoreRequest,
     SessionStatusResponse,
@@ -40,6 +41,12 @@ def create_checkout_session(payload: CheckoutSessionRequest, db: Session = Depen
         telegram_chat_id=payload.telegram_chat_id,
     )
     return CheckoutSessionResponse(checkout_url=checkout_url, session_id=session_id, order_id=order_id)
+
+
+@router.get("/api/payment/plans", response_model=list[PublicPlanResponse])
+def list_payment_plans(db: Session = Depends(get_db)) -> list[PublicPlanResponse]:
+    service = PaymentService(get_settings(), db)
+    return [PublicPlanResponse.model_validate(plan) for plan in service.list_public_subscription_plans()]
 
 
 @router.post("/api/stripe/webhook")

@@ -37,11 +37,14 @@ services:
       uv run --no-sync uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/app --log-level debug --access-log"
     volumes:
       - ./backend:/app
+      - backend_venv:/app/.venv
     ports:
       - "8000:8000"
 
   bot:
-    image: python:3.13-slim
+    build:
+      context: .
+      dockerfile: bot/Dockerfile
     working_dir: /app
     env_file:
       - .env
@@ -51,12 +54,11 @@ services:
       APP_PUBLIC_BASE_URL: http://localhost:5173
     depends_on:
       - backend
-    command: >
-      sh -lc "pip install --no-cache-dir uv &&
-      uv sync --dev &&
-      uv run --no-sync python -m app.main"
+    command: ["uv", "run", "--no-sync", "python", "-m", "app.main"]
+    stop_signal: SIGINT
+    stop_grace_period: 20s
     volumes:
-      - ./bot:/app
+      - ./bot/app:/app/app
 
   frontend:
     image: node:22-alpine
@@ -69,6 +71,7 @@ services:
       VITE_MOBI_SLON_CAMPAIGN_KEY: ${VITE_MOBI_SLON_CAMPAIGN_KEY:-}
       VITE_FB_PIXEL_ID: ${VITE_FB_PIXEL_ID:-}
       VITE_TRACKING_DEBUG: ${VITE_TRACKING_DEBUG:-0}
+      VITE_TELEGRAM_BOT_URL: ${VITE_TELEGRAM_BOT_URL:-}
     command: >
       sh -lc "corepack enable &&
       pnpm install --no-frozen-lockfile &&
@@ -82,3 +85,4 @@ services:
 volumes:
   frontend_node_modules:
   dev_postgres_data:
+  backend_venv:

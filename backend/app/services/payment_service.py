@@ -11,7 +11,7 @@ from fastapi import HTTPException
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
-from app.core.config import Settings, get_plan_map
+from app.core.config import Settings, get_plan_map, get_subscription_plan_catalog
 from app.core.mobi_slon_events import MOBI_SLON_EVENT_SET
 from app.core.models.payment import AccessBinding, AccessToken, Order, PaymentEvent, RestoreOTP
 from app.core.notifications import TelegramSender, build_email_sender
@@ -28,6 +28,7 @@ class PaymentService:
         self.settings = settings
         self.db = db
         self.plan_map = get_plan_map(settings)
+        self.subscription_plans = get_subscription_plan_catalog(settings)
         self.email_sender = build_email_sender(settings)
         self.telegram_sender = TelegramSender(settings)
         stripe.api_key = settings.stripe_secret_key
@@ -96,11 +97,58 @@ class PaymentService:
             return str(max(0, amount_minor))
         return f"{max(0, amount_minor) / 100:.2f}"
 
-    def _subscription_payout(self) -> str:
-        return self._format_amount_minor(
-            self.settings.pay_sub_monthly_amount_minor,
-            self.settings.pay_sub_monthly_currency,
-        )
+    @staticmethod
+    def _get_interval_count(plan: Any) -> int:
+        return max(1, int(plan.interval_count or 1))
+
+    @staticmethod
+    def _get_billing_period(plan: Any) -> str:
+        if plan.interval == "month" and max(1, int(plan.interval_count or 1)) == 3:
+            return "quarter"
+        return plan.interval or "lifetime"
+
+    def list_public_subscription_plans(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "code": plan.code,
+                "headline": plan.headline or plan.product_name,
+                "billing_period": self._get_billing_period(plan),
+                "interval_unit": plan.interval or "lifetime",
+                "interval_count": self._get_interval_count(plan),
+                "price": {
+                    "amount_minor": plan.amount_minor,
+                    "currency": plan.currency,
+                },
+                "compare_at_price": (
+                    {
+                        "amount_minor": plan.compare_at_amount_minor,
+                        "currency": plan.currency,
+                    }
+                    if plan.compare_at_amount_minor is not None
+                    else None
+                ),
+                "per_day_price": (
+                    {
+                        "amount_minor": plan.per_day_amount_minor,
+                        "currency": plan.currency,
+                    }
+                    if plan.per_day_amount_minor is not None
+                    else None
+                ),
+                "compare_at_per_day_price": (
+                    {
+                        "amount_minor": plan.compare_at_per_day_amount_minor,
+                        "currency": plan.currency,
+                    }
+                    if plan.compare_at_per_day_amount_minor is not None
+                    else None
+                ),
+                "badge": plan.badge,
+                "is_default": plan.is_default,
+                "is_highlighted": plan.is_highlighted,
+            }
+            for plan in self.subscription_plans
+        ]
 
     def _build_success_url(self) -> str:
         success_url = self.settings.resolved_pay_success_url
@@ -125,10 +173,6 @@ class PaymentService:
         plan_cfg = self.plan_map.get(plan)
         if plan_cfg is None:
             raise HTTPException(status_code=400, detail="Unknown plan")
-        product_name = {
-            "one_time_basic": self.settings.pay_one_time_basic_product_name,
-            "sub_monthly": self.settings.pay_sub_monthly_product_name,
-        }.get(plan, "Seranking Premium")
 
         if mode == "subscription" and plan_cfg.interval is None:
             raise HTTPException(status_code=400, detail="Plan does not support subscription")
@@ -153,14 +197,17 @@ class PaymentService:
             "price_data": {
                 "currency": plan_cfg.currency,
                 "unit_amount": plan_cfg.amount_minor,
-                "product_data": {"name": product_name},
+                "product_data": {"name": plan_cfg.product_name},
             },
             "quantity": 1,
         }
         stripe_mode: Literal["payment", "subscription"] = "payment"
         if mode == "subscription":
             stripe_mode = "subscription"
-            line_item["price_data"]["recurring"] = {"interval": plan_cfg.interval}
+            line_item["price_data"]["recurring"] = {
+                "interval": plan_cfg.interval,
+                "interval_count": max(1, plan_cfg.interval_count),
+            }
 
         metadata = {"order_id": order.id, "clickid": order_clickid, "plan": plan, "mode": mode, "email": email}
 
@@ -253,10 +300,10 @@ class PaymentService:
         self.db.add(payment_event)
 
         obj = event["data"]["object"]
-        postback_clickid: str | None = None
+        postback_payload: tuple[str, str] | None = None
 
         if event_type == "checkout.session.completed":
-            postback_clickid = self._on_checkout_session_completed(obj)
+            postback_payload = self._on_checkout_session_completed(obj)
         elif event_type == "checkout.session.expired":
             self._update_order_status_by_session(obj.get("id"), status="expired")
         elif event_type == "payment_intent.payment_failed":
@@ -305,11 +352,11 @@ class PaymentService:
 
         self.db.commit()
         logger.info("stripe_webhook_processed event_id=%s event_type=%s", event_id, event_type)
-        if event_type == "checkout.session.completed" and postback_clickid:
+        if event_type == "checkout.session.completed" and postback_payload:
             self._send_mobi_slon_postback(
                 status="pay_success",
-                clickid=postback_clickid,
-                extra_params={"payout": self._subscription_payout()},
+                clickid=postback_payload[0],
+                extra_params={"payout": postback_payload[1]},
                 source="stripe_webhook",
             )
         return {"ok": True, "duplicate": False}
@@ -610,7 +657,7 @@ class PaymentService:
         if period_end is not None:
             order.stripe_current_period_end = period_end
 
-    def _on_checkout_session_completed(self, session_obj: dict) -> str | None:
+    def _on_checkout_session_completed(self, session_obj: dict) -> tuple[str, str] | None:
         order_id = (session_obj.get("metadata") or {}).get("order_id")
         order: Order | None = None
         if order_id:
@@ -670,7 +717,7 @@ class PaymentService:
             order.fulfillment_status,
             order.access_status,
         )
-        return order.clickid
+        return (order.clickid, self._format_amount_minor(order.amount_minor, order.currency))
 
     def _send_mobi_slon_postback(
         self,

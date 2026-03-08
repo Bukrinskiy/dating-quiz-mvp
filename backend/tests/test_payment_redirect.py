@@ -85,6 +85,84 @@ def test_checkout_session_subscription(monkeypatch) -> None:
         assert response.json()["session_id"] == "cs_test_2"
 
 
+def test_checkout_session_weekly_subscription(monkeypatch) -> None:
+    class DummySession:
+        id = "cs_test_weekly"
+        url = "https://checkout.test/weekly"
+
+    monkeypatch.setattr("stripe.checkout.Session.create", lambda **_: DummySession())
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/payment/checkout-session",
+            json={
+                "mode": "subscription",
+                "plan": "sub_weekly",
+                "email": "weekly@example.com",
+                "clickid": "sub-weekly-001",
+                "locale": "en",
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()["session_id"] == "cs_test_weekly"
+
+
+def test_checkout_session_quarterly_subscription(monkeypatch) -> None:
+    class DummySession:
+        id = "cs_test_quarterly"
+        url = "https://checkout.test/quarterly"
+
+    monkeypatch.setattr("stripe.checkout.Session.create", lambda **_: DummySession())
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/payment/checkout-session",
+            json={
+                "mode": "subscription",
+                "plan": "sub_quarterly",
+                "email": "quarterly@example.com",
+                "clickid": "sub-quarterly-001",
+                "locale": "en",
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()["session_id"] == "cs_test_quarterly"
+
+
+def test_payment_plans_endpoint_returns_public_subscription_catalog() -> None:
+    with TestClient(app) as client:
+        response = client.get("/api/payment/plans")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert [plan["code"] for plan in payload] == ["sub_weekly", "sub_monthly", "sub_quarterly"]
+    assert payload[1]["is_default"] is True
+    assert payload[1]["is_highlighted"] is True
+    assert payload[1]["badge"] == "Most popular"
+
+
+def test_payment_plans_endpoint_rejects_invalid_default_configuration() -> None:
+    settings = get_settings()
+    original_weekly = settings.pay_sub_weekly_is_default
+    original_monthly = settings.pay_sub_monthly_is_default
+    original_quarterly = settings.pay_sub_quarterly_is_default
+    settings.pay_sub_weekly_is_default = False
+    settings.pay_sub_monthly_is_default = False
+    settings.pay_sub_quarterly_is_default = False
+
+    try:
+        with TestClient(app, raise_server_exceptions=False) as client:
+            response = client.get("/api/payment/plans")
+    finally:
+        settings.pay_sub_weekly_is_default = original_weekly
+        settings.pay_sub_monthly_is_default = original_monthly
+        settings.pay_sub_quarterly_is_default = original_quarterly
+
+    assert response.status_code == 500
+
+
 def test_webhook_idempotency_and_paid_status(monkeypatch) -> None:
     class DummySession:
         id = "cs_test_paid"
@@ -628,3 +706,98 @@ def test_meta_event_forwarding(monkeypatch) -> None:
         assert payload["data"][0]["user_data"]["fbc"] == "fb.1.123"
         assert payload["data"][0]["user_data"]["client_ip_address"] == "1.2.3.4"
         assert payload["data"][0]["user_data"]["client_user_agent"] == "Mozilla/Test"
+
+
+def test_bot_session_endpoints_require_internal_token() -> None:
+    with TestClient(app) as client:
+        response = client.post("/api/bot/session/start", json={"telegram_user_id": "1", "mode": "write_now"})
+        assert response.status_code == 401
+
+        response = client.post(
+            "/api/bot/media/transcribe",
+            json={
+                "asset_type": "audio",
+                "payload": {"media": {"mime_type": "audio/ogg", "content_base64": "AA=="}},
+            },
+        )
+        assert response.status_code == 401
+
+
+def test_bot_session_text_flow_generate_refine_reset(monkeypatch) -> None:
+    def fake_write_now(self, user_prompt: str) -> dict[str, object]:
+        assert "WriteNowResponseSchema" in user_prompt
+        return {
+            "primary_message": "Привет, давай продолжим разговор вечером?",
+            "why": "Коротко и без давления.",
+            "risks": ["Может выглядеть слишком общо"],
+            "avoid_list": ["Не дави", "Не пиши стену текста", "Не манипулируй"],
+            "next_step": "Подожди ответ 1-2 дня",
+            "fallback_simple_version": "Привет! Продолжим вечером?",
+            "alternatives": ["Привет, как твой день?"],
+        }
+
+    def fake_refine(self, user_prompt: str) -> dict[str, object]:
+        assert "Уточнения пользователя" in user_prompt
+        return {
+            "primary_message": "Привет! Продолжим вечером, если удобно.",
+            "why": "Сделано мягче и короче.",
+            "fallback_simple_version": "Привет, продолжим вечером?",
+            "alternatives": ["Если удобно, давай вечером созвонимся."],
+        }
+
+    monkeypatch.setattr("app.services.openai_bot.OpenAIBotClient.generate_write_now", fake_write_now)
+    monkeypatch.setattr("app.services.openai_bot.OpenAIBotClient.refine_message", fake_refine)
+
+    with TestClient(app) as client:
+        start_resp = client.post(
+            "/api/bot/session/start",
+            json={"telegram_user_id": "555", "mode": "write_now"},
+            headers={"X-Internal-Token": "test-internal-token"},
+        )
+        assert start_resp.status_code == 200
+        session_id = start_resp.json()["session_id"]
+
+        asset_resp = client.post(
+            f"/api/bot/session/{session_id}/asset",
+            json={
+                "telegram_user_id": "555",
+                "asset_type": "text",
+                "payload": {"text": "Она давно не отвечает, хочу мягко пингануть."},
+                "telegram_message_id": 101,
+            },
+            headers={"X-Internal-Token": "test-internal-token"},
+        )
+        assert asset_resp.status_code == 200
+
+        close_resp = client.post(
+            f"/api/bot/session/{session_id}/batch/close",
+            json={"telegram_user_id": "555"},
+            headers={"X-Internal-Token": "test-internal-token"},
+        )
+        assert close_resp.status_code == 200
+        assert close_resp.json()["state"] == "ready_to_generate"
+
+        gen_resp = client.post(
+            f"/api/bot/session/{session_id}/generate",
+            json={"telegram_user_id": "555", "scenario": "standard", "constraints": [], "tried_actions": []},
+            headers={"X-Internal-Token": "test-internal-token"},
+        )
+        assert gen_resp.status_code == 200
+        assert gen_resp.json()["state"] == "awaiting_refinement"
+        assert gen_resp.json()["ui_payload"]["primary_message"]
+
+        refine_resp = client.post(
+            f"/api/bot/session/{session_id}/refine",
+            json={"telegram_user_id": "555", "command": "Сделай мягче и короче"},
+            headers={"X-Internal-Token": "test-internal-token"},
+        )
+        assert refine_resp.status_code == 200
+        assert refine_resp.json()["primary_message"] == "Привет! Продолжим вечером, если удобно."
+
+        reset_resp = client.post(
+            f"/api/bot/session/{session_id}/reset",
+            json={"telegram_user_id": "555"},
+            headers={"X-Internal-Token": "test-internal-token"},
+        )
+        assert reset_resp.status_code == 200
+        assert reset_resp.json()["status"] == "closed"

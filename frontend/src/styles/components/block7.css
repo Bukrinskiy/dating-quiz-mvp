@@ -8,7 +8,7 @@
   max-width: 100%;
   margin: 0 auto;
   display: grid;
-  gap: clamp(18px, 4vw, 28px);
+  gap: clamp(14px, 3.4vw, 22px);
 }
 
 .block7-section {
@@ -19,6 +19,15 @@
   border-radius: 16px;
   border: 1px solid var(--border);
   background: rgba(125, 145, 198, 0.05);
+}
+
+.block7-section--offer {
+  padding: clamp(18px, 4vw, 28px);
+  border-color: rgba(255, 120, 134, 0.28);
+  background:
+    radial-gradient(circle at top right, rgba(255, 111, 145, 0.14), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(125, 145, 198, 0.05));
+  box-shadow: 0 22px 44px rgba(10, 14, 26, 0.26);
 }
 
 .block7__title {
@@ -137,6 +146,10 @@
   gap: 10px;
 }
 
+.block7-case h3 {
+  font-size: 1rem;
+}
+
 .block7-avatar {
   width: 64px;
   height: 64px;
@@ -190,9 +203,12 @@
   min-width: 0;
   padding: clamp(18px, 4vw, 26px);
   border-radius: 18px;
-  border: 1px solid rgba(160, 177, 255, 0.3);
-  background: linear-gradient(180deg, rgba(127, 92, 255, 0.12), rgba(77, 136, 255, 0.08));
+  border: 1px solid rgba(255, 111, 145, 0.38);
+  background:
+    radial-gradient(circle at top center, rgba(255, 111, 145, 0.18), transparent 42%),
+    linear-gradient(180deg, rgba(127, 92, 255, 0.14), rgba(77, 136, 255, 0.08));
   text-align: center;
+  box-shadow: 0 24px 46px rgba(13, 17, 31, 0.3);
 }
 
 .block7-sale__title {
@@ -200,22 +216,16 @@
   line-height: 1.22;
 }
 
-.block7-sale__price {
-  margin: 12px 0 0;
-  font-size: clamp(1.08rem, 3.2vw, 1.3rem);
-  font-weight: 800;
-}
-
 .block7-sale__btn {
-  margin-top: 16px;
+  margin-top: 18px;
+  border: 0;
+  background: linear-gradient(135deg, #ff5d76, #ff7f63);
+  box-shadow: 0 16px 32px rgba(255, 99, 132, 0.24);
 }
 
-.block7-sale__note {
-  margin: 12px auto 0;
-  max-width: 52ch;
-  color: var(--muted);
-  font-size: 0.9rem;
-  line-height: 1.5;
+.block7-sale__btn:hover {
+  border: 0;
+  background: linear-gradient(135deg, #ff6a82, #ff8a6e);
 }
 
 @media (min-width: 720px) {
