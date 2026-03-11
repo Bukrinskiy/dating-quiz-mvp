@@ -12,11 +12,13 @@ import { QuizBlockPage } from "../pages/QuizBlockPage";
 import { useI18n } from "../features/i18n/I18nProvider";
 import { propagateClickIdToLinks } from "../shared/lib/clickid";
 import { logTracking } from "../shared/lib/trackingLogger";
+import { hitYandexMetrikaPage } from "../shared/lib/yandexMetrika";
 
 export const App = () => {
   const { copy } = useI18n();
   const location = useLocation();
   const didSendInitialPageViewRef = useRef(false);
+  const didSendInitialYandexPageViewRef = useRef(false);
 
   useEffect(() => {
     const rafId = window.requestAnimationFrame(() => {
@@ -39,6 +41,15 @@ export const App = () => {
       return;
     }
     logTracking("facebook", "fbq is not available on route change", { pathname: location.pathname }, "warn");
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    if (!didSendInitialYandexPageViewRef.current) {
+      didSendInitialYandexPageViewRef.current = true;
+      return;
+    }
+
+    hitYandexMetrikaPage(`${location.pathname}${location.search}`);
   }, [location.pathname, location.search]);
 
   useEffect(() => {

@@ -5,6 +5,7 @@ import { useI18n } from "../features/i18n/I18nProvider";
 import { addClickIdToPath } from "../shared/lib/clickid";
 import { MobiSlonEvent } from "../shared/lib/mobiSlonEvents";
 import { sendPostbackOnce, track } from "../shared/lib/tracking";
+import { reachYandexMetrikaGoal } from "../shared/lib/yandexMetrika";
 import { LanguageSwitcher } from "../shared/ui/LanguageSwitcher";
 import { SiteFooter } from "../shared/ui/SiteFooter";
 
@@ -21,6 +22,7 @@ export const LandingPage = () => {
 
   const onStart = () => {
     track("hero_cta_click");
+    reachYandexMetrikaGoal("start_quiz");
     sendPostbackOnce(MobiSlonEvent.START_QUIZ, location.search);
     navigate(addClickIdToPath("/block-1", location.search));
   };

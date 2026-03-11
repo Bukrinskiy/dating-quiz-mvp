@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { QuestionCard } from "../components/quiz/QuestionCard";
+import { QuizAnalyzing } from "../components/quiz/QuizAnalyzing";
 import { QuizContinue } from "../components/quiz/QuizContinue";
 import { QuizMicrocopy } from "../components/quiz/QuizMicrocopy";
 import { QuizProgress } from "../components/quiz/QuizProgress";
 import { useI18n } from "../features/i18n/I18nProvider";
 import { addClickIdToPath } from "../shared/lib/clickid";
 import { sendPostbackOnce } from "../shared/lib/tracking";
+import { reachYandexMetrikaGoal } from "../shared/lib/yandexMetrika";
 import { Container } from "../shared/ui/Container";
 import { LanguageSwitcher } from "../shared/ui/LanguageSwitcher";
 import { QuizCard } from "../shared/ui/QuizCard";
@@ -32,6 +34,7 @@ export const QuizBlockPage = ({ blockId }: QuizBlockPageProps) => {
   const [questionIndex, setQuestionIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [completed, setCompleted] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
   const [questionStateClass, setQuestionStateClass] = useState("");
   const [introHidden, setIntroHidden] = useState(false);
@@ -40,10 +43,16 @@ export const QuizBlockPage = ({ blockId }: QuizBlockPageProps) => {
     setQuestionIndex(0);
     setSelectedOption(null);
     setCompleted(false);
+    setAnalyzing(false);
     setTransitioning(false);
     setQuestionStateClass("");
     setIntroHidden(false);
   }, [numericBlockId]);
+
+  const onAnalyzingComplete = useCallback(() => {
+    setAnalyzing(false);
+    setCompleted(true);
+  }, []);
 
   if (!blockMeta || !blockContent) {
     return <Navigate to="/" replace />;
@@ -53,7 +62,7 @@ export const QuizBlockPage = ({ blockId }: QuizBlockPageProps) => {
   const question = blockContent.questions[safeQuestionIndex];
 
   const onSelect = (index: number) => {
-    if (transitioning || completed) {
+    if (transitioning || analyzing || completed) {
       return;
     }
 
@@ -75,13 +84,14 @@ export const QuizBlockPage = ({ blockId }: QuizBlockPageProps) => {
         return;
       }
 
-      setCompleted(true);
+      setAnalyzing(true);
       setQuestionStateClass("");
       setTransitioning(false);
     }, TRANSITION_MS);
   };
 
   const onContinue = () => {
+    reachYandexMetrikaGoal(`block_${numericBlockId}_complete`);
     sendPostbackOnce(blockMeta.postbackStatus, location.search);
     navigate(addClickIdToPath(blockMeta.nextPath, location.search));
   };
@@ -104,13 +114,21 @@ export const QuizBlockPage = ({ blockId }: QuizBlockPageProps) => {
             options={question.options}
             selectedOption={selectedOption}
             transitioning={transitioning}
-            completed={completed}
+            completed={analyzing || completed}
             onSelect={onSelect}
             stateClassName={questionStateClass}
           />
 
+          {analyzing ? (
+            <QuizAnalyzing
+              text={copy.ui.analyzing}
+              visible={analyzing}
+              onComplete={onAnalyzingComplete}
+            />
+          ) : null}
+
           {completed ? (
-            <div className="quiz-complete-group">
+            <div className="quiz-complete-group quiz-ux-fade-in">
               <QuizMicrocopy text={blockContent.microcopy} visible={completed} />
               <QuizContinue
                 to={addClickIdToPath(blockMeta.nextPath, location.search)}

@@ -124,6 +124,7 @@ class TelegramSender:
         self._bot_token = settings.telegram_bot_token
         self._bot_username = self._normalize_bot_username(settings.telegram_bot_username)
         self._bot_username_resolve_attempted = False
+        self._admin_chat_ids = settings.admin_ids_list
 
     @staticmethod
     def _normalize_bot_username(raw_value: str | None) -> str:
@@ -169,20 +170,16 @@ class TelegramSender:
             return ""
         return f"https://t.me/{bot_username}?start={token}"
 
-    def send_activation_message(self, *, chat_id: str, token: str) -> bool:
+    def _send_message(self, *, chat_id: str, text: str, parse_mode: str | None = None) -> bool:
         if not self._bot_token:
             logger.warning("telegram_send_skipped_missing_bot_token", extra={"chat_id": chat_id})
             return False
-
-        deep_link = self.build_deep_link(token)
-        if not deep_link:
-            logger.warning("telegram_send_skipped_missing_bot_username", extra={"chat_id": chat_id})
-            return False
-
-        text = f"Оплата подтверждена. Активируй доступ: {deep_link}"
         url = f"https://api.telegram.org/bot{self._bot_token}/sendMessage"
+        payload: dict[str, str | bool] = {"chat_id": chat_id, "text": text, "disable_web_page_preview": True}
+        if parse_mode:
+            payload["parse_mode"] = parse_mode
         try:
-            response = httpx.post(url, json={"chat_id": chat_id, "text": text}, timeout=10)
+            response = httpx.post(url, json=payload, timeout=10)
             if response.status_code >= 400:
                 logger.warning(
                     "telegram_send_failed",
@@ -193,3 +190,25 @@ class TelegramSender:
         except Exception as exc:
             logger.warning("telegram_send_failed", extra={"chat_id": chat_id, "error": str(exc)})
             return False
+
+    def send_activation_message(self, *, chat_id: str, token: str) -> bool:
+        deep_link = self.build_deep_link(token)
+        if not deep_link:
+            logger.warning("telegram_send_skipped_missing_bot_username", extra={"chat_id": chat_id})
+            return False
+
+        return self._send_message(chat_id=chat_id, text=f"Оплата подтверждена. Активируй доступ: {deep_link}")
+
+    def send_admin_alert(self, *, text: str) -> bool:
+        if not self._admin_chat_ids:
+            logger.warning("telegram_admin_alert_skipped_missing_admin_ids")
+            return False
+        if not self._bot_token:
+            logger.warning("telegram_admin_alert_skipped_missing_bot_token")
+            return False
+
+        delivered = False
+        for chat_id in self._admin_chat_ids:
+            sent = self._send_message(chat_id=chat_id, text=text[:3500], parse_mode="HTML")
+            delivered = delivered or sent
+        return delivered

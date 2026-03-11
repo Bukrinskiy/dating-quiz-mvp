@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useI18n } from "../features/i18n/I18nProvider";
 import { getPaymentSessionStatus, type PaymentSessionStatus } from "../shared/lib/paymentApi";
+import { reachYandexMetrikaGoal } from "../shared/lib/yandexMetrika";
 import { Container } from "../shared/ui/Container";
 import { LanguageSwitcher } from "../shared/ui/LanguageSwitcher";
 import { QuizCard } from "../shared/ui/QuizCard";
@@ -12,6 +13,7 @@ export const PaySuccessPage = () => {
   const location = useLocation();
   const [status, setStatus] = useState<PaymentSessionStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const didTrackPaidRef = useRef(false);
 
   const sessionId = new URLSearchParams(location.search).get("session_id") || "";
   const botUrl =
@@ -63,6 +65,14 @@ export const PaySuccessPage = () => {
   const isPaid = status?.payment_status === "paid";
   const openBotHref = status?.activation_link || botUrl;
 
+  useEffect(() => {
+    if (!isPaid || didTrackPaidRef.current) {
+      return;
+    }
+    didTrackPaidRef.current = true;
+    reachYandexMetrikaGoal("pay_success");
+  }, [isPaid]);
+
   return (
     <>
       <Container>
@@ -71,7 +81,13 @@ export const PaySuccessPage = () => {
           <h1>{copy.ui.paySuccessTitle}</h1>
           <p className="pay-copy">{isPaid ? copy.ui.paySuccessDone : copy.ui.paySuccessPending}</p>
           {openBotHref ? (
-            <a className="btn" href={openBotHref} target="_blank" rel="noreferrer">
+            <a
+              className="btn"
+              href={openBotHref}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => reachYandexMetrikaGoal("open_bot")}
+            >
               {copy.ui.payOpenBot}
             </a>
           ) : null}

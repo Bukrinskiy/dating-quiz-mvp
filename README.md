@@ -83,6 +83,13 @@ make dev-up
 - backend: `http://localhost:8000/health`
 - bot: polling mode (без внешнего порта в dev)
 
+## Frontend analytics env
+
+- `VITE_YANDEX_METRIKA_ID` — ID счётчика Яндекс.Метрики для SPA.
+- Если `VITE_YANDEX_METRIKA_ID` пустой, Метрика не инициализируется.
+- Для runtime в контейнере значение берется из `runtime-config.js`, генерируемого на старте Nginx-контейнера.
+- В `docker-compose.yml` используется `.env`; файл `.env.prod` не подхватывается автоматически без `--env-file`.
+
 ## Telegram bot guided-flow (v1)
 Команды:
 - `/start` — активация/проверка доступа

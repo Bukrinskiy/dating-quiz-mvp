@@ -40,9 +40,22 @@
 ## Runtime notes
 - Backend применяет Alembic миграции на старте (`run_migrations`).
 - Email отправка выполняется по SMTP (Gmail STARTTLS).
+- Frontend runtime-конфиг (`/runtime-config.js`) генерируется из env на старте контейнера.
+- Для Яндекс.Метрики используется `VITE_YANDEX_METRIKA_ID` (пустое значение отключает счётчик).
 - Prod webhook для Telegram: Apache reverse proxy
   - `https://<domain>/tg/webhook/<secret>` -> `http://bot:8081/webhook/<secret>`
 - Bot health endpoint: `GET /health` на `BOT_PORT` (polling и webhook режимы).
+
+## Prod env source of truth
+- В текущем deploy-процессе `docker compose` читает `.env` на сервере.
+- `.env.prod` в репозитории является эталоном значений и должен быть синхронизирован в серверный `.env` перед `make deploy` (или эквивалентным шагом на сервере).
+- Если compose запускается без `--env-file`, изменения только в `.env.prod` не применяются.
+
+## Yandex Metrika prod smoke-check
+- После деплоя открыть сайт и проверить в DevTools:
+  - `window.__APP_CONFIG__.VITE_YANDEX_METRIKA_ID` содержит ожидаемый ID.
+  - `window.ym` определен.
+- Пройти ключевые SPA-маршруты (`/`, `/block-1..7`, `/pay`, `/terms.html`, `/privacy-policy.html`, `/refund-policy.html`) и убедиться, что отправляются route-change `hit`.
 
 ## Apache webhook example
 Пример для виртуального хоста Apache:

@@ -21,7 +21,8 @@ flowchart LR
   ng --> rc["runtime-config.js generated from template"]
   rc --> spa
   api --> health["GET /health"]
-  api --> pay["GET /api/payment/redirect"]
+  api --> plans["GET /api/payment/plans (promo-aware)"]
+  api --> checkout["POST /api/payment/checkout-session"]
 ```
 
 ## Runtime-компоненты
@@ -46,6 +47,7 @@ flowchart LR
 - SPA-роутинг работает через `try_files $uri /index.html` в `frontend/nginx.conf`.
 - API-проксирование для контейнерного frontend: `location /api/` -> `http://backend:8000`.
 - Трекинг-конфиг читается из `window.__APP_CONFIG__` и fallback в `import.meta.env`.
+- Индивидуальные промо-офферы хранятся в БД (`promo_offers`) и применяются server-side как для `/api/payment/plans`, так и для `/api/payment/checkout-session`.
 
 ## Смежные документы
 - [06-deployment-and-environments](./06-deployment-and-environments.md)

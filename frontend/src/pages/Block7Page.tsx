@@ -4,6 +4,7 @@ import { useI18n } from "../features/i18n/I18nProvider";
 import { addClickIdToPath } from "../shared/lib/clickid";
 import { MobiSlonEvent } from "../shared/lib/mobiSlonEvents";
 import { sendPostbackOnce } from "../shared/lib/tracking";
+import { reachYandexMetrikaGoal } from "../shared/lib/yandexMetrika";
 import { Container } from "../shared/ui/Container";
 import { LanguageSwitcher } from "../shared/ui/LanguageSwitcher";
 import { QuizCard } from "../shared/ui/QuizCard";
@@ -15,6 +16,7 @@ export const Block7Page = () => {
   const navigate = useNavigate();
 
   const onPay = () => {
+    reachYandexMetrikaGoal("block_7_complete");
     sendPostbackOnce(MobiSlonEvent.BLOCK7_COMPLETED, location.search);
     navigate(addClickIdToPath("/pay", location.search));
   };

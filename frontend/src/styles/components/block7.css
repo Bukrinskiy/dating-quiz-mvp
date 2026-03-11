@@ -23,9 +23,9 @@
 
 .block7-section--offer {
   padding: clamp(18px, 4vw, 28px);
-  border-color: rgba(255, 120, 134, 0.28);
+  border-color: rgba(96, 165, 250, 0.36);
   background:
-    radial-gradient(circle at top right, rgba(255, 111, 145, 0.14), transparent 30%),
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.2), transparent 30%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(125, 145, 198, 0.05));
   box-shadow: 0 22px 44px rgba(10, 14, 26, 0.26);
 }
@@ -203,12 +203,12 @@
   min-width: 0;
   padding: clamp(18px, 4vw, 26px);
   border-radius: 18px;
-  border: 1px solid rgba(255, 111, 145, 0.38);
+  border: 1px solid rgba(96, 165, 250, 0.46);
   background:
-    radial-gradient(circle at top center, rgba(255, 111, 145, 0.18), transparent 42%),
+    radial-gradient(circle at top center, rgba(56, 189, 248, 0.24), transparent 42%),
     linear-gradient(180deg, rgba(127, 92, 255, 0.14), rgba(77, 136, 255, 0.08));
   text-align: center;
-  box-shadow: 0 24px 46px rgba(13, 17, 31, 0.3);
+  box-shadow: 0 24px 46px rgba(24, 58, 112, 0.28);
 }
 
 .block7-sale__title {
@@ -219,13 +219,13 @@
 .block7-sale__btn {
   margin-top: 18px;
   border: 0;
-  background: linear-gradient(135deg, #ff5d76, #ff7f63);
-  box-shadow: 0 16px 32px rgba(255, 99, 132, 0.24);
+  background: linear-gradient(135deg, #38bdf8, #3b82f6);
+  box-shadow: 0 16px 32px rgba(59, 130, 246, 0.3);
 }
 
 .block7-sale__btn:hover {
   border: 0;
-  background: linear-gradient(135deg, #ff6a82, #ff8a6e);
+  background: linear-gradient(135deg, #67e8f9, #60a5fa);
 }
 
 @media (min-width: 720px) {

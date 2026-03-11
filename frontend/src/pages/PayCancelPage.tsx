@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useI18n } from "../features/i18n/I18nProvider";
+import { reachYandexMetrikaGoal } from "../shared/lib/yandexMetrika";
 import { Container } from "../shared/ui/Container";
 import { LanguageSwitcher } from "../shared/ui/LanguageSwitcher";
 import { QuizCard } from "../shared/ui/QuizCard";
@@ -7,6 +9,10 @@ import { SiteFooter } from "../shared/ui/SiteFooter";
 
 export const PayCancelPage = () => {
   const { copy } = useI18n();
+
+  useEffect(() => {
+    reachYandexMetrikaGoal("pay_cancel");
+  }, []);
 
   return (
     <>

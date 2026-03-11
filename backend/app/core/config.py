@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     access_token_secret: str = "dev-access-secret"
     telegram_bot_token: str = ""
     telegram_bot_username: str = ""
+    bot_admin_ids: str = ""
     email_delivery_mode: str = "log_only"
     smtp_host: str = "smtp.gmail.com"
     smtp_port: int = 587
@@ -101,19 +102,19 @@ class Settings(BaseSettings):
     pay_sub_monthly_is_highlighted: bool = True
     pay_sub_monthly_sort_order: int = 20
 
-    pay_sub_quarterly_amount_minor: int = 14900
-    pay_sub_quarterly_currency: str = "usd"
-    pay_sub_quarterly_interval: str = "month"
-    pay_sub_quarterly_interval_count: int = 3
-    pay_sub_quarterly_product_name: str = "Seranking Premium Quarterly"
-    pay_sub_quarterly_headline: str = "Quarterly plan"
-    pay_sub_quarterly_badge: str = ""
-    pay_sub_quarterly_compare_at_amount_minor: int = 0
-    pay_sub_quarterly_per_day_amount_minor: int = 166
-    pay_sub_quarterly_compare_at_per_day_amount_minor: int = 0
-    pay_sub_quarterly_is_default: bool = False
-    pay_sub_quarterly_is_highlighted: bool = False
-    pay_sub_quarterly_sort_order: int = 10
+    pay_sub_yearly_amount_minor: int = 59600
+    pay_sub_yearly_currency: str = "usd"
+    pay_sub_yearly_interval: str = "month"
+    pay_sub_yearly_interval_count: int = 12
+    pay_sub_yearly_product_name: str = "Seranking Premium Yearly"
+    pay_sub_yearly_headline: str = "Yearly plan"
+    pay_sub_yearly_badge: str = ""
+    pay_sub_yearly_compare_at_amount_minor: int = 0
+    pay_sub_yearly_per_day_amount_minor: int = 166
+    pay_sub_yearly_compare_at_per_day_amount_minor: int = 0
+    pay_sub_yearly_is_default: bool = False
+    pay_sub_yearly_is_highlighted: bool = False
+    pay_sub_yearly_sort_order: int = 10
 
     @property
     def resolved_database_url(self) -> str:
@@ -135,6 +136,11 @@ class Settings(BaseSettings):
     @property
     def resolved_pay_portal_return_url(self) -> str:
         return self.pay_portal_return_url or f"{self.app_base_url}/pay/manage"
+
+    @property
+    def admin_ids_list(self) -> list[str]:
+        values = [item.strip() for item in self.bot_admin_ids.split(",")]
+        return [item for item in values if item]
 
     @property
     def plan_one_time_basic(self) -> PlanConfig:
@@ -184,22 +190,22 @@ class Settings(BaseSettings):
         )
 
     @property
-    def plan_sub_quarterly(self) -> PlanConfig:
+    def plan_sub_yearly(self) -> PlanConfig:
         return PlanConfig(
-            code="sub_quarterly",
-            amount_minor=self.pay_sub_quarterly_amount_minor,
-            currency=self.pay_sub_quarterly_currency,
-            product_name=self.pay_sub_quarterly_product_name,
-            interval=self.pay_sub_quarterly_interval,
-            interval_count=self.pay_sub_quarterly_interval_count,
-            headline=self.pay_sub_quarterly_headline.strip() or None,
-            badge=self.pay_sub_quarterly_badge.strip() or None,
-            compare_at_amount_minor=self.pay_sub_quarterly_compare_at_amount_minor or None,
-            per_day_amount_minor=self.pay_sub_quarterly_per_day_amount_minor or None,
-            compare_at_per_day_amount_minor=self.pay_sub_quarterly_compare_at_per_day_amount_minor or None,
-            is_default=self.pay_sub_quarterly_is_default,
-            is_highlighted=self.pay_sub_quarterly_is_highlighted,
-            sort_order=self.pay_sub_quarterly_sort_order,
+            code="sub_yearly",
+            amount_minor=self.pay_sub_yearly_amount_minor,
+            currency=self.pay_sub_yearly_currency,
+            product_name=self.pay_sub_yearly_product_name,
+            interval=self.pay_sub_yearly_interval,
+            interval_count=self.pay_sub_yearly_interval_count,
+            headline=self.pay_sub_yearly_headline.strip() or None,
+            badge=self.pay_sub_yearly_badge.strip() or None,
+            compare_at_amount_minor=self.pay_sub_yearly_compare_at_amount_minor or None,
+            per_day_amount_minor=self.pay_sub_yearly_per_day_amount_minor or None,
+            compare_at_per_day_amount_minor=self.pay_sub_yearly_compare_at_per_day_amount_minor or None,
+            is_default=self.pay_sub_yearly_is_default,
+            is_highlighted=self.pay_sub_yearly_is_highlighted,
+            sort_order=self.pay_sub_yearly_sort_order,
         )
 
 
@@ -212,7 +218,7 @@ def get_subscription_plan_catalog(settings: Settings) -> list[PlanConfig]:
     plans = [
         settings.plan_sub_weekly,
         settings.plan_sub_monthly,
-        settings.plan_sub_quarterly,
+        settings.plan_sub_yearly,
     ]
     default_count = sum(1 for plan in plans if plan.is_default)
     if default_count != 1:
@@ -225,7 +231,7 @@ def get_plan_map(settings: Settings) -> dict[str, PlanConfig]:
         "one_time_basic": settings.plan_one_time_basic,
         "sub_weekly": settings.plan_sub_weekly,
         "sub_monthly": settings.plan_sub_monthly,
-        "sub_quarterly": settings.plan_sub_quarterly,
+        "sub_yearly": settings.plan_sub_yearly,
     }
     get_subscription_plan_catalog(settings)
     return plan_map

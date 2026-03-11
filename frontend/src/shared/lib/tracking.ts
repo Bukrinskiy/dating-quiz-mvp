@@ -10,6 +10,8 @@ export const track = (event: string): void => {
 
 type PostbackDedupeOptions = {
   sessionId?: string | null;
+  trackingParams?: Record<string, string>;
+  forceSend?: boolean;
 };
 
 const pendingImageBeacons = new Set<HTMLImageElement>();
@@ -53,7 +55,12 @@ const resolveClickId = (search: string): string => {
   return FALLBACK_CLICKID;
 };
 
-const buildTrackingPayload = (status: MobiSlonEvent, search: string, sessionId?: string | null) => {
+const buildTrackingPayload = (
+  status: MobiSlonEvent,
+  search: string,
+  sessionId?: string | null,
+  trackingParamsOverride?: Record<string, string>,
+) => {
   if (!status) {
     return null;
   }
@@ -65,8 +72,22 @@ const buildTrackingPayload = (status: MobiSlonEvent, search: string, sessionId?:
     if (key === "cnv_id" || key === "payout" || key === "cnv_status") {
       return;
     }
-    extraParams[key] = value;
+    const normalizedValue = value.trim();
+    if (!normalizedValue) {
+      return;
+    }
+    extraParams[key] = normalizedValue;
   });
+  if (trackingParamsOverride) {
+    Object.entries(trackingParamsOverride).forEach(([key, value]) => {
+      const normalizedKey = key.trim();
+      const normalizedValue = value.trim();
+      if (!normalizedKey || !normalizedValue || normalizedKey === "cnv_id" || normalizedKey === "payout" || normalizedKey === "cnv_status") {
+        return;
+      }
+      extraParams[normalizedKey] = normalizedValue;
+    });
+  }
 
   return {
     status,
@@ -89,7 +110,7 @@ const sendImageBeacon = (url: string): boolean => {
 };
 
 const sendPostback = async (status: MobiSlonEvent, search: string, options?: PostbackDedupeOptions): Promise<boolean> => {
-  const payload = buildTrackingPayload(status, search, options?.sessionId);
+  const payload = buildTrackingPayload(status, search, options?.sessionId, options?.trackingParams);
   if (!payload) {
     logTracking("mobi-slon", "skip postback: missing clickId or status", { status }, "warn");
     return false;
@@ -156,7 +177,7 @@ const sendPostback = async (status: MobiSlonEvent, search: string, options?: Pos
 
 export const sendPostbackOnce = (status: MobiSlonEvent, search: string, options?: PostbackDedupeOptions): void => {
   const clickId = resolveClickId(search);
-  const forceSend = new URLSearchParams(search).get("force_postback") === "1";
+  const forceSend = options?.forceSend ?? new URLSearchParams(search).get("force_postback") === "1";
 
   const normalizedSessionId = options?.sessionId?.trim() || "global";
   const key = `postback_sent_${status}_${clickId}_${normalizedSessionId}`;

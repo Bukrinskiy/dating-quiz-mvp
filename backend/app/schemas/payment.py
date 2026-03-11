@@ -10,6 +10,7 @@ class CheckoutSessionRequest(BaseModel):
     clickid: str = Field(min_length=1)
     locale: str | None = None
     telegram_chat_id: str | None = None
+    promo_code: str | None = None
 
 
 class CheckoutSessionResponse(BaseModel):
@@ -68,7 +69,7 @@ class MobiSlonEventRequest(BaseModel):
     status: str = Field(min_length=1, max_length=64)
     clickid: str = Field(min_length=1, max_length=256)
     session_id: str | None = Field(default=None, max_length=128)
-    page_path: str | None = Field(default=None, max_length=512)
+    page_path: str | None = None
     tracking_params: dict[str, str] = Field(default_factory=dict)
 
 

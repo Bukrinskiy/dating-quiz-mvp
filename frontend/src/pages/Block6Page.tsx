@@ -6,6 +6,7 @@ import { useI18n } from "../features/i18n/I18nProvider";
 import { addClickIdToPath } from "../shared/lib/clickid";
 import { MobiSlonEvent } from "../shared/lib/mobiSlonEvents";
 import { sendPostbackOnce } from "../shared/lib/tracking";
+import { reachYandexMetrikaGoal } from "../shared/lib/yandexMetrika";
 import { Container } from "../shared/ui/Container";
 import { LanguageSwitcher } from "../shared/ui/LanguageSwitcher";
 import { QuizCard } from "../shared/ui/QuizCard";
@@ -18,6 +19,7 @@ export const Block6Page = () => {
   const navigate = useNavigate();
 
   const onFinish = () => {
+    reachYandexMetrikaGoal("block_6_complete");
     sendPostbackOnce(MobiSlonEvent.BLOCK6_COMPLETED, location.search);
     navigate(addClickIdToPath("/block-7", location.search));
   };

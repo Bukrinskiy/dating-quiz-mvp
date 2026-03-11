@@ -18,6 +18,7 @@ os.environ["TELEGRAM_BOT_USERNAME"] = "test_bot"
 os.environ["EMAIL_DELIVERY_MODE"] = "log_only"
 os.environ["LOG_OTP_IN_NONPROD"] = "true"
 os.environ["BOT_INTERNAL_TOKEN"] = "test-internal-token"
+os.environ["BOT_ADMIN_IDS"] = "111,222"
 os.environ["META_PIXEL_ID"] = "1052620673116886"
 os.environ["META_ACCESS_TOKEN"] = "test-meta-token"
 os.environ["META_GRAPH_API_VERSION"] = "v18.0"
@@ -25,7 +26,34 @@ os.environ["META_GRAPH_API_VERSION"] = "v18.0"
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.main import app
+import app.main as app_main
 from app.core.config import get_settings
+from app.core.db.session import SessionLocal, init_db
+from app.core.models.payment import HttpRequestLog, MobiSlonRequestLog, Order, PromoOffer
+
+
+def _create_promo_offer(
+    *,
+    code: str = "VIPDEAL",
+    is_active: bool = True,
+    currency: str = "usd",
+    weekly: int = 199,
+    monthly: int = 3900,
+    yearly: int = 9900,
+) -> None:
+    init_db()
+    with SessionLocal() as db:
+        db.add(
+            PromoOffer(
+                code=code,
+                is_active=is_active,
+                currency=currency,
+                sub_weekly_amount_minor=weekly,
+                sub_monthly_amount_minor=monthly,
+                sub_yearly_amount_minor=yearly,
+            )
+        )
+        db.commit()
 
 
 def test_legacy_redirect_endpoint_gone() -> None:
@@ -108,10 +136,10 @@ def test_checkout_session_weekly_subscription(monkeypatch) -> None:
         assert response.json()["session_id"] == "cs_test_weekly"
 
 
-def test_checkout_session_quarterly_subscription(monkeypatch) -> None:
+def test_checkout_session_yearly_subscription(monkeypatch) -> None:
     class DummySession:
-        id = "cs_test_quarterly"
-        url = "https://checkout.test/quarterly"
+        id = "cs_test_yearly"
+        url = "https://checkout.test/yearly"
 
     monkeypatch.setattr("stripe.checkout.Session.create", lambda **_: DummySession())
 
@@ -120,15 +148,15 @@ def test_checkout_session_quarterly_subscription(monkeypatch) -> None:
             "/api/payment/checkout-session",
             json={
                 "mode": "subscription",
-                "plan": "sub_quarterly",
-                "email": "quarterly@example.com",
-                "clickid": "sub-quarterly-001",
+                "plan": "sub_yearly",
+                "email": "yearly@example.com",
+                "clickid": "sub-yearly-001",
                 "locale": "en",
             },
         )
 
         assert response.status_code == 200
-        assert response.json()["session_id"] == "cs_test_quarterly"
+        assert response.json()["session_id"] == "cs_test_yearly"
 
 
 def test_payment_plans_endpoint_returns_public_subscription_catalog() -> None:
@@ -137,20 +165,65 @@ def test_payment_plans_endpoint_returns_public_subscription_catalog() -> None:
 
     assert response.status_code == 200
     payload = response.json()
-    assert [plan["code"] for plan in payload] == ["sub_weekly", "sub_monthly", "sub_quarterly"]
+    assert [plan["code"] for plan in payload] == ["sub_yearly", "sub_monthly", "sub_weekly"]
+    assert payload[0]["billing_period"] == "year"
     assert payload[1]["is_default"] is True
     assert payload[1]["is_highlighted"] is True
     assert payload[1]["badge"] == "Most popular"
+
+
+def test_payment_plans_endpoint_returns_promo_prices_for_valid_code() -> None:
+    _create_promo_offer(code="VIP999", weekly=199, monthly=3500, yearly=8900)
+    settings = get_settings()
+
+    with TestClient(app) as client:
+        response = client.get("/api/payment/plans", params={"promo_code": "vip999"})
+
+    assert response.status_code == 200
+    payload = {item["code"]: item for item in response.json()}
+    assert payload["sub_weekly"]["price"]["amount_minor"] == 199
+    assert payload["sub_weekly"]["compare_at_price"]["amount_minor"] == 1999
+    assert payload["sub_weekly"]["compare_at_per_day_price"]["amount_minor"] == 285
+    assert payload["sub_weekly"]["badge"] == "PROMO"
+    assert payload["sub_monthly"]["price"]["amount_minor"] == 3500
+    assert payload["sub_monthly"]["compare_at_price"]["amount_minor"] == 6900
+    assert payload["sub_monthly"]["badge"] == "PROMO"
+    assert payload["sub_yearly"]["price"]["amount_minor"] == 8900
+    assert payload["sub_yearly"]["compare_at_price"]["amount_minor"] == settings.pay_sub_yearly_amount_minor
+    assert payload["sub_yearly"]["badge"] == "PROMO"
+
+
+def test_payment_plans_endpoint_rejects_invalid_promo_code() -> None:
+    with TestClient(app) as client:
+        response = client.get("/api/payment/plans", params={"promo_code": "missing"})
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "promo_invalid"
+
+
+def test_payment_plans_endpoint_is_logged_in_http_request_logs() -> None:
+    with TestClient(app) as client:
+        response = client.get("/api/payment/plans")
+
+    assert response.status_code == 200
+    assert response.headers["X-Request-ID"]
+
+    with SessionLocal() as db:
+        http_log = db.query(HttpRequestLog).filter(HttpRequestLog.request_id == response.headers["X-Request-ID"]).one()
+
+    assert http_log.path == "/api/payment/plans"
+    assert http_log.status_code == 200
+    assert http_log.response_body is not None
 
 
 def test_payment_plans_endpoint_rejects_invalid_default_configuration() -> None:
     settings = get_settings()
     original_weekly = settings.pay_sub_weekly_is_default
     original_monthly = settings.pay_sub_monthly_is_default
-    original_quarterly = settings.pay_sub_quarterly_is_default
+    original_yearly = settings.pay_sub_yearly_is_default
     settings.pay_sub_weekly_is_default = False
     settings.pay_sub_monthly_is_default = False
-    settings.pay_sub_quarterly_is_default = False
+    settings.pay_sub_yearly_is_default = False
 
     try:
         with TestClient(app, raise_server_exceptions=False) as client:
@@ -158,9 +231,74 @@ def test_payment_plans_endpoint_rejects_invalid_default_configuration() -> None:
     finally:
         settings.pay_sub_weekly_is_default = original_weekly
         settings.pay_sub_monthly_is_default = original_monthly
-        settings.pay_sub_quarterly_is_default = original_quarterly
+        settings.pay_sub_yearly_is_default = original_yearly
 
     assert response.status_code == 500
+
+
+def test_checkout_session_subscription_applies_promo_price_and_saves_code(monkeypatch) -> None:
+    class DummySession:
+        id = "cs_test_promo_monthly"
+        url = "https://checkout.test/promo-monthly"
+
+    captured: dict[str, object] = {}
+
+    def fake_session_create(**kwargs):
+        captured.update(kwargs)
+        return DummySession()
+
+    _create_promo_offer(code="SPECIAL50", monthly=5000)
+    monkeypatch.setattr("stripe.checkout.Session.create", fake_session_create)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/payment/checkout-session",
+            json={
+                "mode": "subscription",
+                "plan": "sub_monthly",
+                "email": "promo@example.com",
+                "clickid": "promo-001",
+                "locale": "en",
+                "promo_code": "special50",
+            },
+        )
+
+        assert response.status_code == 200
+        order_id = response.json()["order_id"]
+
+    line_items = captured["line_items"]
+    assert isinstance(line_items, list)
+    assert line_items[0]["price_data"]["unit_amount"] == 5000
+    assert line_items[0]["price_data"]["currency"] == "usd"
+    assert captured["metadata"]["promo_code"] == "SPECIAL50"
+
+    with SessionLocal() as db:
+        order = db.query(Order).filter(Order.id == order_id).one()
+    assert order.promo_code == "SPECIAL50"
+    assert order.amount_minor == 5000
+
+
+def test_checkout_session_rejects_invalid_promo_code(monkeypatch) -> None:
+    def fail_if_called(**_):
+        raise AssertionError("Stripe checkout should not be called for invalid promo code")
+
+    monkeypatch.setattr("stripe.checkout.Session.create", fail_if_called)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/payment/checkout-session",
+            json={
+                "mode": "subscription",
+                "plan": "sub_monthly",
+                "email": "invalid-promo@example.com",
+                "clickid": "promo-002",
+                "locale": "en",
+                "promo_code": "missing",
+            },
+        )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "promo_invalid"
 
 
 def test_webhook_idempotency_and_paid_status(monkeypatch) -> None:
@@ -423,6 +561,412 @@ def test_frontend_relay_mobi_slon_event_rejects_unknown_status() -> None:
 
     assert response.status_code == 400
     assert response.json()["detail"] == "Unknown status"
+
+
+def test_frontend_relay_mobi_slon_event_accepts_new_pay_statuses(monkeypatch) -> None:
+    class DummyPostbackResponse:
+        status_code = 200
+        text = "OK"
+
+    def fake_httpx_post(
+        url: str,
+        *,
+        params: dict[str, str],
+        timeout: float,
+    ) -> DummyPostbackResponse:
+        return DummyPostbackResponse()
+
+    monkeypatch.setattr("httpx.post", fake_httpx_post)
+    settings = get_settings()
+    settings.mobi_slon_postback_url = "https://mobi-slon.example/index.php"
+
+    try:
+        with TestClient(app) as client:
+            for status in (
+                "pay_email_entered",
+                "pay_plan_weekly_selected",
+                "pay_plan_monthly_selected",
+                "pay_plan_yearly_selected",
+            ):
+                response = client.post(
+                    "/api/events/mobi-slon",
+                    json={"status": status, "clickid": "pay-event-001", "tracking_params": {}},
+                )
+                assert response.status_code == 200
+                assert response.json() == {"accepted": True, "forwarded": True}
+    finally:
+        settings.mobi_slon_postback_url = ""
+
+
+def test_frontend_relay_mobi_slon_event_forwards_email_tracking_param(monkeypatch) -> None:
+    class DummyPostbackResponse:
+        status_code = 200
+        text = "OK"
+
+    captured_calls: list[dict[str, object]] = []
+
+    def fake_httpx_post(
+        url: str,
+        *,
+        params: dict[str, str],
+        timeout: float,
+    ) -> DummyPostbackResponse:
+        captured_calls.append({"url": url, "params": params, "timeout": timeout})
+        return DummyPostbackResponse()
+
+    monkeypatch.setattr("httpx.post", fake_httpx_post)
+    settings = get_settings()
+    settings.mobi_slon_postback_url = "https://mobi-slon.example/index.php"
+
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/events/mobi-slon",
+                json={
+                    "status": "pay_email_entered",
+                    "clickid": "pay-email-001",
+                    "tracking_params": {"email": "user@example.com"},
+                },
+            )
+    finally:
+        settings.mobi_slon_postback_url = ""
+
+    assert response.status_code == 200
+    assert response.json() == {"accepted": True, "forwarded": True}
+    assert len(captured_calls) == 1
+    call = captured_calls[0]
+    assert call["params"] == {
+        "cnv_id": "pay-email-001",
+        "payout": "0",
+        "cnv_status": "pay_email_entered",
+        "email": "user@example.com",
+    }
+
+
+def test_frontend_relay_mobi_slon_event_accepts_long_page_path(monkeypatch) -> None:
+    class DummyPostbackResponse:
+        status_code = 200
+        text = "OK"
+
+    def fake_httpx_post(
+        url: str,
+        *,
+        params: dict[str, str],
+        timeout: float,
+    ) -> DummyPostbackResponse:
+        return DummyPostbackResponse()
+
+    monkeypatch.setattr("httpx.post", fake_httpx_post)
+    settings = get_settings()
+    settings.mobi_slon_postback_url = "https://mobi-slon.example/index.php"
+    long_page_path = "/block-1?" + "&".join(f"utm_{idx}={'x' * 32}" for idx in range(40))
+
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/events/mobi-slon",
+                json={
+                    "status": "block1_completed",
+                    "clickid": "long-page-001",
+                    "page_path": long_page_path,
+                    "tracking_params": {},
+                },
+            )
+    finally:
+        settings.mobi_slon_postback_url = ""
+
+    assert response.status_code == 200
+    assert response.json() == {"accepted": True, "forwarded": True}
+
+
+def test_frontend_relay_mobi_slon_event_logs_validation_errors() -> None:
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/events/mobi-slon",
+            json={
+                "status": "start_quiz",
+                "tracking_params": {},
+            },
+        )
+
+    assert response.status_code == 422
+    with SessionLocal() as db:
+        mobi_log = db.query(MobiSlonRequestLog).order_by(MobiSlonRequestLog.created_at.desc()).first()
+        http_log = db.query(HttpRequestLog).order_by(HttpRequestLog.created_at.desc()).first()
+
+    assert mobi_log is not None
+    assert mobi_log.incoming_path == "/api/events/mobi-slon"
+    assert mobi_log.accepted is False
+    assert mobi_log.forwarded is False
+    assert mobi_log.validation_errors
+    assert '"status":"start_quiz"' in (mobi_log.raw_body or "")
+    assert http_log is not None
+    assert http_log.path == "/api/events/mobi-slon"
+    assert http_log.status_code == 422
+    assert http_log.error_class == "RequestValidationError"
+
+
+def test_frontend_relay_mobi_slon_event_logs_success_and_request_id(monkeypatch) -> None:
+    class DummyPostbackResponse:
+        status_code = 200
+        text = '{"status":"success"}'
+
+    def fake_httpx_post(
+        url: str,
+        *,
+        params: dict[str, str],
+        timeout: float,
+    ) -> DummyPostbackResponse:
+        return DummyPostbackResponse()
+
+    monkeypatch.setattr("httpx.post", fake_httpx_post)
+    settings = get_settings()
+    settings.mobi_slon_postback_url = "https://mobi-slon.example/index.php"
+
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/events/mobi-slon",
+                json={
+                    "status": "block2_completed",
+                    "clickid": "relay-logged-001",
+                    "tracking_params": {"utm_source": "meta"},
+                },
+            )
+    finally:
+        settings.mobi_slon_postback_url = ""
+
+    assert response.status_code == 200
+    assert response.headers["X-Request-ID"]
+
+    with SessionLocal() as db:
+        mobi_log = db.query(MobiSlonRequestLog).order_by(MobiSlonRequestLog.created_at.desc()).first()
+        http_log = db.query(HttpRequestLog).order_by(HttpRequestLog.created_at.desc()).first()
+
+    assert mobi_log is not None
+    assert mobi_log.request_id == response.headers["X-Request-ID"]
+    assert mobi_log.accepted is True
+    assert mobi_log.forwarded is True
+    assert mobi_log.upstream_status_code == 200
+    assert mobi_log.attempt_count == 1
+    assert http_log is not None
+    assert http_log.request_id == response.headers["X-Request-ID"]
+    assert http_log.path == "/api/events/mobi-slon"
+    assert http_log.status_code == 200
+
+
+def test_frontend_relay_mobi_slon_event_logs_upstream_failure(monkeypatch) -> None:
+    def fake_httpx_post(
+        url: str,
+        *,
+        params: dict[str, str],
+        timeout: float,
+    ) -> None:
+        raise RuntimeError("upstream down")
+
+    monkeypatch.setattr("httpx.post", fake_httpx_post)
+    settings = get_settings()
+    settings.mobi_slon_postback_url = "https://mobi-slon.example/index.php"
+
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/events/mobi-slon",
+                json={
+                    "status": "block3_completed",
+                    "clickid": "relay-failure-001",
+                    "tracking_params": {},
+                },
+            )
+    finally:
+        settings.mobi_slon_postback_url = ""
+
+    assert response.status_code == 200
+    assert response.json() == {"accepted": True, "forwarded": False}
+
+    with SessionLocal() as db:
+        mobi_log = db.query(MobiSlonRequestLog).order_by(MobiSlonRequestLog.created_at.desc()).first()
+
+    assert mobi_log is not None
+    assert mobi_log.forwarded is False
+    assert mobi_log.error_class == "RuntimeError"
+    assert mobi_log.error_message == "upstream down"
+    assert mobi_log.attempt_count == 3
+
+
+def test_http_request_middleware_skips_bot_routes() -> None:
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/bot/access/status",
+            json={"telegram_user_id": "404"},
+            headers={"X-Internal-Token": "test-internal-token"},
+        )
+
+    assert response.status_code == 200
+    with SessionLocal() as db:
+        bot_logs = db.query(HttpRequestLog).filter(HttpRequestLog.path == "/api/bot/access/status").all()
+
+    assert bot_logs == []
+
+
+def test_validation_error_sends_admin_alert(monkeypatch) -> None:
+    alerts: list[str] = []
+
+    def fake_send_admin_alert(*, text: str) -> bool:
+        alerts.append(text)
+        return True
+
+    monkeypatch.setattr(app_main.admin_telegram_sender, "send_admin_alert", fake_send_admin_alert)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/events/mobi-slon",
+            json={
+                "status": "start_quiz",
+                "tracking_params": {},
+            },
+        )
+
+    assert response.status_code == 422
+    assert len(alerts) == 1
+    assert "request_id:" in alerts[0]
+    assert "/api/events/mobi-slon" in alerts[0]
+    assert "422" in alerts[0]
+    assert "RequestValidationError" in alerts[0]
+    assert "<pre>" in alerts[0]
+
+
+def test_http_400_sends_admin_alert(monkeypatch) -> None:
+    alerts: list[str] = []
+
+    def fake_send_admin_alert(*, text: str) -> bool:
+        alerts.append(text)
+        return True
+
+    monkeypatch.setattr(app_main.admin_telegram_sender, "send_admin_alert", fake_send_admin_alert)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/tracking/mobi-slon-event",
+            json={
+                "status": "transition_to_payment",
+                "clickid": "!!!",
+                "tracking_params": {},
+            },
+        )
+
+    assert response.status_code == 400
+    assert len(alerts) == 1
+    assert "/api/tracking/mobi-slon-event" in alerts[0]
+    assert "400" in alerts[0]
+    assert "Invalid clickid" in alerts[0]
+    assert "<pre>" in alerts[0]
+
+
+def test_http_500_sends_admin_alert(monkeypatch) -> None:
+    alerts: list[str] = []
+
+    def fake_send_admin_alert(*, text: str) -> bool:
+        alerts.append(text)
+        return True
+
+    monkeypatch.setattr(app_main.admin_telegram_sender, "send_admin_alert", fake_send_admin_alert)
+
+    settings = get_settings()
+    original_weekly = settings.pay_sub_weekly_is_default
+    original_monthly = settings.pay_sub_monthly_is_default
+    original_yearly = settings.pay_sub_yearly_is_default
+    settings.pay_sub_weekly_is_default = False
+    settings.pay_sub_monthly_is_default = False
+    settings.pay_sub_yearly_is_default = False
+
+    try:
+        with TestClient(app, raise_server_exceptions=False) as client:
+            response = client.get("/api/payment/plans")
+    finally:
+        settings.pay_sub_weekly_is_default = original_weekly
+        settings.pay_sub_monthly_is_default = original_monthly
+        settings.pay_sub_yearly_is_default = original_yearly
+
+    assert response.status_code == 500
+    assert len(alerts) == 1
+    assert "/api/payment/plans" in alerts[0]
+    assert "500" in alerts[0]
+    assert "<pre>" in alerts[0]
+
+
+def test_success_response_does_not_send_admin_alert(monkeypatch) -> None:
+    alerts: list[str] = []
+
+    def fake_send_admin_alert(*, text: str) -> bool:
+        alerts.append(text)
+        return True
+
+    monkeypatch.setattr(app_main.admin_telegram_sender, "send_admin_alert", fake_send_admin_alert)
+
+    with TestClient(app) as client:
+        response = client.get("/api/payment/plans")
+
+    assert response.status_code == 200
+    assert alerts == []
+
+
+def test_bot_routes_do_not_send_admin_alert(monkeypatch) -> None:
+    alerts: list[str] = []
+
+    def fake_send_admin_alert(*, text: str) -> bool:
+        alerts.append(text)
+        return True
+
+    monkeypatch.setattr(app_main.admin_telegram_sender, "send_admin_alert", fake_send_admin_alert)
+
+    with TestClient(app) as client:
+        response = client.post("/api/bot/access/status", json={"telegram_user_id": "1"})
+
+    assert response.status_code == 401
+    assert alerts == []
+
+
+def test_missing_admin_ids_keeps_response_and_skips_telegram(monkeypatch) -> None:
+    calls: list[tuple[str, str]] = []
+
+    def fake_send_message(*, chat_id: str, text: str) -> bool:
+        calls.append((chat_id, text))
+        return True
+
+    monkeypatch.setattr(app_main.admin_telegram_sender, "_admin_chat_ids", [])
+    monkeypatch.setattr(app_main.admin_telegram_sender, "_send_message", fake_send_message)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/events/mobi-slon",
+            json={
+                "status": "start_quiz",
+                "tracking_params": {},
+            },
+        )
+
+    assert response.status_code == 422
+    assert calls == []
+
+
+def test_telegram_admin_alert_failure_does_not_change_response(monkeypatch) -> None:
+    def fake_send_admin_alert(*, text: str) -> bool:
+        raise RuntimeError("telegram down")
+
+    monkeypatch.setattr(app_main.admin_telegram_sender, "send_admin_alert", fake_send_admin_alert)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/events/mobi-slon",
+            json={
+                "status": "start_quiz",
+                "tracking_params": {},
+            },
+        )
+
+    assert response.status_code == 422
+    assert response.headers["X-Request-ID"]
 
 
 def test_restore_request_and_confirm(monkeypatch) -> None:

@@ -50,10 +50,16 @@
   font-size: 1rem;
 }
 
-.pay-section__current {
+.pay-plan-helper {
+  margin: 0;
   color: var(--muted);
-  font-size: 0.92rem;
-  text-align: right;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  transition: color 0.2s ease;
+}
+
+.pay-plan-helper--selected {
+  color: #7dd3a8;
 }
 
 .pay-plans {
@@ -64,9 +70,8 @@
 .pay-plan {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
   width: 100%;
+  gap: 10px;
   padding: 20px 18px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 24px;
@@ -84,9 +89,9 @@
 }
 
 .pay-plan.is-selected {
-  border-color: rgba(255, 110, 145, 0.9);
-  background: linear-gradient(180deg, rgba(255, 99, 132, 0.14), rgba(255, 255, 255, 0.05));
-  box-shadow: 0 18px 40px rgba(255, 99, 132, 0.12);
+  border-color: rgba(96, 165, 250, 0.72);
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.2), rgba(59, 130, 246, 0.08));
+  box-shadow: 0 18px 40px rgba(59, 130, 246, 0.22);
 }
 
 .pay-plan.is-highlighted:not(.is-selected) {
@@ -131,10 +136,19 @@
   gap: 8px 10px;
 }
 
+.pay-plan__price-row--primary {
+  gap: 8px;
+}
+
 .pay-plan__price-old {
   color: rgba(255, 255, 255, 0.42);
   font-size: 1.05rem;
   text-decoration: line-through;
+}
+
+.pay-plan__price-old--primary {
+  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.52);
 }
 
 .pay-plan__price {
@@ -143,36 +157,63 @@
   line-height: 1;
 }
 
+.pay-plan__price--primary {
+  font-size: clamp(2.2rem, 6vw, 3rem);
+  color: #fff;
+  text-shadow: 0 8px 24px rgba(127, 92, 255, 0.28);
+}
+
 .pay-plan__period {
   color: var(--muted);
   font-size: 0.95rem;
 }
 
-.pay-plan__aside {
-  align-self: center;
-  display: grid;
-  gap: 2px;
-  min-width: 108px;
-  padding: 12px 14px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.08);
-  text-align: center;
+.pay-plan__period--primary {
+  font-size: 1.05rem;
+  color: #d9e7ff;
 }
 
-.pay-plan__aside-price-old {
-  color: rgba(255, 255, 255, 0.42);
-  font-size: 0.92rem;
+.pay-plan__period-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  color: var(--muted);
+  opacity: 0.88;
+}
+
+.pay-plan__period-price-old {
+  color: rgba(255, 255, 255, 0.34);
+  font-size: 0.88rem;
   text-decoration: line-through;
 }
 
-.pay-plan__aside-price {
-  font-size: 1.18rem;
-  font-weight: 800;
+.pay-plan__period-price {
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.72);
 }
 
-.pay-plan__aside-copy {
-  color: var(--muted);
-  font-size: 0.85rem;
+.pay-plan__period-copy {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.56);
+}
+
+.pay-promo-toggle {
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #9ec5ff;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.pay-promo-toggle:hover {
+  color: #b5d7ff;
 }
 
 .pay-trust {
@@ -200,6 +241,36 @@
   box-shadow: 0 0 0 3px rgba(255, 97, 118, 0.12);
 }
 
+.pay-success {
+  margin-top: 10px;
+  color: #7dd3a8;
+  font-size: 0.92rem;
+}
+
+.pay-promo-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.pay-promo-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  border-top-color: #7dd3a8;
+  border-radius: 50%;
+  animation: pay-promo-spin 0.8s linear infinite;
+}
+
+@keyframes pay-promo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .pay-cta {
   position: sticky;
   bottom: 12px;
@@ -208,13 +279,13 @@
   padding-top: 14px;
   padding-bottom: 14px;
   border: 0;
-  background: linear-gradient(135deg, #ff5d76, #ff7f63);
-  box-shadow: 0 14px 34px rgba(255, 99, 132, 0.24);
+  background: linear-gradient(135deg, #38bdf8, #3b82f6);
+  box-shadow: 0 16px 32px rgba(59, 130, 246, 0.3);
 }
 
 .pay-cta:hover {
   border: 0;
-  background: linear-gradient(135deg, #ff6b82, #ff8a6f);
+  background: linear-gradient(135deg, #67e8f9, #60a5fa);
 }
 
 .pay-cta:disabled {
@@ -222,19 +293,32 @@
   cursor: wait;
 }
 
+.pay-cta__label {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.2;
+  opacity: 0.95;
+}
+
+.pay-cta__price-primary {
+  display: block;
+  font-size: clamp(1.4rem, 4.8vw, 1.9rem);
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+}
+
+.pay-cta__period-secondary {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.2;
+  opacity: 0.82;
+}
+
 @media (max-width: 640px) {
-  .pay-plan {
-    grid-template-columns: 1fr;
-  }
-
-  .pay-plan__aside {
-    min-width: 0;
-    width: 100%;
-    grid-auto-flow: column;
-    justify-content: space-between;
-    align-items: baseline;
-  }
-
   .pay-section__head {
     display: grid;
   }

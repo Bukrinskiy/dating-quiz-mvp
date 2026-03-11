@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
+from app.core.request_logging import decode_body, headers_to_dict, write_mobi_slon_request_log
 from app.schemas.payment import (
     ActivateAccessRequest,
     CheckoutSessionRequest,
@@ -39,14 +40,18 @@ def create_checkout_session(payload: CheckoutSessionRequest, db: Session = Depen
         clickid=payload.clickid,
         locale=payload.locale,
         telegram_chat_id=payload.telegram_chat_id,
+        promo_code=payload.promo_code,
     )
     return CheckoutSessionResponse(checkout_url=checkout_url, session_id=session_id, order_id=order_id)
 
 
 @router.get("/api/payment/plans", response_model=list[PublicPlanResponse])
-def list_payment_plans(db: Session = Depends(get_db)) -> list[PublicPlanResponse]:
+def list_payment_plans(
+    promo_code: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+) -> list[PublicPlanResponse]:
     service = PaymentService(get_settings(), db)
-    return [PublicPlanResponse.model_validate(plan) for plan in service.list_public_subscription_plans()]
+    return [PublicPlanResponse.model_validate(plan) for plan in service.list_public_subscription_plans(promo_code=promo_code)]
 
 
 @router.post("/api/stripe/webhook")
@@ -57,7 +62,26 @@ async def stripe_webhook(
 ) -> dict[str, bool]:
     payload = await request.body()
     service = PaymentService(get_settings(), db)
-    return service.handle_webhook(payload, stripe_signature)
+    response_payload, postback_result = service.handle_webhook(payload, stripe_signature)
+    if postback_result is not None:
+        write_mobi_slon_request_log(
+            request_id=getattr(request.state, "request_id", None),
+            transport="server_side_pay_success",
+            incoming_path=request.url.path,
+            status="pay_success",
+            accepted=True,
+            forwarded=postback_result["sent"],
+            request_headers=headers_to_dict(request.headers),
+            raw_body=decode_body(payload),
+            upstream_url=postback_result["upstream_url"],
+            upstream_params=postback_result["upstream_params"],
+            upstream_status_code=postback_result["upstream_status_code"],
+            upstream_response_body=postback_result["upstream_response_body"],
+            attempt_count=postback_result["attempt_count"],
+            error_class=postback_result["error_class"],
+            error_message=postback_result["error_message"],
+        )
+    return response_payload
 
 
 @router.get("/api/payment/session-status", response_model=SessionStatusResponse)
@@ -98,7 +122,7 @@ def restore_confirm(payload: RestoreConfirmRequest, db: Session = Depends(get_db
 
 @router.post("/api/events/mobi-slon", response_model=MobiSlonEventResponse)
 @router.post("/api/tracking/mobi-slon-event", response_model=MobiSlonEventResponse)
-def relay_mobi_slon_event(payload: MobiSlonEventRequest, db: Session = Depends(get_db)) -> MobiSlonEventResponse:
+def relay_mobi_slon_event(payload: MobiSlonEventRequest, request: Request, db: Session = Depends(get_db)) -> MobiSlonEventResponse:
     logger.info(
         "mobi_relay_http_in method=POST status=%s clickid=%s session_id=%s params=%d",
         payload.status,
@@ -107,14 +131,55 @@ def relay_mobi_slon_event(payload: MobiSlonEventRequest, db: Session = Depends(g
         len(payload.tracking_params or {}),
     )
     service = PaymentService(get_settings(), db)
-    forwarded = service.relay_mobi_slon_event(
+    try:
+        postback_result = service.relay_mobi_slon_event(
+            status=payload.status,
+            clickid=payload.clickid,
+            tracking_params=payload.tracking_params,
+            session_id=payload.session_id,
+            page_path=payload.page_path,
+        )
+    except HTTPException as exc:
+        write_mobi_slon_request_log(
+            request_id=getattr(request.state, "request_id", None),
+            transport="post",
+            incoming_path=request.url.path,
+            status=payload.status,
+            clickid=payload.clickid,
+            session_id=payload.session_id,
+            page_path=payload.page_path,
+            tracking_params=payload.tracking_params,
+            request_headers=headers_to_dict(request.headers),
+            raw_body=decode_body(getattr(request.state, "raw_body", None)),
+            accepted=False,
+            forwarded=False,
+            error_class="HTTPException",
+            error_message=str(exc.detail),
+        )
+        raise
+
+    write_mobi_slon_request_log(
+        request_id=getattr(request.state, "request_id", None),
+        transport="post",
+        incoming_path=request.url.path,
         status=payload.status,
         clickid=payload.clickid,
-        tracking_params=payload.tracking_params,
         session_id=payload.session_id,
         page_path=payload.page_path,
+        tracking_params=payload.tracking_params,
+        request_headers=headers_to_dict(request.headers),
+        raw_body=decode_body(getattr(request.state, "raw_body", None)),
+        accepted=True,
+        forwarded=postback_result["sent"],
+        upstream_url=postback_result["upstream_url"],
+        upstream_params=postback_result["upstream_params"],
+        upstream_status_code=postback_result["upstream_status_code"],
+        upstream_response_body=postback_result["upstream_response_body"],
+        attempt_count=postback_result["attempt_count"],
+        error_class=postback_result["error_class"],
+        error_message=postback_result["error_message"],
     )
-    return MobiSlonEventResponse(accepted=True, forwarded=forwarded)
+    return MobiSlonEventResponse(accepted=True, forwarded=postback_result["sent"])
 
 
 @router.get("/api/events/mobi-slon", response_model=MobiSlonEventResponse)
@@ -140,14 +205,55 @@ def relay_mobi_slon_event_fallback(
         len(tracking_params),
     )
     service = PaymentService(get_settings(), db)
-    forwarded = service.relay_mobi_slon_event(
+    try:
+        postback_result = service.relay_mobi_slon_event(
+            status=status,
+            clickid=clickid,
+            tracking_params=tracking_params,
+            session_id=session_id,
+            page_path=page_path,
+        )
+    except HTTPException as exc:
+        write_mobi_slon_request_log(
+            request_id=getattr(request.state, "request_id", None),
+            transport="get_fallback",
+            incoming_path=request.url.path,
+            status=status,
+            clickid=clickid,
+            session_id=session_id,
+            page_path=page_path,
+            tracking_params=tracking_params,
+            request_headers=headers_to_dict(request.headers),
+            raw_body=decode_body(getattr(request.state, "raw_body", None)),
+            accepted=False,
+            forwarded=False,
+            error_class="HTTPException",
+            error_message=str(exc.detail),
+        )
+        raise
+
+    write_mobi_slon_request_log(
+        request_id=getattr(request.state, "request_id", None),
+        transport="get_fallback",
+        incoming_path=request.url.path,
         status=status,
         clickid=clickid,
-        tracking_params=tracking_params,
         session_id=session_id,
         page_path=page_path,
+        tracking_params=tracking_params,
+        request_headers=headers_to_dict(request.headers),
+        raw_body=decode_body(getattr(request.state, "raw_body", None)),
+        accepted=True,
+        forwarded=postback_result["sent"],
+        upstream_url=postback_result["upstream_url"],
+        upstream_params=postback_result["upstream_params"],
+        upstream_status_code=postback_result["upstream_status_code"],
+        upstream_response_body=postback_result["upstream_response_body"],
+        attempt_count=postback_result["attempt_count"],
+        error_class=postback_result["error_class"],
+        error_message=postback_result["error_message"],
     )
-    return MobiSlonEventResponse(accepted=True, forwarded=forwarded)
+    return MobiSlonEventResponse(accepted=True, forwarded=postback_result["sent"])
 
 
 @router.get("/api/payment/redirect")

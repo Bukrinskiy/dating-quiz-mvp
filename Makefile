@@ -191,12 +191,14 @@ push-frontend-image:
 	@VITE_MOBI_SLON_URL="$$(grep -m1 '^VITE_MOBI_SLON_URL=' .env | sed 's/^[^=]*=//')"; \
 	VITE_MOBI_SLON_CAMPAIGN_KEY="$$(grep -m1 '^VITE_MOBI_SLON_CAMPAIGN_KEY=' .env | sed 's/^[^=]*=//')"; \
 	VITE_FB_PIXEL_ID="$$(grep -m1 '^VITE_FB_PIXEL_ID=' .env | sed 's/^[^=]*=//')"; \
+	VITE_YANDEX_METRIKA_ID="$$(grep -m1 '^VITE_YANDEX_METRIKA_ID=' .env | sed 's/^[^=]*=//')"; \
 	VITE_TRACKING_DEBUG="$$(grep -m1 '^VITE_TRACKING_DEBUG=' .env | sed 's/^[^=]*=//')"; \
 	docker build --platform "$(BUILD_PLATFORM)" \
 		$(FULL_BUILD_FLAGS) \
 		--build-arg VITE_MOBI_SLON_URL="$$VITE_MOBI_SLON_URL" \
 		--build-arg VITE_MOBI_SLON_CAMPAIGN_KEY="$$VITE_MOBI_SLON_CAMPAIGN_KEY" \
 		--build-arg VITE_FB_PIXEL_ID="$$VITE_FB_PIXEL_ID" \
+		--build-arg VITE_YANDEX_METRIKA_ID="$$VITE_YANDEX_METRIKA_ID" \
 		--build-arg VITE_TRACKING_DEBUG="$$VITE_TRACKING_DEBUG" \
 		-f frontend/Dockerfile -t "$(FRONTEND_IMAGE)" .
 	@$(call docker_push_retry,$(FRONTEND_IMAGE))

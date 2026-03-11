@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 import logging
 import re
-from typing import Any, Literal, Mapping, cast
+from typing import Any, Literal, Mapping, TypedDict, cast
 
 import httpx
 import stripe
@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_plan_map, get_subscription_plan_catalog
 from app.core.mobi_slon_events import MOBI_SLON_EVENT_SET
-from app.core.models.payment import AccessBinding, AccessToken, Order, PaymentEvent, RestoreOTP
+from app.core.models.payment import AccessBinding, AccessToken, Order, PaymentEvent, PromoOffer, RestoreOTP
 from app.core.notifications import TelegramSender, build_email_sender
 from app.core.security import generate_otp, hash_value, make_access_token, mask_email, parse_access_token, utcnow
 
@@ -21,6 +21,18 @@ logger = logging.getLogger("quiz.payments")
 SAFE_CLICK_ID_RE = re.compile(r"[^a-zA-Z0-9_.-]")
 SAFE_STATUS_RE = re.compile(r"^[a-z0-9_]{1,64}$")
 SAFE_PARAM_KEY_RE = re.compile(r"^[a-zA-Z0-9_.-]{1,64}$")
+SAFE_PROMO_CODE_RE = re.compile(r"^[A-Z0-9_-]{2,64}$")
+
+
+class MobiSlonPostbackResult(TypedDict):
+    sent: bool
+    upstream_url: str | None
+    upstream_params: dict[str, str]
+    upstream_status_code: int | None
+    upstream_response_body: str | None
+    error_class: str | None
+    error_message: str | None
+    attempt_count: int
 
 
 class PaymentService:
@@ -103,52 +115,141 @@ class PaymentService:
 
     @staticmethod
     def _get_billing_period(plan: Any) -> str:
-        if plan.interval == "month" and max(1, int(plan.interval_count or 1)) == 3:
-            return "quarter"
+        if plan.interval == "month" and max(1, int(plan.interval_count or 1)) == 12:
+            return "year"
         return plan.interval or "lifetime"
 
-    def list_public_subscription_plans(self) -> list[dict[str, Any]]:
-        return [
-            {
-                "code": plan.code,
-                "headline": plan.headline or plan.product_name,
-                "billing_period": self._get_billing_period(plan),
-                "interval_unit": plan.interval or "lifetime",
-                "interval_count": self._get_interval_count(plan),
-                "price": {
-                    "amount_minor": plan.amount_minor,
-                    "currency": plan.currency,
-                },
-                "compare_at_price": (
+    @staticmethod
+    def normalize_promo_code(raw_promo_code: str | None) -> str | None:
+        if raw_promo_code is None:
+            return None
+        normalized = raw_promo_code.strip().upper()
+        if not normalized:
+            return None
+        if not SAFE_PROMO_CODE_RE.match(normalized):
+            raise HTTPException(
+                status_code=400,
+                detail={"code": "promo_invalid", "message": "Promo code is invalid or inactive"},
+            )
+        return normalized
+
+    @staticmethod
+    def _daily_amount_from_minor(amount_minor: int, plan: Any) -> int | None:
+        if plan.interval == "week":
+            days = max(1, int(plan.interval_count or 1) * 7)
+        elif plan.interval == "month":
+            days = max(1, int(plan.interval_count or 1) * 30)
+        else:
+            return None
+        return max(1, round(amount_minor / days))
+
+    def _get_active_promo_offer(self, raw_promo_code: str | None) -> PromoOffer | None:
+        promo_code = self.normalize_promo_code(raw_promo_code)
+        if promo_code is None:
+            return None
+        offer = self.db.scalar(select(PromoOffer).where(PromoOffer.code == promo_code, PromoOffer.is_active.is_(True)))
+        if offer is None:
+            raise HTTPException(
+                status_code=400,
+                detail={"code": "promo_invalid", "message": "Promo code is invalid or inactive"},
+            )
+        return offer
+
+    @staticmethod
+    def _resolve_promo_amount_minor(plan_code: str, offer: PromoOffer) -> int | None:
+        if plan_code == "sub_weekly":
+            return offer.sub_weekly_amount_minor
+        if plan_code == "sub_monthly":
+            return offer.sub_monthly_amount_minor
+        if plan_code == "sub_yearly":
+            return offer.sub_yearly_amount_minor
+        return None
+
+    def list_public_subscription_plans(self, promo_code: str | None = None) -> list[dict[str, Any]]:
+        promo_offer = self._get_active_promo_offer(promo_code) if promo_code else None
+        catalog: list[dict[str, Any]] = []
+        for plan in self.subscription_plans:
+            promo_amount_minor = self._resolve_promo_amount_minor(plan.code, promo_offer) if promo_offer else None
+            has_promo = promo_amount_minor is not None
+            current_currency = promo_offer.currency if promo_offer else plan.currency
+
+            price_amount_minor = promo_amount_minor if has_promo else plan.amount_minor
+            per_day_amount_minor = (
+                self._daily_amount_from_minor(promo_amount_minor, plan)
+                if has_promo
+                else plan.per_day_amount_minor
+            )
+
+            compare_at_price = (
+                (
                     {
-                        "amount_minor": plan.compare_at_amount_minor,
+                        "amount_minor": (
+                            plan.compare_at_amount_minor
+                            if plan.code == "sub_weekly" and plan.compare_at_amount_minor is not None
+                            else plan.amount_minor
+                        ),
                         "currency": plan.currency,
                     }
-                    if plan.compare_at_amount_minor is not None
-                    else None
-                ),
-                "per_day_price": (
+                    if has_promo
+                    else (
+                        {
+                            "amount_minor": plan.compare_at_amount_minor,
+                            "currency": plan.currency,
+                        }
+                        if plan.compare_at_amount_minor is not None
+                        else None
+                    )
+                )
+            )
+            compare_at_per_day_price = (
+                (
                     {
-                        "amount_minor": plan.per_day_amount_minor,
+                        "amount_minor": (
+                            plan.compare_at_per_day_amount_minor
+                            if plan.code == "sub_weekly" and plan.compare_at_per_day_amount_minor is not None
+                            else plan.per_day_amount_minor
+                        ),
                         "currency": plan.currency,
                     }
-                    if plan.per_day_amount_minor is not None
-                    else None
-                ),
-                "compare_at_per_day_price": (
-                    {
-                        "amount_minor": plan.compare_at_per_day_amount_minor,
-                        "currency": plan.currency,
-                    }
-                    if plan.compare_at_per_day_amount_minor is not None
-                    else None
-                ),
-                "badge": plan.badge,
-                "is_default": plan.is_default,
-                "is_highlighted": plan.is_highlighted,
-            }
-            for plan in self.subscription_plans
-        ]
+                    if has_promo and plan.per_day_amount_minor is not None
+                    else (
+                        {
+                            "amount_minor": plan.compare_at_per_day_amount_minor,
+                            "currency": plan.currency,
+                        }
+                        if plan.compare_at_per_day_amount_minor is not None
+                        else None
+                    )
+                )
+            )
+
+            catalog.append(
+                {
+                    "code": plan.code,
+                    "headline": plan.headline or plan.product_name,
+                    "billing_period": self._get_billing_period(plan),
+                    "interval_unit": plan.interval or "lifetime",
+                    "interval_count": self._get_interval_count(plan),
+                    "price": {
+                        "amount_minor": price_amount_minor,
+                        "currency": current_currency,
+                    },
+                    "compare_at_price": compare_at_price,
+                    "per_day_price": (
+                        {
+                            "amount_minor": per_day_amount_minor,
+                            "currency": current_currency,
+                        }
+                        if per_day_amount_minor is not None
+                        else None
+                    ),
+                    "compare_at_per_day_price": compare_at_per_day_price,
+                    "badge": "PROMO" if has_promo else plan.badge,
+                    "is_default": plan.is_default,
+                    "is_highlighted": plan.is_highlighted,
+                }
+            )
+        return catalog
 
     def _build_success_url(self) -> str:
         success_url = self.settings.resolved_pay_success_url
@@ -165,6 +266,7 @@ class PaymentService:
         clickid: str,
         locale: str | None,
         telegram_chat_id: str | None,
+        promo_code: str | None,
     ) -> tuple[str, str, str]:
         order_clickid = self.sanitize_clickid(clickid.strip())
         if not order_clickid:
@@ -179,15 +281,41 @@ class PaymentService:
         if mode == "one_time" and plan_cfg.interval is not None:
             raise HTTPException(status_code=400, detail="Plan is subscription-only")
 
+        promo_offer: PromoOffer | None = None
+        applied_amount_minor = plan_cfg.amount_minor
+        applied_currency = plan_cfg.currency
+        normalized_promo_code = self.normalize_promo_code(promo_code)
+        if normalized_promo_code:
+            if mode != "subscription":
+                raise HTTPException(
+                    status_code=400,
+                    detail={"code": "promo_invalid", "message": "Promo code is valid only for subscription plans"},
+                )
+            promo_offer = self._get_active_promo_offer(normalized_promo_code)
+            if promo_offer is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail={"code": "promo_invalid", "message": "Promo code is invalid or inactive"},
+                )
+            promo_amount = self._resolve_promo_amount_minor(plan, promo_offer)
+            if promo_amount is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail={"code": "promo_invalid", "message": "Promo code is invalid or inactive"},
+                )
+            applied_amount_minor = promo_amount
+            applied_currency = promo_offer.currency
+
         order = Order(
             email=email,
             clickid=order_clickid,
             telegram_chat_id=telegram_chat_id,
             mode=mode,
             plan=plan,
+            promo_code=promo_offer.code if promo_offer else None,
             locale=self.normalize_locale(locale),
-            amount_minor=plan_cfg.amount_minor,
-            currency=plan_cfg.currency,
+            amount_minor=applied_amount_minor,
+            currency=applied_currency,
             status="created",
         )
         self.db.add(order)
@@ -195,8 +323,8 @@ class PaymentService:
 
         line_item: dict[str, Any] = {
             "price_data": {
-                "currency": plan_cfg.currency,
-                "unit_amount": plan_cfg.amount_minor,
+                "currency": applied_currency,
+                "unit_amount": applied_amount_minor,
                 "product_data": {"name": plan_cfg.product_name},
             },
             "quantity": 1,
@@ -209,7 +337,9 @@ class PaymentService:
                 "interval_count": max(1, plan_cfg.interval_count),
             }
 
-        metadata = {"order_id": order.id, "clickid": order_clickid, "plan": plan, "mode": mode, "email": email}
+        metadata: dict[str, str] = {"order_id": order.id, "clickid": order_clickid, "plan": plan, "mode": mode, "email": email}
+        if promo_offer is not None:
+            metadata["promo_code"] = promo_offer.code
 
         try:
             session = stripe.checkout.Session.create(
@@ -274,7 +404,7 @@ class PaymentService:
             raise HTTPException(status_code=502, detail=f"Stripe error: {exc}") from exc
         return session.url
 
-    def handle_webhook(self, payload: bytes, signature: str | None) -> dict[str, bool]:
+    def handle_webhook(self, payload: bytes, signature: str | None) -> tuple[dict[str, bool], MobiSlonPostbackResult | None]:
         if not signature:
             raise HTTPException(status_code=400, detail="Missing stripe-signature")
 
@@ -289,7 +419,7 @@ class PaymentService:
         existing = self.db.scalar(select(PaymentEvent).where(PaymentEvent.stripe_event_id == event_id))
         if existing is not None:
             logger.info("stripe_webhook_duplicate event_id=%s event_type=%s", event_id, event_type)
-            return {"ok": True, "duplicate": True}
+            return {"ok": True, "duplicate": True}, None
 
         payment_event = PaymentEvent(
             stripe_event_id=event_id,
@@ -353,13 +483,14 @@ class PaymentService:
         self.db.commit()
         logger.info("stripe_webhook_processed event_id=%s event_type=%s", event_id, event_type)
         if event_type == "checkout.session.completed" and postback_payload:
-            self._send_mobi_slon_postback(
+            postback_result = self._send_mobi_slon_postback(
                 status="pay_success",
                 clickid=postback_payload[0],
                 extra_params={"payout": postback_payload[1]},
                 source="stripe_webhook",
             )
-        return {"ok": True, "duplicate": False}
+            return {"ok": True, "duplicate": False}, postback_result
+        return {"ok": True, "duplicate": False}, None
 
     def relay_mobi_slon_event(
         self,
@@ -369,7 +500,7 @@ class PaymentService:
         tracking_params: Mapping[str, str] | None,
         session_id: str | None,
         page_path: str | None,
-    ) -> bool:
+    ) -> MobiSlonPostbackResult:
         normalized_status = self.normalize_postback_status(status)
         sanitized_clickid = self.sanitize_clickid(clickid.strip())
         if not sanitized_clickid:
@@ -377,7 +508,16 @@ class PaymentService:
 
         if normalized_status == "pay_success":
             logger.warning("mobi_slon_relay_skipped status=%s source=frontend_relay reason=reserved_server_side", normalized_status)
-            return False
+            return {
+                "sent": False,
+                "upstream_url": None,
+                "upstream_params": {},
+                "upstream_status_code": None,
+                "upstream_response_body": None,
+                "error_class": "ReservedServerSideStatus",
+                "error_message": "pay_success can be sent only from stripe_webhook",
+                "attempt_count": 0,
+            }
 
         safe_params = self.sanitize_tracking_params(tracking_params)
         logger.info(
@@ -726,17 +866,28 @@ class PaymentService:
         clickid: str,
         extra_params: Mapping[str, str] | None = None,
         source: str = "unknown",
-    ) -> bool:
+    ) -> MobiSlonPostbackResult:
         postback_base_url = self.settings.mobi_slon_postback_url.strip()
         if not postback_base_url:
             logger.warning("mobi_slon_postback_skipped_missing_url status=%s source=%s", status, source)
-            return False
+            return {
+                "sent": False,
+                "upstream_url": None,
+                "upstream_params": {},
+                "upstream_status_code": None,
+                "upstream_response_body": None,
+                "error_class": "MissingPostbackUrl",
+                "error_message": "mobi_slon_postback_url is not configured",
+                "attempt_count": 0,
+            }
 
         request_params: dict[str, str] = {"cnv_id": clickid, "payout": "0", "cnv_status": status}
         if extra_params:
             request_params.update(extra_params)
 
         last_error: Exception | None = None
+        last_status_code: int | None = None
+        last_response_body: str | None = None
         for attempt in range(1, 4):
             try:
                 logger.info(
@@ -752,6 +903,8 @@ class PaymentService:
                     params=request_params,
                     timeout=10.0,
                 )
+                last_status_code = response.status_code
+                last_response_body = response.text[:1000]
                 if response.status_code < 400:
                     logger.info(
                         "mobi_slon_postback_sent status=%s clickid=%s attempt=%d source=%s code=%d body=%s",
@@ -762,7 +915,16 @@ class PaymentService:
                         response.status_code,
                         response.text[:180].replace("\n", " "),
                     )
-                    return True
+                    return {
+                        "sent": True,
+                        "upstream_url": postback_base_url,
+                        "upstream_params": request_params,
+                        "upstream_status_code": response.status_code,
+                        "upstream_response_body": last_response_body,
+                        "error_class": None,
+                        "error_message": None,
+                        "attempt_count": attempt,
+                    }
                 last_error = RuntimeError(f"HTTP {response.status_code}")
                 logger.warning(
                     "mobi_slon_postback_bad_response status=%s clickid=%s attempt=%d source=%s code=%d body=%s",
@@ -791,4 +953,13 @@ class PaymentService:
             source,
             str(last_error) if last_error else "unknown",
         )
-        return False
+        return {
+            "sent": False,
+            "upstream_url": postback_base_url,
+            "upstream_params": request_params,
+            "upstream_status_code": last_status_code,
+            "upstream_response_body": last_response_body,
+            "error_class": last_error.__class__.__name__ if last_error else None,
+            "error_message": str(last_error) if last_error else None,
+            "attempt_count": 3,
+        }

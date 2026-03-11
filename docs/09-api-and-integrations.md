@@ -8,14 +8,16 @@
 ### `POST /api/payment/checkout-session`
 Request:
 - `mode`: `one_time | subscription`
-- `plan`: `one_time_basic | sub_weekly | sub_monthly | sub_quarterly`
+- `plan`: `one_time_basic | sub_weekly | sub_monthly | sub_yearly`
 - `email`: string
 - `clickid`: string
 - `locale`: optional string
 - `telegram_chat_id`: optional string
+- `promo_code`: optional string (subscription only)
 
 Note:
 - `locale` (`ru`/`en`) сохраняется в `orders` и используется для language-шаблонов email (access + restore OTP).
+- `promo_code` валидируется только на backend; при невалидном/неактивном коде API возвращает `400` с `detail.code=promo_invalid`.
 
 Response:
 - `checkout_url`
@@ -24,6 +26,8 @@ Response:
 
 ### `GET /api/payment/plans`
 - Public catalog for `/pay`.
+- Optional query:
+  - `promo_code`: string (when valid/active, prices are replaced with promo prices).
 - Response fields:
   - `code`
   - `headline`
@@ -37,6 +41,40 @@ Response:
   - `is_default`
   - `is_highlighted`
 - Catalog and merchandising are fully backend-configured through env vars.
+- Если `promo_code` невалиден/неактивен -> `400` + `{"detail":{"code":"promo_invalid","message":"..."}}`.
+
+### Promo offers storage
+- Table: `seranking.promo_offers`
+  - `code` (unique, uppercase), `is_active`
+  - `currency`
+  - `sub_weekly_amount_minor`, `sub_monthly_amount_minor`, `sub_yearly_amount_minor`
+  - `created_at`, `updated_at`
+- Applied promo code is stored in `seranking.orders.promo_code`.
+
+### How to create an individual promo offer
+```sql
+INSERT INTO seranking.promo_offers (
+  id,
+  code,
+  is_active,
+  currency,
+  sub_weekly_amount_minor,
+  sub_monthly_amount_minor,
+  sub_yearly_amount_minor,
+  created_at,
+  updated_at
+) VALUES (
+  '00000000-0000-0000-0000-000000000001',
+  'VIP2026A',
+  true,
+  'usd',
+  199,
+  3900,
+  9900,
+  now(),
+  now()
+);
+```
 
 ### `POST /api/stripe/webhook`
 - Проверка подписи `stripe-signature` + `STRIPE_WEBHOOK_SECRET`.
@@ -80,6 +118,7 @@ Response:
 - Public relay endpoint for frontend.
 - Request: `status`, `clickid`, optional `session_id`, `page_path`, `tracking_params`.
 - Backend validates payload, logs relay attempt, forwards to MobiSлон with retries.
+- Для `status=pay_email_entered` frontend передает `tracking_params.email` (PII), и значение попадает в relay/logs.
 
 MobiSлон event names (enum reference):
 - `start_quiz`
@@ -91,6 +130,10 @@ MobiSлон event names (enum reference):
 - `block6_completed`
 - `block7_completed`
 - `transition_to_payment`
+- `pay_email_entered`
+- `pay_plan_weekly_selected`
+- `pay_plan_monthly_selected`
+- `pay_plan_yearly_selected`
 - `pay_success`
 
 ### `GET /api/tracking/mobi-slon-event`
