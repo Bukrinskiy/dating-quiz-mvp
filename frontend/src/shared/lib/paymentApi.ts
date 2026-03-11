@@ -26,11 +26,27 @@ export type CheckoutSessionResponse = {
   order_id: string;
 };
 
-export type PaymentSessionStatus = {
+export type PaymentStatus = {
   payment_status: string;
   fulfillment_status: string;
   access_status: string;
   activation_link: string | null;
+};
+
+export type CreatePaymentIntentRequest = {
+  plan: string;
+  email: string;
+  clickid: string;
+  locale?: string;
+  telegram_chat_id?: string;
+  promo_code?: string;
+};
+
+export type CreatePaymentIntentResponse = {
+  order_id: string;
+  client_secret: string;
+  customer_id: string;
+  publishable_key: string;
 };
 
 export class ApiError extends Error {
@@ -97,12 +113,34 @@ export const getPaymentPlans = async (promoCode?: string): Promise<PublicPlan[]>
   return response.json() as Promise<PublicPlan[]>;
 };
 
-export const getPaymentSessionStatus = async (sessionId: string): Promise<PaymentSessionStatus> => {
+export const getPaymentSessionStatus = async (sessionId: string): Promise<PaymentStatus> => {
   const response = await fetch(`/api/payment/session-status?session_id=${encodeURIComponent(sessionId)}`);
   if (!response.ok) {
     throw new Error(`Session status failed (${response.status})`);
   }
-  return response.json() as Promise<PaymentSessionStatus>;
+  return response.json() as Promise<PaymentStatus>;
+};
+
+export const createPaymentIntent = async (payload: CreatePaymentIntentRequest): Promise<CreatePaymentIntentResponse> => {
+  const response = await fetch("/api/payment/intent", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw await parseApiError(response, `Payment intent creation failed (${response.status})`);
+  }
+
+  return response.json() as Promise<CreatePaymentIntentResponse>;
+};
+
+export const getPaymentOrderStatus = async (orderId: string): Promise<PaymentStatus> => {
+  const response = await fetch(`/api/payment/order-status?order_id=${encodeURIComponent(orderId)}`);
+  if (!response.ok) {
+    throw new Error(`Order status failed (${response.status})`);
+  }
+  return response.json() as Promise<PaymentStatus>;
 };
 
 export const createCustomerPortal = async (email: string): Promise<{ portal_url: string }> => {

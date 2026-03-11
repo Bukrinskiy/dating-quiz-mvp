@@ -12,6 +12,7 @@ if TEST_DB_PATH.exists():
 
 os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DB_PATH}"
 os.environ["STRIPE_SECRET_KEY"] = "sk_test_dummy"
+os.environ["STRIPE_PUBLISHABLE_KEY"] = "pk_test_dummy"
 os.environ["STRIPE_WEBHOOK_SECRET"] = "whsec_dummy"
 os.environ["ACCESS_TOKEN_SECRET"] = "test-secret"
 os.environ["TELEGRAM_BOT_USERNAME"] = "test_bot"
@@ -157,6 +158,262 @@ def test_checkout_session_yearly_subscription(monkeypatch) -> None:
 
         assert response.status_code == 200
         assert response.json()["session_id"] == "cs_test_yearly"
+
+
+def test_payment_intent_subscription(monkeypatch) -> None:
+    class DummyList:
+        data: list[object] = []
+
+    class DummyCustomer:
+        id = "cus_intent_1"
+
+    class DummyPaymentIntent:
+        id = "pi_intent_1"
+        client_secret = "pi_secret_1"
+
+    class DummyInvoice:
+        payment_intent = DummyPaymentIntent()
+
+    class DummySubscription:
+        id = "sub_intent_1"
+        latest_invoice = DummyInvoice()
+
+    captured_subscription_payload: dict[str, object] = {}
+
+    monkeypatch.setattr("stripe.Customer.list", lambda **_: DummyList())
+    monkeypatch.setattr("stripe.Customer.create", lambda **_: DummyCustomer())
+    monkeypatch.setattr("stripe.Product.list", lambda **_: DummyList())
+    monkeypatch.setattr("stripe.Product.create", lambda **_: type("DummyProduct", (), {"id": "prod_intent_1"})())
+
+    def fake_subscription_create(**kwargs):
+        captured_subscription_payload.update(kwargs)
+        return DummySubscription()
+
+    monkeypatch.setattr("stripe.Subscription.create", fake_subscription_create)
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/payment/intent",
+            json={
+                "plan": "sub_monthly",
+                "email": "intent@example.com",
+                "clickid": "intent-001",
+                "locale": "en",
+            },
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["order_id"]
+    assert payload["client_secret"] == "pi_secret_1"
+    assert payload["customer_id"] == "cus_intent_1"
+    assert payload["publishable_key"] == "pk_test_dummy"
+
+    with SessionLocal() as db:
+        order = db.query(Order).filter(Order.id == payload["order_id"]).one()
+
+    assert order.status == "intent_created"
+    assert order.stripe_customer_id == "cus_intent_1"
+    assert order.stripe_subscription_id == "sub_intent_1"
+    assert order.stripe_payment_intent_id == "pi_intent_1"
+    items = captured_subscription_payload["items"]
+    assert isinstance(items, list)
+    first_item = items[0]
+    assert first_item["price_data"]["product"] == "prod_intent_1"
+    assert "product_data" not in first_item["price_data"]
+
+
+def test_payment_intent_rejects_invalid_promo_code(monkeypatch) -> None:
+    class DummyList:
+        data: list[object] = []
+
+    class DummyCustomer:
+        id = "cus_intent_invalid"
+
+    class DummySubscription:
+        id = "sub_intent_invalid"
+        latest_invoice = {"payment_intent": {"id": "pi_intent_invalid", "client_secret": "pi_secret_invalid"}}
+
+    monkeypatch.setattr("stripe.Customer.list", lambda **_: DummyList())
+    monkeypatch.setattr("stripe.Customer.create", lambda **_: DummyCustomer())
+    monkeypatch.setattr("stripe.Product.list", lambda **_: DummyList())
+    monkeypatch.setattr("stripe.Product.create", lambda **_: type("DummyProduct", (), {"id": "prod_intent_invalid"})())
+    monkeypatch.setattr("stripe.Subscription.create", lambda **_: DummySubscription())
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/payment/intent",
+            json={
+                "plan": "sub_monthly",
+                "email": "intent-invalid@example.com",
+                "clickid": "intent-002",
+                "locale": "en",
+                "promo_code": "missing",
+            },
+        )
+
+    assert response.status_code == 400
+    assert response.json()["detail"]["code"] == "promo_invalid"
+
+
+def test_payment_order_status_endpoint(monkeypatch) -> None:
+    class DummySession:
+        id = "cs_order_status"
+        url = "https://checkout.test/order-status"
+
+    monkeypatch.setattr("stripe.checkout.Session.create", lambda **_: DummySession())
+
+    with TestClient(app) as client:
+        create_response = client.post(
+            "/api/payment/checkout-session",
+            json={
+                "mode": "subscription",
+                "plan": "sub_monthly",
+                "email": "order-status@example.com",
+                "clickid": "order-status-001",
+                "locale": "en",
+            },
+        )
+        assert create_response.status_code == 200
+        order_id = create_response.json()["order_id"]
+
+        status_response = client.get("/api/payment/order-status", params={"order_id": order_id})
+        assert status_response.status_code == 200
+        assert status_response.json()["payment_status"] == "session_created"
+
+        missing_response = client.get("/api/payment/order-status", params={"order_id": "missing-order-id"})
+        assert missing_response.status_code == 404
+
+
+def test_payment_intent_paid_via_invoice_webhook_updates_order_status(monkeypatch) -> None:
+    class DummyList:
+        data: list[object] = []
+
+    class DummyCustomer:
+        id = "cus_intent_paid"
+
+    class DummySubscription:
+        id = "sub_intent_paid"
+        latest_invoice = {"payment_intent": {"id": "pi_intent_paid", "client_secret": "pi_secret_paid"}}
+
+    monkeypatch.setattr("stripe.Customer.list", lambda **_: DummyList())
+    monkeypatch.setattr("stripe.Customer.create", lambda **_: DummyCustomer())
+    monkeypatch.setattr("stripe.Product.list", lambda **_: DummyList())
+    monkeypatch.setattr("stripe.Product.create", lambda **_: type("DummyProduct", (), {"id": "prod_intent_paid"})())
+    monkeypatch.setattr("stripe.Subscription.create", lambda **_: DummySubscription())
+
+    with TestClient(app) as client:
+        create_response = client.post(
+            "/api/payment/intent",
+            json={
+                "plan": "sub_monthly",
+                "email": "intent-paid@example.com",
+                "clickid": "intent-paid-001",
+                "locale": "en",
+            },
+        )
+        assert create_response.status_code == 200
+        order_id = create_response.json()["order_id"]
+
+        event = {
+            "id": "evt_intent_paid",
+            "type": "invoice.paid",
+            "data": {
+                "object": {
+                    "customer": "cus_intent_paid",
+                    "subscription": "sub_intent_paid",
+                    "lines": {"data": [{"period": {"end": 1712222222}}]},
+                }
+            },
+        }
+        monkeypatch.setattr("stripe.Webhook.construct_event", lambda payload, sig, secret: event)
+        webhook_response = client.post("/api/stripe/webhook", headers={"stripe-signature": "x"}, content=b"{}")
+        assert webhook_response.status_code == 200
+
+        status_response = client.get("/api/payment/order-status", params={"order_id": order_id})
+        assert status_response.status_code == 200
+        payload = status_response.json()
+        assert payload["payment_status"] == "paid"
+        assert payload["activation_link"]
+
+
+def test_payment_intent_uses_invoice_confirmation_secret_when_payment_intent_missing(monkeypatch) -> None:
+    class DummyList:
+        data: list[object] = []
+
+    class DummyCustomer:
+        id = "cus_intent_conf_secret"
+
+    class DummySubscription:
+        id = "sub_intent_conf_secret"
+        latest_invoice = {"confirmation_secret": {"client_secret": "cs_conf_secret_1"}}
+
+    monkeypatch.setattr("stripe.Customer.list", lambda **_: DummyList())
+    monkeypatch.setattr("stripe.Customer.create", lambda **_: DummyCustomer())
+    monkeypatch.setattr("stripe.Product.list", lambda **_: DummyList())
+    monkeypatch.setattr("stripe.Product.create", lambda **_: type("DummyProduct", (), {"id": "prod_intent_conf_secret"})())
+    monkeypatch.setattr("stripe.Subscription.create", lambda **_: DummySubscription())
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/payment/intent",
+            json={
+                "plan": "sub_monthly",
+                "email": "intent-conf-secret@example.com",
+                "clickid": "intent-conf-secret-001",
+                "locale": "en",
+            },
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["client_secret"] == "cs_conf_secret_1"
+
+
+def test_payment_intent_succeeded_webhook_marks_order_paid(monkeypatch) -> None:
+    class DummyList:
+        data: list[object] = []
+
+    class DummyCustomer:
+        id = "cus_intent_succeeded"
+
+    class DummySubscription:
+        id = "sub_intent_succeeded"
+        latest_invoice = {"payment_intent": {"id": "pi_intent_succeeded", "client_secret": "pi_secret_succeeded"}}
+
+    monkeypatch.setattr("stripe.Customer.list", lambda **_: DummyList())
+    monkeypatch.setattr("stripe.Customer.create", lambda **_: DummyCustomer())
+    monkeypatch.setattr("stripe.Product.list", lambda **_: DummyList())
+    monkeypatch.setattr("stripe.Product.create", lambda **_: type("DummyProduct", (), {"id": "prod_intent_succeeded"})())
+    monkeypatch.setattr("stripe.Subscription.create", lambda **_: DummySubscription())
+
+    with TestClient(app) as client:
+        create_response = client.post(
+            "/api/payment/intent",
+            json={
+                "plan": "sub_monthly",
+                "email": "intent-succeeded@example.com",
+                "clickid": "intent-succeeded-001",
+                "locale": "en",
+            },
+        )
+        assert create_response.status_code == 200
+        order_id = create_response.json()["order_id"]
+
+        event = {
+            "id": "evt_intent_succeeded",
+            "type": "payment_intent.succeeded",
+            "data": {"object": {"id": "pi_intent_succeeded", "customer": "cus_intent_succeeded"}},
+        }
+        monkeypatch.setattr("stripe.Webhook.construct_event", lambda payload, sig, secret: event)
+        webhook_response = client.post("/api/stripe/webhook", headers={"stripe-signature": "x"}, content=b"{}")
+        assert webhook_response.status_code == 200
+
+        status_response = client.get("/api/payment/order-status", params={"order_id": order_id})
+        assert status_response.status_code == 200
+        payload = status_response.json()
+        assert payload["payment_status"] == "paid"
+        assert payload["activation_link"]
 
 
 def test_payment_plans_endpoint_returns_public_subscription_catalog() -> None:

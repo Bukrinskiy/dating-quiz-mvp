@@ -257,17 +257,14 @@ class PaymentService:
             return f"{success_url}&session_id={{CHECKOUT_SESSION_ID}}"
         return f"{success_url}?session_id={{CHECKOUT_SESSION_ID}}"
 
-    def create_checkout_session(
+    def _resolve_order_payload(
         self,
         *,
         mode: str,
         plan: str,
-        email: str,
         clickid: str,
-        locale: str | None,
-        telegram_chat_id: str | None,
         promo_code: str | None,
-    ) -> tuple[str, str, str]:
+    ) -> tuple[str, Any, PromoOffer | None, int, str]:
         order_clickid = self.sanitize_clickid(clickid.strip())
         if not order_clickid:
             raise HTTPException(status_code=400, detail="Invalid clickid")
@@ -306,6 +303,94 @@ class PaymentService:
             applied_amount_minor = promo_amount
             applied_currency = promo_offer.currency
 
+        return order_clickid, plan_cfg, promo_offer, applied_amount_minor, applied_currency
+
+    def _build_order_metadata(self, *, order: Order, mode: str, plan: str, email: str, promo_offer: PromoOffer | None) -> dict[str, str]:
+        metadata: dict[str, str] = {
+            "order_id": order.id,
+            "clickid": order.clickid,
+            "plan": plan,
+            "mode": mode,
+            "email": email,
+        }
+        if promo_offer is not None:
+            metadata["promo_code"] = promo_offer.code
+        return metadata
+
+    def _extract_token_activation_link(self, order: Order) -> str | None:
+        token = self.db.scalar(
+            select(AccessToken)
+            .where(AccessToken.order_id == order.id, AccessToken.status == "issued")
+            .order_by(desc(AccessToken.issued_at))
+        )
+        if token is None:
+            return None
+        token_value = make_access_token(token.id, self.settings.access_token_secret)
+        return self.telegram_sender.build_deep_link(token_value)
+
+    @staticmethod
+    def _stripe_get(obj: Any, key: str) -> Any:
+        if obj is None:
+            return None
+        if isinstance(obj, dict):
+            return obj.get(key)
+        return getattr(obj, key, None)
+
+    def _get_or_create_customer(self, email: str) -> str:
+        try:
+            existing = stripe.Customer.list(email=email, limit=1)
+            existing_data = self._stripe_get(existing, "data") or []
+            if existing_data:
+                customer_id = self._stripe_get(existing_data[0], "id")
+                if isinstance(customer_id, str) and customer_id:
+                    return customer_id
+            created = stripe.Customer.create(email=email)
+            created_id = self._stripe_get(created, "id")
+            if not isinstance(created_id, str) or not created_id:
+                raise HTTPException(status_code=502, detail="Stripe did not return customer id")
+            return created_id
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"Stripe error: {exc}") from exc
+
+    def _get_or_create_product(self, product_name: str) -> str:
+        try:
+            products = stripe.Product.list(active=True, limit=100)
+            for product in self._stripe_get(products, "data") or []:
+                if self._stripe_get(product, "name") == product_name:
+                    product_id = self._stripe_get(product, "id")
+                    if isinstance(product_id, str) and product_id:
+                        return product_id
+
+            created = stripe.Product.create(name=product_name)
+            created_id = self._stripe_get(created, "id")
+            if not isinstance(created_id, str) or not created_id:
+                raise HTTPException(status_code=502, detail="Stripe did not return product id")
+            return created_id
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail=f"Stripe error: {exc}") from exc
+
+    def create_checkout_session(
+        self,
+        *,
+        mode: str,
+        plan: str,
+        email: str,
+        clickid: str,
+        locale: str | None,
+        telegram_chat_id: str | None,
+        promo_code: str | None,
+    ) -> tuple[str, str, str]:
+        order_clickid, plan_cfg, promo_offer, applied_amount_minor, applied_currency = self._resolve_order_payload(
+            mode=mode,
+            plan=plan,
+            clickid=clickid,
+            promo_code=promo_code,
+        )
+
         order = Order(
             email=email,
             clickid=order_clickid,
@@ -337,9 +422,7 @@ class PaymentService:
                 "interval_count": max(1, plan_cfg.interval_count),
             }
 
-        metadata: dict[str, str] = {"order_id": order.id, "clickid": order_clickid, "plan": plan, "mode": mode, "email": email}
-        if promo_offer is not None:
-            metadata["promo_code"] = promo_offer.code
+        metadata = self._build_order_metadata(order=order, mode=mode, plan=plan, email=email, promo_offer=promo_offer)
 
         try:
             session = stripe.checkout.Session.create(
@@ -364,26 +447,115 @@ class PaymentService:
         self.db.commit()
         return checkout_url, session.id, order.id
 
+    def create_subscription_intent(
+        self,
+        *,
+        plan: str,
+        email: str,
+        clickid: str,
+        locale: str | None,
+        telegram_chat_id: str | None,
+        promo_code: str | None,
+    ) -> tuple[str, str, str, str]:
+        if not self.settings.stripe_publishable_key.strip():
+            raise HTTPException(status_code=503, detail="Stripe publishable key is not configured")
+
+        order_clickid, plan_cfg, promo_offer, applied_amount_minor, applied_currency = self._resolve_order_payload(
+            mode="subscription",
+            plan=plan,
+            clickid=clickid,
+            promo_code=promo_code,
+        )
+
+        order = Order(
+            email=email,
+            clickid=order_clickid,
+            telegram_chat_id=telegram_chat_id,
+            mode="subscription",
+            plan=plan,
+            promo_code=promo_offer.code if promo_offer else None,
+            locale=self.normalize_locale(locale),
+            amount_minor=applied_amount_minor,
+            currency=applied_currency,
+            status="created",
+        )
+        self.db.add(order)
+        self.db.flush()
+
+        metadata = self._build_order_metadata(order=order, mode="subscription", plan=plan, email=email, promo_offer=promo_offer)
+        try:
+            customer_id = self._get_or_create_customer(email)
+            product_id = self._get_or_create_product(plan_cfg.product_name)
+            subscription = stripe.Subscription.create(
+                customer=customer_id,
+                payment_behavior="default_incomplete",
+                payment_settings={"save_default_payment_method": "on_subscription"},
+                items=[
+                    {
+                        "price_data": {
+                            "currency": applied_currency,
+                            "unit_amount": applied_amount_minor,
+                            "product": product_id,
+                            "recurring": {
+                                "interval": plan_cfg.interval,
+                                "interval_count": max(1, plan_cfg.interval_count),
+                            },
+                        }
+                    }
+                ],
+                metadata=metadata,
+                expand=["latest_invoice.payment_intent", "latest_invoice.confirmation_secret", "pending_setup_intent"],
+            )
+        except Exception as exc:
+            self.db.rollback()
+            raise HTTPException(status_code=502, detail=f"Stripe error: {exc}") from exc
+
+        subscription_id = self._stripe_get(subscription, "id")
+        latest_invoice = self._stripe_get(subscription, "latest_invoice")
+        confirmation_secret = self._stripe_get(latest_invoice, "confirmation_secret")
+        client_secret = self._stripe_get(confirmation_secret, "client_secret")
+        payment_intent = self._stripe_get(latest_invoice, "payment_intent")
+        payment_intent_id = self._stripe_get(payment_intent, "id")
+        if not isinstance(client_secret, str) or not client_secret:
+            client_secret = self._stripe_get(payment_intent, "client_secret")
+        if (not isinstance(client_secret, str) or not client_secret) and self._stripe_get(subscription, "pending_setup_intent"):
+            pending_setup_intent = self._stripe_get(subscription, "pending_setup_intent")
+            client_secret = self._stripe_get(pending_setup_intent, "client_secret")
+        if not isinstance(client_secret, str) or not client_secret:
+            self.db.rollback()
+            raise HTTPException(status_code=502, detail="Stripe did not return payment client_secret")
+
+        order.stripe_customer_id = customer_id
+        if isinstance(subscription_id, str):
+            order.stripe_subscription_id = subscription_id
+        if isinstance(payment_intent_id, str):
+            order.stripe_payment_intent_id = payment_intent_id
+        order.status = "intent_created"
+        self.db.commit()
+        return order.id, client_secret, customer_id, self.settings.stripe_publishable_key.strip()
+
     def get_session_status(self, session_id: str) -> dict[str, str | None]:
         order = self.db.scalar(select(Order).where(Order.stripe_session_id == session_id))
         if order is None:
             raise HTTPException(status_code=404, detail="Session not found")
 
-        activation_link: str | None = None
-        token = self.db.scalar(
-            select(AccessToken)
-            .where(AccessToken.order_id == order.id, AccessToken.status == "issued")
-            .order_by(desc(AccessToken.issued_at))
-        )
-        if token is not None:
-            token_value = make_access_token(token.id, self.settings.access_token_secret)
-            activation_link = self.telegram_sender.build_deep_link(token_value)
+        return {
+            "payment_status": order.status,
+            "fulfillment_status": order.fulfillment_status,
+            "access_status": order.access_status,
+            "activation_link": self._extract_token_activation_link(order),
+        }
+
+    def get_order_status(self, order_id: str) -> dict[str, str | None]:
+        order = self.db.scalar(select(Order).where(Order.id == order_id))
+        if order is None:
+            raise HTTPException(status_code=404, detail="Order not found")
 
         return {
             "payment_status": order.status,
             "fulfillment_status": order.fulfillment_status,
             "access_status": order.access_status,
-            "activation_link": activation_link,
+            "activation_link": self._extract_token_activation_link(order),
         }
 
     def create_customer_portal(self, email: str) -> str:
@@ -436,6 +608,14 @@ class PaymentService:
             postback_payload = self._on_checkout_session_completed(obj)
         elif event_type == "checkout.session.expired":
             self._update_order_status_by_session(obj.get("id"), status="expired")
+        elif event_type == "payment_intent.succeeded":
+            order = self._find_order_by_payment_intent(obj.get("id"))
+            if order is not None:
+                order.status = "paid"
+                customer_id = obj.get("customer")
+                if isinstance(customer_id, str) and customer_id:
+                    order.stripe_customer_id = customer_id
+                self._ensure_access_delivery(order)
         elif event_type == "payment_intent.payment_failed":
             self._update_order_status_by_payment_intent(obj.get("id"), status="failed")
         elif event_type == "invoice.paid":
@@ -448,6 +628,8 @@ class PaymentService:
                 binding_status="active",
                 current_period_end_ts=period_end_ts,
             )
+            if order is not None:
+                self._ensure_access_delivery(order)
         elif event_type == "invoice.payment_failed":
             period_end_ts = (((obj.get("lines") or {}).get("data") or [{}])[0].get("period") or {}).get("end")
             order = self._find_order_by_subscription(obj.get("subscription"), obj.get("customer"))
@@ -749,6 +931,11 @@ class PaymentService:
             )
         return None
 
+    def _find_order_by_payment_intent(self, payment_intent_id: str | None) -> Order | None:
+        if not payment_intent_id:
+            return None
+        return self.db.scalar(select(Order).where(Order.stripe_payment_intent_id == payment_intent_id))
+
     def _set_bindings_status(self, order_id: str, *, status: str) -> None:
         bindings = self.db.scalars(select(AccessBinding).where(AccessBinding.order_id == order_id)).all()
         for binding in bindings:
@@ -817,7 +1004,18 @@ class PaymentService:
         period_end = self._as_utc_datetime(session_obj.get("current_period_end"))
         if period_end is not None:
             order.stripe_current_period_end = period_end
+        self._ensure_access_delivery(order)
+        logger.info(
+            "checkout_session_completed order_id=%s session_id=%s clickid=%s fulfillment_status=%s access_status=%s",
+            order.id,
+            order.stripe_session_id,
+            order.clickid,
+            order.fulfillment_status,
+            order.access_status,
+        )
+        return (order.clickid, self._format_amount_minor(order.amount_minor, order.currency))
 
+    def _ensure_access_delivery(self, order: Order) -> None:
         token = self.db.scalar(
             select(AccessToken)
             .where(AccessToken.order_id == order.id, AccessToken.status == "issued")
@@ -831,33 +1029,28 @@ class PaymentService:
         token_value = make_access_token(token.id, self.settings.access_token_secret)
         activation_link = self.telegram_sender.build_deep_link(token_value)
 
+        should_send = order.fulfillment_status in {"none", "pending"}
         email_ok = True
-        try:
-            self.email_sender.send_access_email(
-                email=order.email,
-                order_id=order.id,
-                activation_link=activation_link,
-                locale=order.locale,
-            )
-        except Exception as exc:  # noqa: BLE001
-            email_ok = False
-            logger.warning("email_delivery_failed order_id=%s email=%s error=%s", order.id, mask_email(order.email), str(exc))
-
         telegram_ok = True
-        if order.telegram_chat_id:
-            telegram_ok = self.telegram_sender.send_activation_message(chat_id=order.telegram_chat_id, token=token_value)
+        if should_send:
+            try:
+                self.email_sender.send_access_email(
+                    email=order.email,
+                    order_id=order.id,
+                    activation_link=activation_link,
+                    locale=order.locale,
+                )
+            except Exception as exc:  # noqa: BLE001
+                email_ok = False
+                logger.warning("email_delivery_failed order_id=%s email=%s error=%s", order.id, mask_email(order.email), str(exc))
 
-        order.fulfillment_status = "done" if telegram_ok and email_ok else "partial"
-        order.access_status = "token_issued"
-        logger.info(
-            "checkout_session_completed order_id=%s session_id=%s clickid=%s fulfillment_status=%s access_status=%s",
-            order.id,
-            order.stripe_session_id,
-            order.clickid,
-            order.fulfillment_status,
-            order.access_status,
-        )
-        return (order.clickid, self._format_amount_minor(order.amount_minor, order.currency))
+            if order.telegram_chat_id:
+                telegram_ok = self.telegram_sender.send_activation_message(chat_id=order.telegram_chat_id, token=token_value)
+
+        if should_send:
+            order.fulfillment_status = "done" if telegram_ok and email_ok else "partial"
+        if order.access_status in {"none", "pending", "expired", "revoked"}:
+            order.access_status = "token_issued"
 
     def _send_mobi_slon_postback(
         self,

@@ -24,6 +24,21 @@ Response:
 - `session_id`
 - `order_id`
 
+### `POST /api/payment/intent`
+Request:
+- `plan`: `sub_weekly | sub_monthly | sub_yearly`
+- `email`: string
+- `clickid`: string
+- `locale`: optional string
+- `telegram_chat_id`: optional string
+- `promo_code`: optional string
+
+Response:
+- `order_id`
+- `client_secret`
+- `customer_id`
+- `publishable_key`
+
 ### `GET /api/payment/plans`
 - Public catalog for `/pay`.
 - Optional query:
@@ -81,6 +96,12 @@ INSERT INTO seranking.promo_offers (
 - Идемпотентность через таблицу `payment_events` (`stripe_event_id` unique).
 
 ### `GET /api/payment/session-status?session_id=...`
+- `payment_status`
+- `fulfillment_status`
+- `access_status`
+- `activation_link` (если выдан token)
+
+### `GET /api/payment/order-status?order_id=...`
 - `payment_status`
 - `fulfillment_status`
 - `access_status`

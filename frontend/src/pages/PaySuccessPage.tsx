@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useI18n } from "../features/i18n/I18nProvider";
-import { getPaymentSessionStatus, type PaymentSessionStatus } from "../shared/lib/paymentApi";
+import { getPaymentOrderStatus, getPaymentSessionStatus, type PaymentStatus } from "../shared/lib/paymentApi";
 import { reachYandexMetrikaGoal } from "../shared/lib/yandexMetrika";
 import { Container } from "../shared/ui/Container";
 import { LanguageSwitcher } from "../shared/ui/LanguageSwitcher";
@@ -11,10 +11,11 @@ import { SiteFooter } from "../shared/ui/SiteFooter";
 export const PaySuccessPage = () => {
   const { copy } = useI18n();
   const location = useLocation();
-  const [status, setStatus] = useState<PaymentSessionStatus | null>(null);
+  const [status, setStatus] = useState<PaymentStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const didTrackPaidRef = useRef(false);
 
+  const orderId = new URLSearchParams(location.search).get("order_id") || "";
   const sessionId = new URLSearchParams(location.search).get("session_id") || "";
   const botUrl =
     window.__APP_CONFIG__?.VITE_TELEGRAM_BOT_URL?.trim() ||
@@ -22,7 +23,7 @@ export const PaySuccessPage = () => {
     "";
 
   useEffect(() => {
-    if (!sessionId) {
+    if (!orderId && !sessionId) {
       setError(null);
       setStatus(null);
       return;
@@ -33,7 +34,7 @@ export const PaySuccessPage = () => {
 
     const pollStatus = async () => {
       try {
-        const payload = await getPaymentSessionStatus(sessionId);
+        const payload = orderId ? await getPaymentOrderStatus(orderId) : await getPaymentSessionStatus(sessionId);
         if (cancelled) {
           return;
         }
@@ -60,7 +61,7 @@ export const PaySuccessPage = () => {
         window.clearTimeout(timer);
       }
     };
-  }, [copy.ui.payError, sessionId]);
+  }, [copy.ui.payError, orderId, sessionId]);
 
   const isPaid = status?.payment_status === "paid";
   const openBotHref = status?.activation_link || botUrl;
@@ -91,7 +92,7 @@ export const PaySuccessPage = () => {
               {copy.ui.payOpenBot}
             </a>
           ) : null}
-          {isPaid || !sessionId ? <p className="pay-copy">{copy.ui.payRestoreHint}</p> : null}
+          {isPaid || (!sessionId && !orderId) ? <p className="pay-copy">{copy.ui.payRestoreHint}</p> : null}
           {error ? <p className="pay-error">{error}</p> : null}
         </QuizCard>
       </Container>

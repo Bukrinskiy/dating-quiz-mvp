@@ -19,6 +19,22 @@ class CheckoutSessionResponse(BaseModel):
     order_id: str
 
 
+class PaymentIntentRequest(BaseModel):
+    plan: str = Field(min_length=1)
+    email: str
+    clickid: str = Field(min_length=1)
+    locale: str | None = None
+    telegram_chat_id: str | None = None
+    promo_code: str | None = None
+
+
+class PaymentIntentResponse(BaseModel):
+    order_id: str
+    client_secret: str
+    customer_id: str
+    publishable_key: str
+
+
 class MoneyAmountResponse(BaseModel):
     amount_minor: int
     currency: str
@@ -59,6 +75,13 @@ class RestoreConfirmRequest(BaseModel):
 
 
 class SessionStatusResponse(BaseModel):
+    payment_status: str
+    fulfillment_status: str
+    access_status: str
+    activation_link: str | None = None
+
+
+class OrderStatusResponse(BaseModel):
     payment_status: str
     fulfillment_status: str
     access_status: str

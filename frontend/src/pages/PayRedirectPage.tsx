@@ -1,9 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Elements, ExpressCheckoutElement, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
+import type { Stripe, StripeExpressCheckoutElementConfirmEvent } from "@stripe/stripe-js";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useI18n } from "../features/i18n/I18nProvider";
 import { getClickId } from "../shared/lib/clickid";
 import { MobiSlonEvent } from "../shared/lib/mobiSlonEvents";
-import { ApiError, createCheckoutSession, getPaymentPlans, type MoneyAmount, type PublicPlan } from "../shared/lib/paymentApi";
+import {
+  ApiError,
+  createPaymentIntent,
+  getPaymentPlans,
+  type CreatePaymentIntentResponse,
+  type MoneyAmount,
+  type PublicPlan,
+} from "../shared/lib/paymentApi";
 import { sendPostbackOnce } from "../shared/lib/tracking";
 import { logTracking } from "../shared/lib/trackingLogger";
 import { reachYandexMetrikaGoal } from "../shared/lib/yandexMetrika";
@@ -65,10 +75,11 @@ type PlanCardProps = {
   badgeText: string;
   billingCopy: string;
   perDayCopy: string;
+  disabled: boolean;
   onSelect: (code: string) => void;
 };
 
-const PlanCard = ({ plan, locale, selected, badgeText, billingCopy, perDayCopy, onSelect }: PlanCardProps) => {
+const PlanCard = ({ plan, locale, selected, badgeText, billingCopy, perDayCopy, disabled, onSelect }: PlanCardProps) => {
   const headline = plan.headline.trim();
   const badge = plan.badge?.trim() || (plan.is_highlighted ? badgeText : "");
   const badgeClassName = badge.toUpperCase() === "PROMO" ? "pay-plan__badge pay-plan__badge--promo" : "pay-plan__badge";
@@ -76,9 +87,11 @@ const PlanCard = ({ plan, locale, selected, badgeText, billingCopy, perDayCopy, 
   return (
     <button
       type="button"
-      className={`pay-plan ${selected ? "is-selected" : ""} ${plan.is_highlighted ? "is-highlighted" : ""}`.trim()}
+      className={`pay-plan ${selected ? "is-selected" : ""} ${plan.is_highlighted ? "is-highlighted" : ""} ${disabled ? "is-disabled" : ""}`.trim()}
       onClick={() => onSelect(plan.code)}
       aria-pressed={selected}
+      aria-disabled={disabled}
+      disabled={disabled}
     >
       {badge ? <span className={badgeClassName}>{badge}</span> : null}
       <span className="pay-plan__main">
@@ -112,25 +125,132 @@ const PlanCard = ({ plan, locale, selected, badgeText, billingCopy, perDayCopy, 
   );
 };
 
+type EmbeddedPaymentFormProps = {
+  returnUrl: string;
+  submitLabel: string;
+  submittingLabel: string;
+  dividerLabel: string;
+  onFailure: (message: string) => void;
+};
+
+const EmbeddedPaymentForm = ({ returnUrl, submitLabel, submittingLabel, dividerLabel, onFailure }: EmbeddedPaymentFormProps) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [submitting, setSubmitting] = useState(false);
+  const [expressReady, setExpressReady] = useState(false);
+
+  const confirmCurrentPayment = async (): Promise<{ ok: boolean; message?: string }> => {
+    if (!stripe || !elements) {
+      return { ok: false, message: "Stripe is not ready" };
+    }
+
+    const result = await stripe.confirmPayment({
+      elements,
+      confirmParams: { return_url: returnUrl },
+      redirect: "if_required",
+    });
+
+    if (result.error?.message) {
+      return { ok: false, message: result.error.message };
+    }
+
+    if (result.paymentIntent && ["succeeded", "processing", "requires_capture"].includes(result.paymentIntent.status)) {
+      window.location.href = returnUrl;
+      return { ok: true };
+    }
+
+    window.location.href = returnUrl;
+    return { ok: true };
+  };
+
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!stripe || !elements || submitting) {
+      return;
+    }
+
+    setSubmitting(true);
+    const result = await confirmCurrentPayment();
+    if (!result.ok) {
+      onFailure(result.message || "Payment confirmation failed");
+      setSubmitting(false);
+    }
+  };
+
+  const onExpressConfirm = async (event: StripeExpressCheckoutElementConfirmEvent) => {
+    if (!stripe || !elements || submitting) {
+      event.paymentFailed({ reason: "fail", message: "Stripe is not ready" });
+      return;
+    }
+
+    setSubmitting(true);
+    const result = await confirmCurrentPayment();
+    if (!result.ok) {
+      event.paymentFailed({ reason: "fail", message: result.message || "Payment confirmation failed" });
+      onFailure(result.message || "Payment confirmation failed");
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="pay-element-form">
+      <div className={`pay-express-checkout ${expressReady ? "is-ready" : "is-loading"}`}>
+        {!expressReady ? (
+          <div className="pay-express-skeleton" aria-hidden="true">
+            <span />
+            <span />
+          </div>
+        ) : null}
+        <ExpressCheckoutElement
+          onReady={() => setExpressReady(true)}
+          onConfirm={onExpressConfirm}
+          options={{
+            buttonHeight: 48,
+            paymentMethods: { applePay: "auto", googlePay: "auto" },
+            layout: { maxColumns: 2, maxRows: 1, overflow: "auto" },
+          }}
+        />
+      </div>
+      <div className="pay-element-divider" role="separator" aria-label="payment methods separator">
+        <span>{dividerLabel}</span>
+      </div>
+      <form onSubmit={onSubmit}>
+        <PaymentElement />
+        <button className="btn pay-element-submit" type="submit" disabled={!stripe || !elements || submitting}>
+          {submitting ? submittingLabel : submitLabel}
+        </button>
+      </form>
+    </div>
+  );
+};
+
 export const PayRedirectPage = () => {
   const { copy, locale } = useI18n();
   const location = useLocation();
   const promoInputRef = useRef<HTMLInputElement | null>(null);
+  const paymentSectionRef = useRef<HTMLElement | null>(null);
+  const intentRequestKeyRef = useRef<string | null>(null);
+  const intentInFlightKeyRef = useRef<string | null>(null);
+  const lastFocusedOrderIdRef = useRef<string | null>(null);
+  const transitionTrackedRef = useRef(false);
 
   const promoFromQuery = useMemo(() => new URLSearchParams(location.search).get("promo")?.trim() || "", [location.search]);
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [intentLoading, setIntentLoading] = useState(false);
   const [plans, setPlans] = useState<PublicPlan[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
   const [selectedPlanCode, setSelectedPlanCode] = useState<string>("");
   const [emailTouched, setEmailTouched] = useState(false);
+  const [emailBlurred, setEmailBlurred] = useState(false);
   const [promoCode, setPromoCode] = useState(promoFromQuery);
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoChecking, setPromoChecking] = useState(false);
   const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
   const [isPromoOpen, setIsPromoOpen] = useState(Boolean(promoFromQuery));
   const [emailEventSent, setEmailEventSent] = useState(false);
+  const [intentPayload, setIntentPayload] = useState<CreatePaymentIntentResponse | null>(null);
+  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
 
   const normalizedPromoCode = promoCode.trim().toUpperCase();
   const promoApplied = Boolean(
@@ -233,12 +353,32 @@ export const PayRedirectPage = () => {
 
   const selectedPlanHeadline = selectedPlan ? resolvePlanHeadline(selectedPlan, copy) : "";
   const emailValue = email.trim();
+  const hasValidEmail = isValidEmail(emailValue);
+  const plansLocked = !hasValidEmail;
   const emailError =
     emailTouched && emailValue.length === 0
       ? copy.ui.payEmailRequired
-      : emailTouched && !isValidEmail(email)
+      : emailTouched && !hasValidEmail
         ? copy.ui.payEmailInvalid
         : null;
+
+  const planHelperText = plansLocked
+    ? copy.ui.payPlanHelperNeedsEmail
+    : selectedPlan
+      ? copy.ui.payPlanHelperSelected.replace("{plan}", selectedPlanHeadline)
+      : copy.ui.payPlanHelperIdle;
+
+  const canCreateIntent =
+    Boolean(selectedPlan) &&
+    emailBlurred &&
+    hasValidEmail &&
+    !promoChecking &&
+    (!normalizedPromoCode || promoApplied);
+
+  const intentKey =
+    selectedPlan && canCreateIntent
+      ? `${selectedPlan.code}|${emailValue.toLowerCase()}|${(appliedPromoCode || "").toUpperCase()}`
+      : null;
 
   const maybeSendPayEmailEvent = (value: string) => {
     if (emailEventSent || !isValidEmail(value)) {
@@ -251,7 +391,17 @@ export const PayRedirectPage = () => {
   };
 
   const onSelectPlan = (planCode: string) => {
+    if (plansLocked) {
+      return;
+    }
+
     setSelectedPlanCode(planCode);
+    setIntentPayload(null);
+    setStripePromise(null);
+    setError(null);
+    intentRequestKeyRef.current = null;
+    lastFocusedOrderIdRef.current = null;
+
     const event = resolvePlanPostbackEvent(planCode);
     if (event) {
       if (!normalizedPromoCode) {
@@ -264,83 +414,198 @@ export const PayRedirectPage = () => {
     }
   };
 
-  const onPay = async () => {
-    if (!selectedPlan) {
-      setError(copy.ui.paySelectPlanHint);
-      return;
+  const buildReturnUrl = (orderId: string): string => {
+    const base = new URL(window.location.origin);
+    const successUrl = new URL("/pay/success", base);
+    successUrl.searchParams.set("order_id", orderId);
+    const botUrl = new URLSearchParams(location.search).get("bot_url")?.trim();
+    if (botUrl) {
+      successUrl.searchParams.set("bot_url", botUrl);
     }
-    if (!emailValue) {
-      setEmailTouched(true);
-      setError(copy.ui.payEmailRequired);
-      return;
-    }
-    if (!isValidEmail(email)) {
-      setEmailTouched(true);
-      setError(copy.ui.payEmailInvalid);
-      return;
-    }
-
-    setEmailTouched(true);
-    setError(null);
-    setLoading(true);
-    reachYandexMetrikaGoal("checkout_start");
-    sendPostbackOnce(MobiSlonEvent.TRANSITION_TO_PAYMENT, location.search);
-
-    try {
-      const payload = await createCheckoutSession({
-        mode: "subscription",
-        plan: selectedPlan.code,
-        email: email.trim(),
-        clickid,
-        locale,
-        telegram_chat_id: tgChatId || undefined,
-        promo_code: appliedPromoCode || undefined,
-      });
-      logTracking("payment", "checkout_session_created", {
-        sessionId: payload.session_id,
-        mode: "subscription",
-        plan: selectedPlan.code,
-      });
-      window.location.href = payload.checkout_url;
-    } catch (cause) {
-      if (cause instanceof ApiError && cause.code === "promo_invalid") {
-        setPromoError(copy.ui.payPromoInvalid);
-        setLoading(false);
-        return;
-      }
-      logTracking(
-        "payment",
-        "checkout_session_error",
-        { mode: "subscription", plan: selectedPlan.code, error: String(cause) },
-        "error",
-      );
-      setError(copy.ui.payError);
-      setLoading(false);
-    }
+    return successUrl.toString();
   };
+
+  useEffect(() => {
+    if (!selectedPlan || !intentKey || !canCreateIntent) {
+      return;
+    }
+    if (intentRequestKeyRef.current === intentKey && intentPayload) {
+      return;
+    }
+    if (intentInFlightKeyRef.current === intentKey) {
+      return;
+    }
+
+    let cancelled = false;
+    const requestIntent = async () => {
+      intentInFlightKeyRef.current = intentKey;
+      setIntentLoading(true);
+      setError(null);
+      try {
+        const payload = await createPaymentIntent({
+          plan: selectedPlan.code,
+          email: emailValue,
+          clickid,
+          locale,
+          telegram_chat_id: tgChatId || undefined,
+          promo_code: appliedPromoCode || undefined,
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        intentRequestKeyRef.current = intentKey;
+        setIntentPayload(payload);
+        setStripePromise(loadStripe(payload.publishable_key));
+        logTracking("payment", "payment_intent_created", {
+          orderId: payload.order_id,
+          plan: selectedPlan.code,
+        });
+        reachYandexMetrikaGoal("checkout_start");
+        if (!transitionTrackedRef.current) {
+          sendPostbackOnce(MobiSlonEvent.TRANSITION_TO_PAYMENT, location.search);
+          transitionTrackedRef.current = true;
+        }
+      } catch (cause) {
+        if (cancelled) {
+          return;
+        }
+
+        if (cause instanceof ApiError && cause.code === "promo_invalid") {
+          setPromoError(copy.ui.payPromoInvalid);
+          setAppliedPromoCode(null);
+          setIntentPayload(null);
+          setStripePromise(null);
+          intentRequestKeyRef.current = null;
+          return;
+        }
+
+        logTracking(
+          "payment",
+          "payment_intent_error",
+          { plan: selectedPlan.code, error: String(cause) },
+          "error",
+        );
+        setError(copy.ui.payError);
+      } finally {
+        if (intentInFlightKeyRef.current === intentKey) {
+          intentInFlightKeyRef.current = null;
+        }
+        if (!cancelled) {
+          setIntentLoading(false);
+        }
+      }
+    };
+
+    void requestIntent();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    appliedPromoCode,
+    canCreateIntent,
+    clickid,
+    copy.ui.payError,
+    copy.ui.payPromoInvalid,
+    emailValue,
+    intentKey,
+    intentPayload,
+    locale,
+    location.search,
+    selectedPlan,
+    tgChatId,
+  ]);
+
+  useEffect(() => {
+    if (!intentPayload) {
+      return;
+    }
+    if (lastFocusedOrderIdRef.current === intentPayload.order_id) {
+      return;
+    }
+
+    const target = paymentSectionRef.current;
+    if (!target) {
+      return;
+    }
+
+    lastFocusedOrderIdRef.current = intentPayload.order_id;
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => {
+      target.focus({ preventScroll: true });
+    }, 240);
+  }, [intentPayload]);
+
+  useEffect(() => {
+    document.body.classList.toggle("pay-loading-lock", intentLoading);
+    return () => {
+      document.body.classList.remove("pay-loading-lock");
+    };
+  }, [intentLoading]);
 
   return (
     <>
       <Container className="pay-page">
         <LanguageSwitcher />
-        <QuizCard className="pay-card">
+        <QuizCard className="pay-card" aria-busy={intentLoading}>
           <div className="pay-hero">
-            <span className="pay-kicker">{copy.ui.payModeSubscription}</span>
             <h1>{copy.ui.payTitle}</h1>
-            <p className="pay-copy">{copy.ui.paySubtitle}</p>
+          </div>
+
+          <section className="pay-section" aria-labelledby="pay-email-label">
+            <label id="pay-email-label" className="pay-field" htmlFor="pay-email">
+              {copy.ui.payEmailLabel}
+            </label>
+            <p className="pay-email-explain">{copy.ui.payEmailExplain}</p>
+            <input
+              id="pay-email"
+              className={`pay-input ${emailError ? "is-invalid" : ""}`.trim()}
+              type="email"
+              value={email}
+              onChange={(event) => {
+                const value = event.target.value;
+                setEmail(value);
+                setEmailBlurred(false);
+                setIntentPayload(null);
+                setStripePromise(null);
+                intentRequestKeyRef.current = null;
+                lastFocusedOrderIdRef.current = null;
+                maybeSendPayEmailEvent(value);
+                if (error) {
+                  setError(null);
+                }
+              }}
+              onBlur={() => {
+                setEmailTouched(true);
+                setEmailBlurred(true);
+                maybeSendPayEmailEvent(email);
+              }}
+              placeholder={copy.ui.payEmailPlaceholder}
+              autoComplete="email"
+              aria-invalid={emailError ? "true" : "false"}
+              aria-describedby={emailError ? "pay-email-error" : "pay-email-hint"}
+            />
+            {!emailError ? <p id="pay-email-hint" className="pay-email-hint">{copy.ui.payEmailHintNoSpam}</p> : null}
+          </section>
+
+          <div className="pay-trust pay-trust--inline" aria-label="purchase trust indicators">
+            <span>{copy.ui.paySecureCheckout}</span>
+            <span>{copy.ui.payCancelAnytime}</span>
+            <span>{copy.ui.payMoneyBack}</span>
+            <span>{copy.ui.paySupportAccess}</span>
           </div>
 
           <section className="pay-section" aria-labelledby="pay-plan-label">
             <div className="pay-section__head">
               <h2 id="pay-plan-label">{copy.ui.payPlanLabel}</h2>
             </div>
-            <p className={`pay-plan-helper ${selectedPlan ? "pay-plan-helper--selected" : ""}`}>
-              {selectedPlan
-                ? copy.ui.payPlanHelperSelected.replace("{plan}", selectedPlanHeadline)
-                : copy.ui.payPlanHelperIdle}
+            <p className={`pay-plan-helper ${selectedPlan && !plansLocked ? "pay-plan-helper--selected" : ""}`}>
+              {planHelperText}
             </p>
 
-            <div className="pay-plans" aria-busy={plansLoading}>
+            <div className={`pay-plans ${plansLocked ? "is-locked" : "is-unlocked"}`} aria-busy={plansLoading}>
               {plans.map((plan) => (
                 <PlanCard
                   key={plan.code}
@@ -351,6 +616,7 @@ export const PayRedirectPage = () => {
                   billingCopy={resolveBillingCopy(plan, copy)}
                   perDayCopy={copy.ui.payPerDay}
                   onSelect={onSelectPlan}
+                  disabled={plansLocked}
                 />
               ))}
             </div>
@@ -387,6 +653,10 @@ export const PayRedirectPage = () => {
                     const nextPromo = event.target.value.toUpperCase();
                     setPromoCode(nextPromo);
                     setPromoError(null);
+                    setIntentPayload(null);
+                    setStripePromise(null);
+                    intentRequestKeyRef.current = null;
+                    lastFocusedOrderIdRef.current = null;
                     const nextUrl = new URL(window.location.href);
                     if (nextPromo.trim()) {
                       nextUrl.searchParams.set("promo", nextPromo.trim());
@@ -420,63 +690,41 @@ export const PayRedirectPage = () => {
             ) : null}
           </section>
 
-          <div className="pay-trust" aria-label="purchase trust indicators">
-            <span>{copy.ui.payCancelAnytime}</span>
-            <span>{copy.ui.payMoneyBack}</span>
-            <span>{copy.ui.paySecureCheckout}</span>
-            <span>{copy.ui.paySupportAccess}</span>
-          </div>
-
-          <section className="pay-section" aria-labelledby="pay-email-label">
-            <label id="pay-email-label" className="pay-field" htmlFor="pay-email">
-              {copy.ui.payEmailLabel}
-            </label>
-            <input
-              id="pay-email"
-              className={`pay-input ${emailError ? "is-invalid" : ""}`.trim()}
-              type="email"
-              value={email}
-              onChange={(event) => {
-                const value = event.target.value;
-                setEmail(value);
-                maybeSendPayEmailEvent(value);
-                if (error) {
-                  setError(null);
-                }
-              }}
-              onBlur={() => {
-                setEmailTouched(true);
-                maybeSendPayEmailEvent(email);
-              }}
-              placeholder={copy.ui.payEmailPlaceholder}
-              autoComplete="email"
-              aria-invalid={emailError ? "true" : "false"}
-              aria-describedby={emailError ? "pay-email-error" : undefined}
-            />
-          </section>
-
-          <button className="btn pay-cta" type="button" onClick={onPay} disabled={loading || plansLoading}>
-            {loading ? (
-              copy.ui.payStarting
-            ) : selectedPlan ? (
-              <>
-                <span className="pay-cta__label">{copy.ui.payStartSelected}</span>
-                <span className="pay-cta__price-primary">
-                  {formatMoney(selectedPlan.per_day_price ?? selectedPlan.price, locale)} {copy.ui.payPerDay}
-                </span>
-                <span className="pay-cta__period-secondary">
-                  {selectedPlanHeadline} &middot; {formatMoney(selectedPlan.price, locale)}
-                </span>
-              </>
-            ) : (
-              copy.ui.payStart
-            )}
-          </button>
+          {intentPayload && stripePromise ? (
+            <section
+              ref={paymentSectionRef}
+              tabIndex={-1}
+              className="pay-section pay-element"
+              aria-label="embedded payment element"
+            >
+              <Elements
+                stripe={stripePromise}
+                options={{
+                  clientSecret: intentPayload.client_secret,
+                  appearance: { theme: "night" },
+                }}
+              >
+                <EmbeddedPaymentForm
+                  returnUrl={buildReturnUrl(intentPayload.order_id)}
+                  submitLabel={copy.ui.payConfirmButton}
+                  submittingLabel={copy.ui.payConfirmingButton}
+                  dividerLabel={copy.ui.payOrCard}
+                  onFailure={(message) => setError(message || copy.ui.payError)}
+                />
+              </Elements>
+            </section>
+          ) : null}
 
           {emailError ? <p id="pay-email-error" className="pay-error">{emailError}</p> : null}
           {!emailError && error ? <p className="pay-error">{error}</p> : null}
         </QuizCard>
       </Container>
+      <div className={`pay-loading-overlay ${intentLoading ? "is-active" : ""}`} aria-hidden={intentLoading ? "false" : "true"}>
+        <div className="pay-loading-overlay__content" role="status" aria-live="polite">
+          <span className="pay-loading-overlay__spinner" aria-hidden="true" />
+          <span>{copy.ui.payPreparingOverlay}</span>
+        </div>
+      </div>
       <SiteFooter />
     </>
   );

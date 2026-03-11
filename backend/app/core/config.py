@@ -30,6 +30,7 @@ class Settings(BaseSettings):
 
     app_base_url: str = "http://localhost:8080"
     stripe_secret_key: str = ""
+    stripe_publishable_key: str = ""
     stripe_webhook_secret: str = ""
     pay_success_url: str | None = None
     pay_cancel_url: str | None = None

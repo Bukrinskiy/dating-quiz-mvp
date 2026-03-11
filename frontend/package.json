@@ -13,6 +13,8 @@
     "lint:types": "tsc --noEmit"
   },
   "dependencies": {
+    "@stripe/react-stripe-js": "^3.8.1",
+    "@stripe/stripe-js": "^7.6.1",
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/themes": "^3.2.1",
     "react": "^19.2.0",

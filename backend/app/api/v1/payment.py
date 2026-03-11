@@ -17,6 +17,9 @@ from app.schemas.payment import (
     CustomerPortalRequest,
     MobiSlonEventRequest,
     MobiSlonEventResponse,
+    OrderStatusResponse,
+    PaymentIntentRequest,
+    PaymentIntentResponse,
     PublicPlanResponse,
     RestoreConfirmRequest,
     RestoreRequest,
@@ -43,6 +46,25 @@ def create_checkout_session(payload: CheckoutSessionRequest, db: Session = Depen
         promo_code=payload.promo_code,
     )
     return CheckoutSessionResponse(checkout_url=checkout_url, session_id=session_id, order_id=order_id)
+
+
+@router.post("/api/payment/intent", response_model=PaymentIntentResponse)
+def create_payment_intent(payload: PaymentIntentRequest, db: Session = Depends(get_db)) -> PaymentIntentResponse:
+    service = PaymentService(get_settings(), db)
+    order_id, client_secret, customer_id, publishable_key = service.create_subscription_intent(
+        plan=payload.plan,
+        email=payload.email,
+        clickid=payload.clickid,
+        locale=payload.locale,
+        telegram_chat_id=payload.telegram_chat_id,
+        promo_code=payload.promo_code,
+    )
+    return PaymentIntentResponse(
+        order_id=order_id,
+        client_secret=client_secret,
+        customer_id=customer_id,
+        publishable_key=publishable_key,
+    )
 
 
 @router.get("/api/payment/plans", response_model=list[PublicPlanResponse])
@@ -89,6 +111,18 @@ def session_status(session_id: str = Query(min_length=1), db: Session = Depends(
     service = PaymentService(get_settings(), db)
     payload = service.get_session_status(session_id)
     return SessionStatusResponse(
+        payment_status=cast(str, payload["payment_status"]),
+        fulfillment_status=cast(str, payload["fulfillment_status"]),
+        access_status=cast(str, payload["access_status"]),
+        activation_link=cast(str | None, payload["activation_link"]),
+    )
+
+
+@router.get("/api/payment/order-status", response_model=OrderStatusResponse)
+def order_status(order_id: str = Query(min_length=1), db: Session = Depends(get_db)) -> OrderStatusResponse:
+    service = PaymentService(get_settings(), db)
+    payload = service.get_order_status(order_id)
+    return OrderStatusResponse(
         payment_status=cast(str, payload["payment_status"]),
         fulfillment_status=cast(str, payload["fulfillment_status"]),
         access_status=cast(str, payload["access_status"]),

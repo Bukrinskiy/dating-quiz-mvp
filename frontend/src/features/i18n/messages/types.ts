@@ -47,6 +47,8 @@ export type AppMessages = {
     payTitle: string;
     paySubtitle: string;
     payEmailLabel: string;
+    payEmailExplain: string;
+    payEmailHintNoSpam: string;
     payEmailPlaceholder: string;
     payEmailRequired: string;
     payEmailInvalid: string;
@@ -71,12 +73,17 @@ export type AppMessages = {
     payMoneyBack: string;
     paySelectPlanHint: string;
     payPlanHelperIdle: string;
+    payPlanHelperNeedsEmail: string;
     payPlanHelperSelected: string;
     payStartSelected: string;
     payModeOneTime: string;
     payModeSubscription: string;
     payStart: string;
     payStarting: string;
+    payPreparingOverlay: string;
+    payOrCard: string;
+    payConfirmButton: string;
+    payConfirmingButton: string;
     paySuccessTitle: string;
     paySuccessPending: string;
     paySuccessDone: string;
