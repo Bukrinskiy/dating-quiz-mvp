@@ -44,6 +44,11 @@ make up
 6. Email отключен в MVP: вместо отправки backend пишет `email_delivery_skipped` в лог.
 7. Telegram restore: `/restore` -> `POST /api/auth/restore/request|confirm`.
 
+## Landing funnel (proxy pre-qualifier)
+
+- Маршрут `/` теперь использует desktop-first hero под прокси-офферы: визуальный mockup с ошибками/фильтрами + CTA `Подобрать прокси`.
+- CTA на hero сохраняет текущую механику трекинга и переводит пользователя на `/block-1` с прокинутым `clickid`.
+
 ## API
 
 - `GET /api/payment/plans`

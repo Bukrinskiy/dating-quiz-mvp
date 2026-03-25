@@ -12,6 +12,10 @@
 - `/refund-policy.html`
 - `*` -> redirect `/`
 
+## Hero on `/`
+- Desktop-first лендинг стилизован под proxy-quiz: слева mockup с warning-чипами и карточкой параметров, справа value proposition + CTA.
+- CTA `Подобрать прокси` (`Pick proxies` для EN) отправляет `hero_cta_click`, затем ведет на `/block-1` с сохранением `clickid`.
+
 ## Payment UX
 1. `/pay` загружает тарифы через `GET /api/payment/plans`, показывает выбор `sub_weekly`, `sub_monthly`, `sub_quarterly`, затем собирает email.
 2. По умолчанию выделяется backend-configured default plan; frontend не хардкодит цены и бейджи.
