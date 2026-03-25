@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { HeroSection } from "../components/landing/HeroSection";
 import { useI18n } from "../features/i18n/I18nProvider";
@@ -12,8 +12,6 @@ export const LandingPage = () => {
   const { copy } = useI18n();
   const location = useLocation();
   const navigate = useNavigate();
-  const [videoFallback, setVideoFallback] = useState(false);
-  const heroVideoSrc = copy.hero.videoSrc.trim();
 
   useEffect(() => {
     track("hero_view");
@@ -34,13 +32,11 @@ export const LandingPage = () => {
           subtitle={copy.hero.subtitle}
           list={copy.hero.list}
           note={copy.hero.note}
-          videoSrc={heroVideoSrc}
           cta={copy.hero.cta}
           microcopy={copy.hero.microcopy}
-          fallbackText={copy.hero.fallback}
-          fallback={videoFallback}
+          warnings={copy.hero.warnings}
+          checks={copy.hero.checks}
           onCtaClick={onStart}
-          onVideoError={() => setVideoFallback(true)}
         />
       </main>
       <SiteFooter />

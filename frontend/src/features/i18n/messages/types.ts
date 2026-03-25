@@ -85,8 +85,8 @@ export type AppMessages = {
     note: string;
     cta: string;
     microcopy: string;
-    fallback: string;
-    videoSrc: string;
+    warnings: string[];
+    checks: string[];
   };
   footer: {
     terms: string;
