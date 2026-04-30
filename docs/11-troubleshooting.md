@@ -11,6 +11,16 @@
 ## `/api/payment/session-status` returns `404`
 - Проверьте `session_id` из success URL.
 
+## `POST /api/events/mobi-slon` returns `422`
+- Проверьте `X-Request-ID` в ответе и найдите запись в `flirto_guru.http_request_logs`.
+- Для payload и validation details смотрите `flirto_guru.mobi_slon_request_logs.raw_body` и `validation_errors`.
+- Длинный `page_path` теперь допускается; если `422` остался, проблема в других обязательных полях (`status`, `clickid`, JSON body).
+
+## Mobi-Slon postback is not delivered
+- Найдите запись в `flirto_guru.mobi_slon_request_logs` по `clickid` или `request_id`.
+- Проверьте `forwarded`, `upstream_status_code`, `upstream_response_body`, `error_class`, `error_message`.
+- Для frontend relay сопоставьте ту же попытку с `flirto_guru.http_request_logs` по `request_id`.
+
 ## `/api/bot/*` returns `401 Unauthorized`
 - Проверьте header `X-Internal-Token`.
 - Проверьте совпадение `BOT_INTERNAL_TOKEN` в bot и backend окружении.

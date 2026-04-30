@@ -22,7 +22,7 @@ async def restore_entry(message: Message, state: FSMContext) -> None:
     await send_with_thinking(message, "Введите email, который использовали при оплате.")
 
 
-@router.message(RestoreFlow.waiting_email, F.text)
+@router.message(RestoreFlow.waiting_email, F.text, ~F.text.startswith("/"))
 async def restore_email(message: Message, state: FSMContext, backend: BackendApiClient) -> None:
     email = message.text.strip()
     try:
@@ -38,7 +38,7 @@ async def restore_email(message: Message, state: FSMContext, backend: BackendApi
     await send_with_thinking(message, "Введите OTP-код восстановления.")
 
 
-@router.message(RestoreFlow.waiting_otp, F.text)
+@router.message(RestoreFlow.waiting_otp, F.text, ~F.text.startswith("/"))
 async def restore_otp(message: Message, state: FSMContext, backend: BackendApiClient) -> None:
     otp = message.text.strip()
     if len(otp) != 6 or not otp.isdigit():

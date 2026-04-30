@@ -1,0 +1,15 @@
+<svg width="280" height="64" viewBox="0 0 280 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="minFullGrad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8244a2"/>
+      <stop offset="1" stop-color="#f41c5d"/>
+    </linearGradient>
+  </defs>
+  <!-- Icon -->
+  <rect width="64" height="64" rx="16" fill="url(#minFullGrad)"/>
+  <path d="M20 13 H44 V18 H25 V28 H38 V33 H25 V50 H20 Z" fill="white"/>
+  <path d="M44 13 L45.5 16 L48.5 17.5 L45.5 19 L44 22 L42.5 19 L39.5 17.5 L42.5 16 Z" fill="white" opacity="0.45"/>
+  <!-- Text: "flirto" bold + ".guru" lighter -->
+  <text x="80" y="38" fill="#3b2b5b" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="28" font-weight="700" letter-spacing="-0.5">flirto</text>
+  <text x="178" y="38" fill="#8244a2" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="28" font-weight="400" letter-spacing="-0.5">.guru</text>
+</svg>

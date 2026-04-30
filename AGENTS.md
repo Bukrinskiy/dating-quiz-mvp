@@ -4,7 +4,7 @@
 `dating-quiz-mvp` — продуктовый MVP квиза знакомств с веб-воронкой и backend API для платежного редиректа.
 
 Границы текущего scope:
-- Frontend SPA (`React 19 + TypeScript + Vite 7`) и legacy статические артефакты в корне репозитория.
+- Frontend SPA (`React 19 + TypeScript + Vite 7`) с новой воронкой `/:lang/quiz/*`.
 - Backend API (`FastAPI`, Python 3.12, запуск через `uv`).
 - Контейнеризация и окружения через `docker compose` и `Makefile`.
 
@@ -39,7 +39,7 @@ Dev-режим (backend в Docker + frontend локально):
 - PR: обязательны описание изменений, рисков, план тестов и откат.
 - Минимальные проверки перед PR:
   - `make test-backend`
-  - smoke frontend маршрутов `/`, `/block-1..7`, `/pay`, `/terms.html`, `/privacy-policy.html`, `/refund-policy.html`
+  - smoke frontend маршрутов `/:lang/quiz/1`, `/:lang/quiz/15`, `/:lang/quiz/26`, `/:lang/quiz/email/:uuid`, `/:lang/quiz/checkout/:uuid`, `/:lang/terms.html`
   - проверка docker-подъема (`make up`/`make down`)
 
 Детали: [04-development-workflow](docs/04-development-workflow.md), [05-testing-strategy](docs/05-testing-strategy.md).

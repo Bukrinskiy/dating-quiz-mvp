@@ -1,0 +1,24 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="boldGrad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f41c5d"/>
+      <stop offset="1" stop-color="#8244a2"/>
+    </linearGradient>
+    <linearGradient id="boldAccent" x1="24" y1="28" x2="42" y2="40" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f41c5d"/>
+      <stop offset="1" stop-color="#fd7f72"/>
+    </linearGradient>
+  </defs>
+  <!-- Dark background with slight rounding -->
+  <rect x="4" y="4" width="56" height="56" rx="8" fill="#3b2b5b"/>
+  <!-- Bold F — thick bars with diagonal cuts -->
+  <!-- Vertical bar -->
+  <path d="M14 12 H23 V52 H14 Z" fill="url(#boldGrad)"/>
+  <!-- Top bar with angled right edge -->
+  <path d="M23 12 H48 L44 22 H23 Z" fill="url(#boldGrad)"/>
+  <!-- Middle bar with angled right edge -->
+  <path d="M23 30 H40 L37 39 H23 Z" fill="url(#boldAccent)"/>
+  <!-- Subtle speed lines (clean, non-intersecting) -->
+  <line x1="48" y1="28" x2="52" y2="24" stroke="#f41c5d" stroke-width="1.5" opacity="0.3" stroke-linecap="round"/>
+  <line x1="48" y1="34" x2="52" y2="30" stroke="#f41c5d" stroke-width="1.5" opacity="0.2" stroke-linecap="round"/>
+</svg>

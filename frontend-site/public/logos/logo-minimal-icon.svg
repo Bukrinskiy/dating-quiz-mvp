@@ -1,0 +1,14 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="minGrad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8244a2"/>
+      <stop offset="1" stop-color="#f41c5d"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background -->
+  <rect width="64" height="64" rx="16" fill="url(#minGrad)"/>
+  <!-- Clean F as a single unified path -->
+  <path d="M20 13 H44 V18 H25 V28 H38 V33 H25 V50 H20 Z" fill="white"/>
+  <!-- Sparkle accent -->
+  <path d="M44 13 L45.5 16 L48.5 17.5 L45.5 19 L44 22 L42.5 19 L39.5 17.5 L42.5 16 Z" fill="white" opacity="0.45"/>
+</svg>

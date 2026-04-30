@@ -1,0 +1,14 @@
+{
+  "browser": {
+    "launchOptions": {
+      "headless": true,
+      "channel": "chrome"
+    },
+    "contextOptions": {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    }
+  }
+}

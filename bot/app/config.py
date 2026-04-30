@@ -16,6 +16,7 @@ class BotSettings(BaseSettings):
     bot_backend_base_url: str = "http://backend:8000"
     bot_webhook_path_secret: str = ""
     app_public_base_url: str = ""
+    pay_public_base_url: str = "http://localhost:5176"
     bot_pay_url: str = ""
     bot_allowed_public_commands: str = "/start,/restore,/support"
     bot_admin_ids: str = ""
@@ -48,10 +49,10 @@ class BotSettings(BaseSettings):
         configured = self.bot_pay_url.strip()
         if configured:
             return configured
-        base = self.app_public_base_url.rstrip("/")
+        base = self.pay_public_base_url.rstrip("/")
         if not base:
             return ""
-        return f"{base}/pay"
+        return f"{base}/ru/pay/manage"
 
     @property
     def admin_ids_list(self) -> list[str]:

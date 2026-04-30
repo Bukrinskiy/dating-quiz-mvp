@@ -4,11 +4,21 @@
 - `postgres` (`postgres:17-alpine`)
 - `backend` (FastAPI + Stripe)
 - `bot` (aiogram Telegram service)
-- `frontend` (Nginx + SPA)
+- `frontend-site` (brand-site surface for `flirto.guru`)
+- `frontend-landing` (quiz landing surface for `lp*.flirto.guru`)
+- `frontend-pay` (payment surface for `pay.flirto.guru`)
+- `frontend-app` (PWA surface for `app.flirto.guru`)
+- `frontend_old` / `frontend` (legacy transitional surface, не часть target topology)
 
 ## Core env
 - `DATABASE_URL`
+- `SITE_PUBLIC_BASE_URL`
+- `PAY_PUBLIC_BASE_URL`
+- `APP_APP_PUBLIC_BASE_URL`
+- `API_PUBLIC_BASE_URL`
+- `BACKEND_CORS_ALLOW_ORIGINS`
 - `STRIPE_SECRET_KEY`
+- `STRIPE_PUBLISHABLE_KEY`
 - `STRIPE_WEBHOOK_SECRET`
 - `ACCESS_TOKEN_SECRET`
 - `TELEGRAM_BOT_TOKEN`
@@ -17,7 +27,7 @@
 - `SMTP_HOST` (`smtp.gmail.com`)
 - `SMTP_PORT` (`587`)
 - `SMTP_USE_TLS=true`
-- `SMTP_LOGIN` (`support@seranking.store`)
+- `SMTP_LOGIN` (`support@flirto.guru`)
 - `SMTP_PASSWORD` (Gmail app password)
 - `SMTP_FROM_EMAIL`
 - `BOT_MODE` (`polling|webhook`)
@@ -26,6 +36,7 @@
 - `BOT_BACKEND_BASE_URL`
 - `BOT_WEBHOOK_PATH_SECRET`
 - `APP_PUBLIC_BASE_URL`
+- `BOT_PAY_URL`
 - `BOT_ALLOWED_PUBLIC_COMMANDS`
 - `EMAIL_DELIVERY_MODE=log_only`
 - `LOG_OTP_IN_NONPROD=true`
@@ -33,16 +44,106 @@
 ## Pricing env (backend authority)
 - `PAY_ONE_TIME_BASIC_AMOUNT_MINOR`
 - `PAY_ONE_TIME_BASIC_CURRENCY`
-- `PAY_SUB_MONTHLY_AMOUNT_MINOR`
+- `PAY_SUB_MONTHLY_BASE_AMOUNT_MINOR`
+- `PAY_SUB_MONTHLY_DISCOUNT_PERCENT`
+- `PAY_SUB_MONTHLY_BASE_PER_DAY_AMOUNT_MINOR`
 - `PAY_SUB_MONTHLY_CURRENCY`
 - `PAY_SUB_MONTHLY_INTERVAL`
 
 ## Runtime notes
 - Backend применяет Alembic миграции на старте (`run_migrations`).
+- Browser-facing backend origin для новых surfaces: `API_PUBLIC_BASE_URL` (`api.flirto.guru` в target topology).
+- Payment success/cancel/manage URLs backend генерирует только от `PAY_PUBLIC_BASE_URL`.
+- CORS allowlist задается через `BACKEND_CORS_ALLOW_ORIGINS` как comma-separated список origins без wildcard.
 - Email отправка выполняется по SMTP (Gmail STARTTLS).
+- Для smoke-проверки SMTP локально можно выполнить `cd backend && uv run python -m app.cli.send_test_email you@example.com`.
+- Новые frontend runtime-конфиги (`/runtime-config.js`) генерируются из env на старте соответствующих контейнеров.
+- Для `frontend-landing` локальный Vite dev-server тоже отдает `/runtime-config.js` из корневого env, чтобы dev повторял runtime contract production.
+- Target production topology состоит из `frontend-site`, `frontend-landing`, `frontend-pay`, `frontend-app`, `backend`, `bot`, `postgres`.
+- Внешний Apache является source of truth для production host routing и TLS; compose поднимает только app containers.
+- Legacy single `frontend` container сохраняется только как transitional runtime до cutover.
+- В `docker-compose.dev.yml` target dev topology поднимает `frontend-site` на `http://localhost:5175`, `frontend-landing` на `http://localhost:5174`, `frontend-pay` на `http://localhost:5176` и `frontend-app` на `http://localhost:5177`.
+- Для Яндекс.Метрики используется `VITE_YANDEX_METRIKA_ID` (пустое значение отключает счётчик).
 - Prod webhook для Telegram: Apache reverse proxy
   - `https://<domain>/tg/webhook/<secret>` -> `http://bot:8081/webhook/<secret>`
 - Bot health endpoint: `GET /health` на `BOT_PORT` (polling и webhook режимы).
+
+## Target production host mapping
+| Public host | Target service | Notes |
+|---|---|---|
+| `flirto.guru` | `frontend-site` | brand/legal/trust pages |
+| `lp*.flirto.guru` | `frontend-landing` | один runtime для всех landing hosts |
+| `pay.flirto.guru` | `frontend-pay` | checkout, success, cancel, manage |
+| `app.flirto.guru` | `frontend-app` | email-auth PWA и advice workspace |
+| `api.flirto.guru` | `backend` | единый browser-facing API origin |
+
+## Service env matrix
+### Backend
+- `SITE_PUBLIC_BASE_URL`
+- `PAY_PUBLIC_BASE_URL`
+- `API_PUBLIC_BASE_URL`
+- `BACKEND_CORS_ALLOW_ORIGINS`
+- Stripe env (`STRIPE_*`)
+- Bot/payment integration env (`BOT_INTERNAL_TOKEN`, `BOT_ALLOWED_PUBLIC_COMMANDS`)
+
+### Frontend site
+- `API_BASE_URL`
+- `PRIMARY_LANDING_URL`
+
+### Frontend landing
+- `APP_SURFACE`
+- `API_BASE_URL`
+- `PAY_PUBLIC_BASE_URL`
+- `VITE_MOBI_SLON_URL` (`lp1` production: `https://whitetrack.xyz/index.php`)
+- `VITE_MOBI_SLON_CAMPAIGN_KEY` (`lp1` production pixel campaign key)
+- `VITE_FB_PIXEL_ID`
+- `VITE_YANDEX_METRIKA_ID`
+- `VITE_TRACKING_DEBUG`
+
+### Frontend pay
+- `APP_SURFACE`
+- `API_BASE_URL`
+- `PAY_PUBLIC_BASE_URL`
+- `VITE_YANDEX_METRIKA_ID`
+- `VITE_TRACKING_DEBUG`
+
+### Frontend app
+- `APP_SURFACE`
+- `API_BASE_URL`
+- `PAY_PUBLIC_BASE_URL`
+- `APP_PUBLIC_BASE_URL`
+
+### Bot
+- `BOT_BACKEND_BASE_URL`
+- `APP_PUBLIC_BASE_URL`
+- `BOT_PAY_URL`
+- `BOT_MODE`
+- `BOT_PORT`
+- `BOT_WEBHOOK_PATH_SECRET`
+
+## Prod env source of truth
+- В текущем deploy-процессе `docker compose` читает `.env` на сервере.
+- `.env.prod` в репозитории является эталоном значений и должен быть синхронизирован в серверный `.env` перед `make deploy` (или эквивалентным шагом на сервере).
+- Если compose запускается без `--env-file`, изменения только в `.env.prod` не применяются.
+- Target production compose должен публиковать loopback-only порты:
+  - `SITE_PORT` -> `frontend-site`
+  - `LANDING_PORT` -> `frontend-landing`
+  - `PAY_PORT` -> `frontend-pay`
+  - `APP_PORT` -> `frontend-app`
+  - `BACKEND_PORT` -> `backend`
+  - `BOT_PORT` -> `bot`
+- Apache должен проксировать публичные host names в эти loopback ports; прямой internet exposure контейнеров не является source of truth.
+
+## Yandex Metrika prod smoke-check
+- После деплоя открыть сайт и проверить в DevTools:
+  - `window.__APP_CONFIG__.VITE_YANDEX_METRIKA_ID` содержит ожидаемый ID.
+  - `window.ym` определен.
+- Пройти ключевые маршруты новых surfaces в target topology:
+  - `site`: `http://localhost:5175/en`
+  - `landing`: `http://localhost:5174/ru/quiz/15`, `http://localhost:5174/ru/quiz/26`, `http://localhost:5174/ru/quiz/email/:uuid`
+  - `pay`: `http://localhost:5176/ru/checkout/:uuid`, `http://localhost:5176/ru/pay/success`, `http://localhost:5176/ru/pay/manage`
+  - `app`: `http://localhost:5177/login`, `http://localhost:5177/paywall`, `http://localhost:5177/app`
+- Проверить preflight/browser calls из `site`, `landing` и `pay` в `API_PUBLIC_BASE_URL`.
 
 ## Apache webhook example
 Пример для виртуального хоста Apache:

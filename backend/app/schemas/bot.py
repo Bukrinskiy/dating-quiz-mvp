@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
@@ -29,6 +30,29 @@ class BotRestoreConfirmRequest(BaseModel):
     email: str
     otp: str = Field(min_length=6, max_length=6)
     telegram_user_id: str = Field(min_length=1)
+
+
+class BotAdminAccessGrantRequest(BaseModel):
+    email: str = Field(min_length=3)
+    expires_at: datetime
+    admin_telegram_user_id: str = Field(min_length=1)
+    admin_telegram_username: str | None = None
+
+
+class BotAdminAccessRevokeRequest(BaseModel):
+    email: str = Field(min_length=3)
+    admin_telegram_user_id: str = Field(min_length=1)
+    admin_telegram_username: str | None = None
+
+
+class BotAdminAccessResponse(BaseModel):
+    status: Literal["granted", "revoked", "not_found"]
+    email: str
+    expires_at: str | None = None
+    has_access_after: bool
+    order_id: str | None = None
+    plan: str | None = None
+    access_status: str | None = None
 
 
 class BotSessionStartRequest(BaseModel):
@@ -164,11 +188,11 @@ class BotSessionRefineResponse(BaseModel):
     llm_provider: str
     model_name: str
     ui_payload: dict[str, Any]
-    primary_message: str
-    why: str
-    fallback_simple_version: str
+    primary_message: str | None = None
+    why: str | None = None
+    fallback_simple_version: str | None = None
     next_step: str
-    alternatives: list[str]
+    alternatives: list[str] = Field(default_factory=list)
 
 
 class BotSessionResetRequest(BaseModel):

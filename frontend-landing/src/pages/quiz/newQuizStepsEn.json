@@ -1,0 +1,422 @@
+[
+  {
+    "step": 1,
+    "type": "single-selection-with-image",
+    "question": "What are you looking for?",
+    "answers": [
+      {
+        "image": "/images/quiz/quiz-affemity-funnel/q-1-1.webp",
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/q-1-1-icon.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/q-1-1-iconActive.svg",
+        "title": "A committed relationship"
+      },
+      {
+        "image": "/images/quiz/quiz-affemity-funnel/q-1-2.webp",
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/q-1-2-icon.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/q-1-2-iconActive.svg",
+        "title": "Casual dating and fun"
+      },
+      {
+        "image": "/images/quiz/quiz-affemity-funnel/q-1-3.webp",
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/q-1-3-icon.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/q-1-3-iconActive.svg",
+        "title": "New friendships"
+      },
+      {
+        "image": "/images/quiz/quiz-affemity-funnel/q-1-4.webp",
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/q-1-4-icon.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/q-1-4-iconActive.svg",
+        "title": "Still figuring it out"
+      }
+    ],
+    "klaviyoTag": "qMainGoal",
+    "uiTag": "main-goal"
+  },
+  {
+    "step": 2,
+    "type": "single",
+    "question": "How old are you?",
+    "answers": [
+      "18 - 24",
+      "25 - 34",
+      "35 - 44",
+      "45 - 54",
+      "55 +"
+    ],
+    "klaviyoTag": "qAge",
+    "uiTag": "qAge"
+  },
+  {
+    "step": 3,
+    "type": "single-selection-with-svg",
+    "question": "How would you describe your personality?",
+    "answers": [
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/q-3-1-icon.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/q-3-1-iconActive.svg",
+        "title": "Introverted"
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/q-3-2-icon.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/q-3-2-iconActive.svg",
+        "title": "Extroverted"
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/q-3-3-icon.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/q-3-3-iconActive.svg",
+        "title": "A mix of both"
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/q-3-4-icon.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/q-3-4-iconActive.svg",
+        "title": "Not sure"
+      }
+    ],
+    "uiTag": "your-personality"
+  },
+  {
+    "step": 4,
+    "type": "single",
+    "question": "Where are you on your dating journey?",
+    "answers": [
+      "Almost living my dream love life",
+      "Making some progress",
+      "Just getting started"
+    ]
+  },
+  {
+    "step": 5,
+    "type": "prompt-1"
+  },
+  {
+    "step": 6,
+    "type": "multiple",
+    "question": "What skills would you like to improve?",
+    "description": "Select all that apply",
+    "answers": [
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/q-6-1-icon.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/q-6-1-iconActive.svg",
+        "title": "Secrets of attraction"
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/q-6-2-icon.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/q-6-2-iconActive.svg",
+        "title": "Texting with confidence"
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/q-6-3-icon.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/q-6-3-iconActive.svg",
+        "title": "Flirting tips"
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/q-6-4-icon.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/q-6-4-iconActive.svg",
+        "title": "Building self-confidence"
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/q-6-5-icon.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/q-6-5-iconActive.svg",
+        "title": "Starting conversations"
+      }
+    ],
+    "uiTag": "skills-to-improve"
+  },
+  {
+    "step": 7,
+    "type": "prompt-2"
+  },
+  {
+    "step": 8,
+    "type": "single-rate",
+    "statement": "I prefer to keep my texts light and casual",
+    "question": "How well does the statement above describe you?",
+    "answers": [
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/rate-big-dislike.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/rate-big-dislike-active.svg",
+        "answer": 1
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/rate-small-dislike.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/rate-small-dislike-active.svg",
+        "answer": 2
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/rate-dont-know.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/rate-dont-know-active.svg",
+        "answer": 3
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/rate-small-like.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/rate-small-like-active.svg",
+        "answer": 4
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/rate-big-like.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/rate-big-like-active.svg",
+        "answer": 5
+      }
+    ]
+  },
+  {
+    "step": 9,
+    "type": "single-rate",
+    "statement": "I struggle dealing with rejection",
+    "question": "How well does the statement above describe you?",
+    "answers": [
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/rate-big-dislike.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/rate-big-dislike-active.svg",
+        "answer": 1
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/rate-small-dislike.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/rate-small-dislike-active.svg",
+        "answer": 2
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/rate-dont-know.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/rate-dont-know-active.svg",
+        "answer": 3
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/rate-small-like.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/rate-small-like-active.svg",
+        "answer": 4
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/rate-big-like.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/rate-big-like-active.svg",
+        "answer": 5
+      }
+    ]
+  },
+  {
+    "step": 10,
+    "type": "slide",
+    "question": "How important is it that a woman shows interest early on?",
+    "description": "Please choose the level of importance",
+    "answers": 4
+  },
+  {
+    "step": 11,
+    "type": "prompt-3"
+  },
+  {
+    "step": 12,
+    "type": "single-rate",
+    "statement": "I tend to open up about my needs right away",
+    "question": "How well does the statement above describe you?",
+    "answers": [
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/rate-big-dislike.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/rate-big-dislike-active.svg",
+        "answer": 1
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/rate-small-dislike.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/rate-small-dislike-active.svg",
+        "answer": 2
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/rate-dont-know.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/rate-dont-know-active.svg",
+        "answer": 3
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/rate-small-like.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/rate-small-like-active.svg",
+        "answer": 4
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/rate-big-like.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/rate-big-like-active.svg",
+        "answer": 5
+      }
+    ]
+  },
+  {
+    "step": 13,
+    "type": "single-selection-with-svg",
+    "question": "Do you struggle to keep a conversation going?",
+    "answers": [
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/single-like.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/single-likeActive.svg",
+        "title": "Yes"
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/single-dislike.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/single-dislikeActive.svg",
+        "title": "No"
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/single-dont-know.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/single-dont-knowActive.svg",
+        "title": "Not sure"
+      }
+    ]
+  },
+  {
+    "step": 14,
+    "type": "single-selection-with-svg",
+    "question": "How quickly do you usually reply to a woman you’re interested in?",
+    "answers": [
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/q-15-1-icon.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/q-15-1-iconActive.svg",
+        "title": "Right away"
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/q-15-2-icon.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/q-15-2-iconActive.svg",
+        "title": "I wait a bit"
+      }
+    ]
+  },
+  {
+    "step": 15,
+    "type": "prompt-4"
+  },
+  {
+    "step": 16,
+    "type": "single-selection-with-svg",
+    "question": "Can you easily read between the lines when she texts?",
+    "answers": [
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/single-like.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/single-likeActive.svg",
+        "title": "Yes"
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/single-dislike.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/single-dislikeActive.svg",
+        "title": "No"
+      }
+    ]
+  },
+  {
+    "step": 17,
+    "type": "single-rate",
+    "statement": "I feel comfortable expressing my emotions",
+    "question": "How well does the statement above describe you?",
+    "answers": [
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/rate-big-dislike.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/rate-big-dislike-active.svg",
+        "answer": 1
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/rate-small-dislike.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/rate-small-dislike-active.svg",
+        "answer": 2
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/rate-dont-know.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/rate-dont-know-active.svg",
+        "answer": 3
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/rate-small-like.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/rate-small-like-active.svg",
+        "answer": 4
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/rate-big-like.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/rate-big-like-active.svg",
+        "answer": 5
+      }
+    ]
+  },
+  {
+    "step": 18,
+    "type": "single-selection-with-svg",
+    "question": "Have you ever delayed your response on purpose?",
+    "answers": [
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/single-like.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/single-likeActive.svg",
+        "title": "Yes"
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/single-dislike.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/single-dislikeActive.svg",
+        "title": "No"
+      }
+    ]
+  },
+  {
+    "step": 19,
+    "type": "single-selection-with-svg",
+    "question": "Have you ever been ghosted?",
+    "answers": [
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/single-like.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/single-likeActive.svg",
+        "title": "Yes"
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/single-dislike.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/single-dislikeActive.svg",
+        "title": "No"
+      }
+    ],
+    "uiTag": "have-been-ghosted"
+  },
+  {
+    "step": 20,
+    "type": "prompt-5"
+  },
+  {
+    "step": 21,
+    "type": "slide",
+    "question": "How important is improving your dating life currently?",
+    "description": "Please choose the level of importance",
+    "answers": 4
+  },
+  {
+    "step": 22,
+    "type": "prompt-6"
+  },
+  {
+    "step": 23,
+    "type": "single-selection-with-svg",
+    "question": "How much time are you ready to invest to improve your dating skills?",
+    "answers": [
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/q-24-1-icon.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/q-24-1-iconActive.svg",
+        "title": "< 5 minutes/day"
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/q-24-2-icon.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/q-24-2-iconActive.svg",
+        "title": "5 - 10 minutes/day"
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/q-24-3-icon.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/q-24-3-iconActive.svg",
+        "title": "10 - 30 minutes/day"
+      },
+      {
+        "svgIcon": "/icons/quiz/quiz-affemity-funnel/q-24-4-icon.svg",
+        "svgIconActive": "/icons/quiz/quiz-affemity-funnel/q-24-4-iconActive.svg",
+        "title": "> 30 minutes/day"
+      }
+    ],
+    "uiTag": "daily-learning-goal"
+  },
+  {
+    "step": 24,
+    "type": "prompt-7"
+  },
+  {
+    "step": 25,
+    "type": "calculating-screen"
+  },
+  {
+    "step": 26,
+    "type": "result-screen"
+  }
+]

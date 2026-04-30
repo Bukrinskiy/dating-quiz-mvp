@@ -13,6 +13,11 @@ class MobiSlonEvent(StrEnum):
     BLOCK6_COMPLETED = "block6_completed"
     BLOCK7_COMPLETED = "block7_completed"
     TRANSITION_TO_PAYMENT = "transition_to_payment"
+    PAY_EMAIL_ENTERED = "pay_email_entered"
+    PAY_PLAN_WEEKLY_SELECTED = "pay_plan_weekly_selected"
+    PAY_PLAN_MONTHLY_SELECTED = "pay_plan_monthly_selected"
+    PAY_PLAN_YEARLY_SELECTED = "pay_plan_yearly_selected"
+    CHECKOUT_POPUP_CLOSED = "checkout_popup_closed"
     PAY_SUCCESS = "pay_success"
 
 

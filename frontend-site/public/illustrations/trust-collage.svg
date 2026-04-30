@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 700" role="img" aria-label="Flirto Guru trust illustration">
+  <defs>
+    <linearGradient id="panel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff7fa"/>
+      <stop offset="100%" stop-color="#ffeef4"/>
+    </linearGradient>
+  </defs>
+  <rect width="920" height="700" rx="56" fill="url(#panel)"/>
+  <circle cx="168" cy="156" r="84" fill="#ffffff" opacity=".88"/>
+  <circle cx="766" cy="138" r="66" fill="#ffd2df" opacity=".8"/>
+  <circle cx="748" cy="560" r="108" fill="#ffffff" opacity=".82"/>
+
+  <g transform="translate(88 134)">
+    <rect width="320" height="190" rx="34" fill="#ffffff"/>
+    <text x="30" y="52" font-size="26" font-family="Arial, sans-serif" fill="#2b2330">“Way less awkward now.”</text>
+    <text x="30" y="92" font-size="18" font-family="Arial, sans-serif" fill="#897a8e">Short reply ideas that actually sound natural.</text>
+    <g transform="translate(30 126)">
+      <circle cx="16" cy="16" r="16" fill="#ff8fad"/>
+      <circle cx="52" cy="16" r="16" fill="#ff8fad"/>
+      <circle cx="88" cy="16" r="16" fill="#ff8fad"/>
+      <circle cx="124" cy="16" r="16" fill="#ff8fad"/>
+      <circle cx="160" cy="16" r="16" fill="#ff8fad"/>
+    </g>
+  </g>
+
+  <g transform="translate(460 94)">
+    <rect width="360" height="240" rx="40" fill="#1f1a24"/>
+    <rect x="28" y="30" width="304" height="180" rx="28" fill="#fff9fb"/>
+    <rect x="54" y="58" width="148" height="20" rx="10" fill="#ec7394"/>
+    <rect x="54" y="98" width="246" height="14" rx="7" fill="#d4c2cb"/>
+    <rect x="54" y="126" width="210" height="14" rx="7" fill="#e2d6dc"/>
+    <rect x="54" y="164" width="178" height="14" rx="7" fill="#d9c6cf"/>
+  </g>
+
+  <g transform="translate(126 392)">
+    <rect width="260" height="190" rx="34" fill="#ffffff"/>
+    <text x="30" y="52" font-size="22" font-family="Arial, sans-serif" fill="#2b2330">Clear next steps</text>
+    <text x="30" y="88" font-size="17" font-family="Arial, sans-serif" fill="#897a8e">No giant scripts. Just the next message.</text>
+    <circle cx="212" cy="136" r="34" fill="#ffe0e8"/>
+    <path d="M212 120c8-12 30-3 21 14-6 11-21 18-21 18s-15-7-21-18c-9-17 13-26 21-14z" fill="#ec7394"/>
+  </g>
+
+  <g transform="translate(434 408)">
+    <rect width="330" height="156" rx="34" fill="#ffffff"/>
+    <text x="28" y="48" font-size="22" font-family="Arial, sans-serif" fill="#2b2330">Feels lighter</text>
+    <text x="28" y="82" font-size="17" font-family="Arial, sans-serif" fill="#897a8e">Less pressure, better flow, more confidence.</text>
+    <rect x="28" y="110" width="122" height="16" rx="8" fill="#ec7394"/>
+    <rect x="28" y="136" width="206" height="12" rx="6" fill="#dbcad1"/>
+  </g>
+</svg>

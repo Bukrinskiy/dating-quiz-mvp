@@ -18,6 +18,10 @@ router = Router(name="support")
 _PREVIEW_LIMIT: Final[int] = 240
 
 
+def _is_not_command_message(message: Message) -> bool:
+    return not (message.text or "").strip().startswith("/")
+
+
 def _build_support_header(message: Message) -> str:
     user = message.from_user
     user_id = str(user.id) if user else "unknown"
@@ -53,7 +57,7 @@ async def support_cancel(message: Message, state: FSMContext) -> None:
     await send_with_thinking(message, "Обращение в поддержку отменено.")
 
 
-@router.message(SupportFlow.waiting_message)
+@router.message(SupportFlow.waiting_message, _is_not_command_message)
 async def support_forward_to_admins(message: Message, state: FSMContext) -> None:
     settings = get_settings()
     admin_ids = settings.admin_ids_list
