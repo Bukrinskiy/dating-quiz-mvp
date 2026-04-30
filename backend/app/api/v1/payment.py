@@ -23,7 +23,15 @@ from app.schemas.payment import (
     PublicPlanResponse,
     RestoreConfirmRequest,
     RestoreRequest,
+    SessionCreateRequest,
+    SessionCreateResponse,
+    SessionCurrencyRequest,
+    SessionCurrencyResponse,
+    SessionPaymentIntentRequest,
+    SessionPlanDataRequest,
+    SessionPlanDataResponse,
     SessionStatusResponse,
+    SessionUpdateEmailRequest,
 )
 from app.core.config import get_settings
 from app.core.db.session import get_db
@@ -44,6 +52,10 @@ def create_checkout_session(payload: CheckoutSessionRequest, db: Session = Depen
         locale=payload.locale,
         telegram_chat_id=payload.telegram_chat_id,
         promo_code=payload.promo_code,
+        brand=payload.brand,
+        landing_id=payload.landing_id,
+        entry_host=payload.entry_host,
+        entry_path=payload.entry_path,
     )
     return CheckoutSessionResponse(checkout_url=checkout_url, session_id=session_id, order_id=order_id)
 
@@ -58,6 +70,10 @@ def create_payment_intent(payload: PaymentIntentRequest, db: Session = Depends(g
         locale=payload.locale,
         telegram_chat_id=payload.telegram_chat_id,
         promo_code=payload.promo_code,
+        brand=payload.brand,
+        landing_id=payload.landing_id,
+        entry_host=payload.entry_host,
+        entry_path=payload.entry_path,
     )
     return PaymentIntentResponse(
         order_id=order_id,
@@ -74,6 +90,74 @@ def list_payment_plans(
 ) -> list[PublicPlanResponse]:
     service = PaymentService(get_settings(), db)
     return [PublicPlanResponse.model_validate(plan) for plan in service.list_public_subscription_plans(promo_code=promo_code)]
+
+
+@router.post("/api/session/get-currency2", response_model=SessionCurrencyResponse)
+def session_get_currency(payload: SessionCurrencyRequest, db: Session = Depends(get_db)) -> SessionCurrencyResponse:
+    service = PaymentService(get_settings(), db)
+    resolved = service.resolve_session_currency(payload.locale)
+    return SessionCurrencyResponse(currency=resolved["currency"], locale=resolved["locale"])
+
+
+@router.post("/api/session/create", response_model=SessionCreateResponse)
+def session_create(payload: SessionCreateRequest, db: Session = Depends(get_db)) -> SessionCreateResponse:
+    service = PaymentService(get_settings(), db)
+    session_uuid = service.create_quiz_session(
+        locale=payload.locale,
+        currency=payload.currency,
+        clickid=payload.clickid,
+        brand=payload.brand,
+        landing_id=payload.landing_id,
+        entry_host=payload.entry_host,
+        entry_path=payload.entry_path,
+        tracking_params=payload.tracking_params,
+        answers=payload.answers,
+    )
+    return SessionCreateResponse(uuid=session_uuid)
+
+
+@router.post("/api/session/update-email")
+def session_update_email(payload: SessionUpdateEmailRequest, db: Session = Depends(get_db)) -> dict[str, bool]:
+    service = PaymentService(get_settings(), db)
+    service.update_quiz_session_email(session_uuid=payload.uuid, email=payload.email)
+    return {"ok": True}
+
+
+@router.post("/api/session/get-plan-data", response_model=SessionPlanDataResponse)
+def session_get_plan_data(payload: SessionPlanDataRequest, db: Session = Depends(get_db)) -> SessionPlanDataResponse:
+    service = PaymentService(get_settings(), db)
+    data = service.get_quiz_session_plan_data(session_uuid=payload.uuid, promo_code=payload.promo_code)
+    return SessionPlanDataResponse(
+        uuid=cast(str, data["uuid"]),
+        locale=cast(str, data["locale"]),
+        currency=cast(str, data["currency"]),
+        email=cast(str | None, data["email"]),
+        plans=[PublicPlanResponse.model_validate(plan) for plan in cast(list[dict], data["plans"])],
+    )
+
+
+@router.post("/api/session/create-payment-intent", response_model=PaymentIntentResponse)
+def session_create_payment_intent(payload: SessionPaymentIntentRequest, db: Session = Depends(get_db)) -> PaymentIntentResponse:
+    service = PaymentService(get_settings(), db)
+    order_id, client_secret, customer_id, publishable_key = service.create_subscription_intent_for_quiz_session(
+        session_uuid=payload.uuid,
+        plan=payload.plan,
+        email=payload.email,
+        clickid=payload.clickid,
+        locale=payload.locale,
+        telegram_chat_id=payload.telegram_chat_id,
+        promo_code=payload.promo_code,
+        brand=payload.brand,
+        landing_id=payload.landing_id,
+        entry_host=payload.entry_host,
+        entry_path=payload.entry_path,
+    )
+    return PaymentIntentResponse(
+        order_id=order_id,
+        client_secret=client_secret,
+        customer_id=customer_id,
+        publishable_key=publishable_key,
+    )
 
 
 @router.post("/api/stripe/webhook")
@@ -327,7 +411,7 @@ def send_meta_event(
         ]
     }
     url = f"https://graph.facebook.com/{settings.meta_graph_api_version}/{settings.meta_pixel_id}/events"
-
+    logger.info(f"[GET /api/tracking/meta-event]:POST:{url=!r}:{payload=!r}:")
     try:
         response = httpx.post(
             url,

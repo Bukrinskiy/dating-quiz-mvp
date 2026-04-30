@@ -24,6 +24,12 @@ services:
     pull_policy: always
     env_file:
       - .env
+    environment:
+      SITE_PUBLIC_BASE_URL: ${SITE_PUBLIC_BASE_URL:-https://flirto.guru}
+      PAY_PUBLIC_BASE_URL: ${PAY_PUBLIC_BASE_URL:-https://pay.flirto.guru}
+      APP_PUBLIC_BASE_URL: ${APP_APP_PUBLIC_BASE_URL:-https://app.flirto.guru}
+      API_PUBLIC_BASE_URL: ${API_PUBLIC_BASE_URL:-https://api.flirto.guru}
+      BACKEND_CORS_ALLOW_ORIGINS: ${BACKEND_CORS_ALLOW_ORIGINS:-https://flirto.guru,https://pay.flirto.guru,https://app.flirto.guru,https://lp1.flirto.guru}
     depends_on:
       postgres:
         condition: service_healthy
@@ -41,6 +47,9 @@ services:
     environment:
       BOT_MODE: ${BOT_MODE:-webhook}
       BOT_BACKEND_BASE_URL: http://backend:8000
+      APP_PUBLIC_BASE_URL: ${APP_PUBLIC_BASE_URL:-https://flirto.guru}
+      PAY_PUBLIC_BASE_URL: ${PAY_PUBLIC_BASE_URL:-https://pay.flirto.guru}
+      BOT_PAY_URL: ${BOT_PAY_URL:-https://pay.flirto.guru/ru/pay/manage}
     depends_on:
       backend:
         condition: service_started
@@ -52,16 +61,81 @@ services:
     ports:
       - "127.0.0.1:${BOT_PORT:-8081}:${BOT_PORT:-8081}"
 
-  frontend:
-    image: ${DOCKER_REPO:-artyom85/seranking-server}:frontend-${IMAGE_TAG:-latest}
+  frontend-site:
+    image: ${DOCKER_REPO:-artyom85/seranking-server}:frontend-site-${IMAGE_TAG:-latest}
     pull_policy: always
     env_file:
       - .env
+    environment:
+      APP_SURFACE: ${SITE_APP_SURFACE:-site}
+      APP_BRAND: ${SITE_APP_BRAND:-Flirto Guru}
+      API_BASE_URL: ${SITE_API_BASE_URL:-https://api.flirto.guru}
+      PRIMARY_LANDING_URL: ${SITE_PRIMARY_LANDING_URL:-https://lp1.flirto.guru/en/quiz/1}
     depends_on:
-      - backend
+      backend:
+        condition: service_started
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${FRONTEND_PORT:-8080}:80"
+      - "127.0.0.1:${SITE_PORT:-8082}:80"
+
+  frontend-landing:
+    image: ${DOCKER_REPO:-artyom85/seranking-server}:frontend-landing-${IMAGE_TAG:-latest}
+    pull_policy: always
+    env_file:
+      - .env
+    environment:
+      APP_SURFACE: ${LANDING_APP_SURFACE:-landing}
+      API_BASE_URL: ${LANDING_API_BASE_URL:-https://api.flirto.guru}
+      PAY_PUBLIC_BASE_URL: ${LANDING_PAY_PUBLIC_BASE_URL:-https://pay.flirto.guru}
+      VITE_MOBI_SLON_URL: ${VITE_MOBI_SLON_URL:-https://mobi-slon.com/index.php}
+      VITE_MOBI_SLON_CAMPAIGN_KEY: ${VITE_MOBI_SLON_CAMPAIGN_KEY:-}
+      VITE_FB_PIXEL_ID: ${VITE_FB_PIXEL_ID:-}
+      VITE_YANDEX_METRIKA_ID: ${VITE_YANDEX_METRIKA_ID:-}
+      VITE_TRACKING_DEBUG: ${VITE_TRACKING_DEBUG:-0}
+    depends_on:
+      backend:
+        condition: service_started
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${LANDING_PORT:-8083}:80"
+
+  frontend-pay:
+    image: ${DOCKER_REPO:-artyom85/seranking-server}:frontend-pay-${IMAGE_TAG:-latest}
+    pull_policy: always
+    env_file:
+      - .env
+    environment:
+      APP_SURFACE: ${PAY_APP_SURFACE:-pay}
+      API_BASE_URL: ${PAY_API_BASE_URL:-https://api.flirto.guru}
+      PAY_PUBLIC_BASE_URL: ${PAY_PUBLIC_BASE_URL:-https://pay.flirto.guru}
+      VITE_MOBI_SLON_URL: ${VITE_MOBI_SLON_URL:-https://mobi-slon.com/index.php}
+      VITE_MOBI_SLON_CAMPAIGN_KEY: ${VITE_MOBI_SLON_CAMPAIGN_KEY:-}
+      VITE_FB_PIXEL_ID: ${VITE_FB_PIXEL_ID:-}
+      VITE_YANDEX_METRIKA_ID: ${VITE_YANDEX_METRIKA_ID:-}
+      VITE_TRACKING_DEBUG: ${VITE_TRACKING_DEBUG:-0}
+    depends_on:
+      backend:
+        condition: service_started
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${PAY_PORT:-8084}:80"
+
+  frontend-app:
+    image: ${DOCKER_REPO:-artyom85/seranking-server}:frontend-app-${IMAGE_TAG:-latest}
+    pull_policy: always
+    env_file:
+      - .env
+    environment:
+      APP_SURFACE: ${APP_FRONTEND_SURFACE:-app}
+      API_BASE_URL: ${APP_API_BASE_URL:-https://api.flirto.guru}
+      PAY_PUBLIC_BASE_URL: ${PAY_PUBLIC_BASE_URL:-https://pay.flirto.guru}
+      APP_PUBLIC_BASE_URL: ${APP_APP_PUBLIC_BASE_URL:-https://app.flirto.guru}
+    depends_on:
+      backend:
+        condition: service_started
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${APP_PORT:-8085}:80"
 
 volumes:
   postgres_data:

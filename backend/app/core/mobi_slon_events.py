@@ -17,6 +17,7 @@ class MobiSlonEvent(StrEnum):
     PAY_PLAN_WEEKLY_SELECTED = "pay_plan_weekly_selected"
     PAY_PLAN_MONTHLY_SELECTED = "pay_plan_monthly_selected"
     PAY_PLAN_YEARLY_SELECTED = "pay_plan_yearly_selected"
+    CHECKOUT_POPUP_CLOSED = "checkout_popup_closed"
     PAY_SUCCESS = "pay_success"
 
 

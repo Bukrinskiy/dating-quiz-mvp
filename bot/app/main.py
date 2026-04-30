@@ -16,11 +16,13 @@ from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_applicati
 
 from app.client.backend_api import BackendApiClient
 from app.config import get_settings
+from app.handlers.admin_access import router as admin_access_router
 from app.handlers.advice import router as advice_router
 from app.handlers.restore import router as restore_router
 from app.handlers.start import router as start_router
 from app.handlers.support import router as support_router
 from app.middlewares.access_gate import AccessGateMiddleware
+from app.middlewares.state_interrupt import StateInterruptMiddleware
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger("quiz.bot")
@@ -65,6 +67,8 @@ async def _sync_bot_commands(bot: Bot) -> None:
             BotCommand(command="reset", description="Сбросить активную сессию"),
             BotCommand(command="restore", description="Восстановить доступ"),
             BotCommand(command="support", description="Написать в поддержку"),
+            BotCommand(command="grant_access", description="Выдать ручной доступ по email"),
+            BotCommand(command="revoke_access", description="Отозвать ручной доступ по email"),
         ]
     )
 
@@ -90,9 +94,11 @@ async def _start_health_server(*, port: int, mode: str) -> web.AppRunner:
 async def _build_dispatcher(backend: BackendApiClient, public_commands: set[str], pay_url: str) -> Dispatcher:
     dp = Dispatcher(storage=MemoryStorage())
     dp.errors.register(_global_error_handler)
+    dp.message.outer_middleware(StateInterruptMiddleware())
     dp.message.middleware(AccessGateMiddleware(backend=backend, public_commands=public_commands, pay_url=pay_url))
     dp["backend"] = backend
     dp["pay_url"] = pay_url
+    dp.include_router(admin_access_router)
     dp.include_router(start_router)
     dp.include_router(restore_router)
     dp.include_router(support_router)

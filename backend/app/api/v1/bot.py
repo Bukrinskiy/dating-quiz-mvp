@@ -13,6 +13,9 @@ from app.schemas.bot import (
     BotAccessStatusRequest,
     BotAccessStatusResponse,
     BotActivateAccessRequest,
+    BotAdminAccessGrantRequest,
+    BotAdminAccessResponse,
+    BotAdminAccessRevokeRequest,
     BotMediaTranscribeRequest,
     BotMediaTranscribeResponse,
     BotRestoreConfirmRequest,
@@ -35,6 +38,8 @@ from app.schemas.bot import (
     BotSessionStartResponse,
 )
 from app.services.bot_session_service import BotSessionService
+from app.services.entitlement_service import EntitlementService
+from app.services.manual_access_service import ManualAccessService, ManualGrantAdminMeta
 from app.services.payment_service import PaymentService
 
 logger = logging.getLogger("quiz.bot_api")
@@ -109,6 +114,57 @@ def bot_restore_confirm(payload: BotRestoreConfirmRequest, db: Session = Depends
         extra={"email": mask_email(payload.email), "telegram_user_id": payload.telegram_user_id},
     )
     return service.restore_confirm(email=payload.email, otp=payload.otp, telegram_user_id=payload.telegram_user_id)
+
+
+@router.post(
+    "/api/bot/admin/access/grant",
+    response_model=BotAdminAccessResponse,
+    dependencies=[Depends(_require_internal_token)],
+)
+def bot_admin_access_grant(payload: BotAdminAccessGrantRequest, db: Session = Depends(get_db)) -> BotAdminAccessResponse:
+    grant = ManualAccessService(db).grant_by_email(
+        email=payload.email,
+        expires_at=payload.expires_at,
+        admin_meta=ManualGrantAdminMeta(
+            telegram_user_id=payload.admin_telegram_user_id,
+            telegram_username=payload.admin_telegram_username,
+        ),
+    )
+    resolved = EntitlementService(db).resolve_payload_by_email(payload.email)
+    return BotAdminAccessResponse(
+        status="granted",
+        email=payload.email.strip().lower(),
+        expires_at=grant.expires_at.isoformat(),
+        has_access_after=bool(resolved["has_access"]),
+        order_id=resolved["order_id"],
+        plan=resolved["plan"],
+        access_status=resolved["access_status"],
+    )
+
+
+@router.post(
+    "/api/bot/admin/access/revoke",
+    response_model=BotAdminAccessResponse,
+    dependencies=[Depends(_require_internal_token)],
+)
+def bot_admin_access_revoke(payload: BotAdminAccessRevokeRequest, db: Session = Depends(get_db)) -> BotAdminAccessResponse:
+    grant = ManualAccessService(db).revoke_by_email(
+        email=payload.email,
+        admin_meta=ManualGrantAdminMeta(
+            telegram_user_id=payload.admin_telegram_user_id,
+            telegram_username=payload.admin_telegram_username,
+        ),
+    )
+    resolved = EntitlementService(db).resolve_payload_by_email(payload.email)
+    return BotAdminAccessResponse(
+        status="revoked" if grant is not None else "not_found",
+        email=payload.email.strip().lower(),
+        expires_at=grant.expires_at.isoformat() if grant is not None else None,
+        has_access_after=bool(resolved["has_access"]),
+        order_id=resolved["order_id"],
+        plan=resolved["plan"],
+        access_status=resolved["access_status"],
+    )
 
 
 @router.post(

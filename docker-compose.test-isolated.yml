@@ -23,6 +23,12 @@ services:
     pull_policy: always
     env_file:
       - .env
+    environment:
+      SITE_PUBLIC_BASE_URL: http://127.0.0.1:${TEST_SITE_PORT:-18081}
+      PAY_PUBLIC_BASE_URL: http://127.0.0.1:${TEST_PAY_PORT:-18083}
+      APP_PUBLIC_BASE_URL: http://127.0.0.1:${TEST_APP_PORT:-18085}
+      API_PUBLIC_BASE_URL: http://127.0.0.1:${TEST_BACKEND_PORT:-18000}
+      BACKEND_CORS_ALLOW_ORIGINS: http://127.0.0.1:${TEST_SITE_PORT:-18081},http://127.0.0.1:${TEST_LANDING_PORT:-18082},http://127.0.0.1:${TEST_PAY_PORT:-18083},http://127.0.0.1:${TEST_APP_PORT:-18085}
     depends_on:
       postgres:
         condition: service_healthy
@@ -42,6 +48,9 @@ services:
     environment:
       BOT_MODE: ${BOT_MODE:-polling}
       BOT_BACKEND_BASE_URL: http://backend:8000
+      APP_PUBLIC_BASE_URL: http://127.0.0.1:${TEST_SITE_PORT:-18081}
+      PAY_PUBLIC_BASE_URL: http://127.0.0.1:${TEST_PAY_PORT:-18083}
+      BOT_PAY_URL: http://127.0.0.1:${TEST_PAY_PORT:-18083}/ru/pay/manage
     depends_on:
       backend:
         condition: service_started
@@ -49,18 +58,84 @@ services:
     expose:
       - "${BOT_PORT:-8081}"
 
-  frontend:
+  frontend-site:
     build:
       context: .
-      dockerfile: frontend/Dockerfile
+      dockerfile: frontend-site/Dockerfile
     pull_policy: always
     env_file:
       - .env
+    environment:
+      APP_SURFACE: site
+      API_BASE_URL: http://127.0.0.1:${TEST_BACKEND_PORT:-18000}
+      PRIMARY_LANDING_URL: http://127.0.0.1:${TEST_LANDING_PORT:-18082}/en/quiz/1
     depends_on:
       - backend
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${TEST_FRONTEND_PORT:-18080}:80"
+      - "127.0.0.1:${TEST_SITE_PORT:-18081}:80"
+
+  frontend-landing:
+    build:
+      context: .
+      dockerfile: frontend-landing/Dockerfile
+    pull_policy: always
+    env_file:
+      - .env
+    environment:
+      APP_SURFACE: landing
+      API_BASE_URL: http://127.0.0.1:${TEST_BACKEND_PORT:-18000}
+      PAY_PUBLIC_BASE_URL: http://127.0.0.1:${TEST_PAY_PORT:-18083}
+      VITE_MOBI_SLON_URL: ${VITE_MOBI_SLON_URL:-https://mobi-slon.com/index.php}
+      VITE_MOBI_SLON_CAMPAIGN_KEY: ${VITE_MOBI_SLON_CAMPAIGN_KEY:-}
+      VITE_FB_PIXEL_ID: ${VITE_FB_PIXEL_ID:-}
+      VITE_YANDEX_METRIKA_ID: ${VITE_YANDEX_METRIKA_ID:-}
+      VITE_TRACKING_DEBUG: ${VITE_TRACKING_DEBUG:-0}
+    depends_on:
+      - backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${TEST_LANDING_PORT:-18082}:80"
+
+  frontend-pay:
+    build:
+      context: .
+      dockerfile: frontend-pay/Dockerfile
+    pull_policy: always
+    env_file:
+      - .env
+    environment:
+      APP_SURFACE: pay
+      API_BASE_URL: http://127.0.0.1:${TEST_BACKEND_PORT:-18000}
+      PAY_PUBLIC_BASE_URL: http://127.0.0.1:${TEST_PAY_PORT:-18083}
+      VITE_MOBI_SLON_URL: ${VITE_MOBI_SLON_URL:-https://mobi-slon.com/index.php}
+      VITE_MOBI_SLON_CAMPAIGN_KEY: ${VITE_MOBI_SLON_CAMPAIGN_KEY:-}
+      VITE_FB_PIXEL_ID: ${VITE_FB_PIXEL_ID:-}
+      VITE_YANDEX_METRIKA_ID: ${VITE_YANDEX_METRIKA_ID:-}
+      VITE_TRACKING_DEBUG: ${VITE_TRACKING_DEBUG:-0}
+    depends_on:
+      - backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${TEST_PAY_PORT:-18083}:80"
+
+  frontend-app:
+    build:
+      context: .
+      dockerfile: frontend-app/Dockerfile
+    pull_policy: always
+    env_file:
+      - .env
+    environment:
+      APP_SURFACE: app
+      API_BASE_URL: http://127.0.0.1:${TEST_BACKEND_PORT:-18000}
+      PAY_PUBLIC_BASE_URL: http://127.0.0.1:${TEST_PAY_PORT:-18083}
+      APP_PUBLIC_BASE_URL: http://127.0.0.1:${TEST_APP_PORT:-18085}
+    depends_on:
+      - backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${TEST_APP_PORT:-18085}:80"
 
 volumes:
   test_postgres_data:

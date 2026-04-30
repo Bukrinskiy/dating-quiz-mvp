@@ -1,0 +1,124 @@
+.legal-page {
+  min-height: 100dvh;
+  width: 100%;
+  background: #f5f4f7;
+  font-family: "FlirtJost", "Jost", "Segoe UI", sans-serif;
+  color: #3b2b5b;
+  padding: 24px 16px 0;
+}
+
+.legal-page > .lang-switcher {
+  max-width: 880px;
+  margin: 0 auto 18px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.legal-card {
+  width: min(100%, 880px);
+  margin: 0 auto;
+  background: #ffffff;
+  border: 1px solid #ddcbe9;
+  border-radius: 24px;
+  padding: clamp(20px, 3.2vw, 36px);
+  box-shadow: 0 8px 24px #3b2b5b10;
+}
+
+.legal-title {
+  margin: 0;
+  font-size: clamp(28px, 3.8vw, 44px);
+  line-height: 1.08;
+  font-weight: 700;
+  color: #3b2b5b;
+}
+
+.legal-updated {
+  margin: 10px 0 0;
+  color: #6f5a97;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.legal-text {
+  margin: 16px 0 0;
+  color: #5f4f7f;
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+.legal-section {
+  margin-top: 28px;
+}
+
+.legal-section h2 {
+  margin: 0;
+  font-size: clamp(22px, 2.4vw, 30px);
+  line-height: 1.18;
+  font-weight: 700;
+  color: #3b2b5b;
+}
+
+.legal-list {
+  margin: 14px 0 0;
+  padding-left: 22px;
+  display: grid;
+  gap: 10px;
+  color: #5f4f7f;
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.legal-email {
+  display: inline-block;
+  margin-top: 12px;
+  color: #6f5a97;
+  text-decoration: underline;
+}
+
+.site-footer--legal {
+  margin: 18px auto 14px;
+}
+
+@media (max-width: 767px) {
+  .legal-page {
+    padding: 14px 12px 0;
+  }
+
+  .legal-page > .lang-switcher {
+    margin-bottom: 12px;
+  }
+
+  .legal-card {
+    border-radius: 20px;
+    padding: 18px 16px 20px;
+  }
+
+  .legal-title {
+    font-size: 30px;
+    line-height: 1.1;
+  }
+
+  .legal-text {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  .legal-section {
+    margin-top: 24px;
+  }
+
+  .legal-section h2 {
+    font-size: 22px;
+    line-height: 1.2;
+  }
+
+  .legal-list {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .site-footer--legal {
+    margin-top: 14px;
+    margin-bottom: 10px;
+  }
+}

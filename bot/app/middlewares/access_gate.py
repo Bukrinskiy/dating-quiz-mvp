@@ -9,6 +9,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, TelegramObject
 
 from app.client.backend_api import BackendApiClient
+from app.config import get_settings
 from app.utils.thinking import send_with_thinking
 
 logger = logging.getLogger("quiz.bot")
@@ -54,7 +55,11 @@ class AccessGateMiddleware(BaseMiddleware):
         state = data.get("state")
         if state is not None:
             state_name = await state.get_state()
-            if state_name and (state_name.startswith("RestoreFlow:") or state_name.startswith("SupportFlow:")):
+            if state_name and (
+                state_name.startswith("RestoreFlow:")
+                or state_name.startswith("SupportFlow:")
+                or state_name.startswith("AdminAccessFlow:")
+            ):
                 return await handler(event, data)
 
         command = ""
@@ -66,6 +71,10 @@ class AccessGateMiddleware(BaseMiddleware):
 
         telegram_user_id = str(event.from_user.id) if event.from_user else ""
         if not telegram_user_id:
+            return await handler(event, data)
+
+        admin_commands = {"/grant_access", "/revoke_access"}
+        if command in admin_commands and telegram_user_id in set(get_settings().admin_ids_list):
             return await handler(event, data)
 
         try:

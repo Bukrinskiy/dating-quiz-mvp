@@ -8,7 +8,10 @@ BUILD_PLATFORM ?= linux/amd64
 PUSH_RETRIES ?= 5
 FULL_BUILD_FLAGS ?=# --pull --no-cache
 BACKEND_IMAGE := $(DOCKER_REPO):backend-$(IMAGE_TAG)
-FRONTEND_IMAGE := $(DOCKER_REPO):frontend-$(IMAGE_TAG)
+FRONTEND_SITE_IMAGE := $(DOCKER_REPO):frontend-site-$(IMAGE_TAG)
+FRONTEND_LANDING_IMAGE := $(DOCKER_REPO):frontend-landing-$(IMAGE_TAG)
+FRONTEND_PAY_IMAGE := $(DOCKER_REPO):frontend-pay-$(IMAGE_TAG)
+FRONTEND_APP_IMAGE := $(DOCKER_REPO):frontend-app-$(IMAGE_TAG)
 BOT_IMAGE := $(DOCKER_REPO):bot-$(IMAGE_TAG)
 
 define docker_push_retry
@@ -23,7 +26,7 @@ echo "Push failed for $(1) after $(PUSH_RETRIES) attempts" >&2; \
 exit 1
 endef
 
-.PHONY: help up down restart build rebuild ps logs logs-frontend logs-backend logs-bot test-up test-down test-restart test-ps test-logs test-backend test-backend-local frontend-build backend-build bot-build backend-lint frontend-lint alembic-revision alembic-upgrade alembic-new dev-up dev-build dev-down dev-restart dev-logs dev-logs-backend dev-logs-frontend dev-logs-bot dev-ps dev-frontend docker-login push-backend-image push-frontend-image push-bot-image push-images deploy
+.PHONY: help up down restart build rebuild ps logs logs-frontend logs-backend logs-bot test-up test-down test-restart test-ps test-logs test-backend test-backend-local frontend-build backend-build bot-build backend-lint frontend-lint frontend-landing-lint frontend-pay-lint frontend-app-lint alembic-revision alembic-upgrade alembic-new dev-up dev-build dev-down dev-restart dev-logs dev-logs-backend dev-logs-frontend-site dev-logs-frontend-landing dev-logs-frontend-pay dev-logs-frontend-app dev-logs-bot dev-ps dev-frontend dev-frontend-site dev-frontend-landing dev-frontend-pay dev-frontend-app docker-login push-backend-image push-frontend-site-image push-frontend-landing-image push-frontend-pay-image push-frontend-app-image push-bot-image push-images deploy
 
 help:
 	@echo "Available targets:"
@@ -34,7 +37,7 @@ help:
 	@echo "  make rebuild            - Rebuild all images without cache"
 	@echo "  make ps                 - Show service status"
 	@echo "  make logs               - Tail logs for all services"
-	@echo "  make logs-frontend      - Tail frontend logs"
+	@echo "  make logs-frontend      - Tail site/landing/pay frontend logs"
 	@echo "  make logs-backend       - Tail backend logs"
 	@echo "  make logs-bot           - Tail bot logs"
 	@echo "  make test-up            - Start isolated test stack (separate ports/volumes)"
@@ -52,20 +55,33 @@ help:
 	@echo "  make alembic-upgrade    - Apply Alembic migrations to head"
 	@echo "  make alembic-new MSG='desc' - Generate new revision and apply it"
 	@echo "  make frontend-lint      - Run frontend lint/type checks"
-	@echo "  make dev-up             - Start backend+frontend+bot dev containers (with reload/HMR)"
-	@echo "  make dev-build          - Build backend+frontend+bot dev images"
+	@echo "  make frontend-landing-lint - Run frontend-landing lint/type checks"
+	@echo "  make frontend-pay-lint  - Run frontend-pay lint/type checks"
+	@echo "  make frontend-app-lint  - Run frontend-app lint/type checks"
+	@echo "  make dev-up             - Start backend+frontends+bot dev containers (with reload/HMR)"
+	@echo "  make dev-build          - Build backend+frontends+bot dev images"
 	@echo "  make dev-down           - Stop dev containers"
 	@echo "  make dev-restart        - Restart dev containers"
 	@echo "  make dev-ps             - Show dev service status"
 	@echo "  make dev-logs           - Tail all dev logs"
 	@echo "  make dev-logs-backend   - Tail backend dev logs"
-	@echo "  make dev-logs-frontend  - Tail frontend dev logs"
+	@echo "  make dev-logs-frontend-site - Tail frontend-site dev logs"
+	@echo "  make dev-logs-frontend-landing - Tail frontend-landing dev logs"
+	@echo "  make dev-logs-frontend-pay - Tail frontend-pay dev logs"
+	@echo "  make dev-logs-frontend-app - Tail frontend-app dev logs"
 	@echo "  make dev-logs-bot       - Tail bot dev logs"
 	@echo "  make dev-frontend       - Run frontend locally with Vite HMR (without docker)"
+	@echo "  make dev-frontend-site  - Run frontend-site locally with Vite HMR (without docker)"
+	@echo "  make dev-frontend-landing - Run frontend-landing locally with Vite HMR (without docker)"
+	@echo "  make dev-frontend-pay   - Run frontend-pay locally with Vite HMR (without docker)"
+	@echo "  make dev-frontend-app   - Run frontend-app locally with Vite HMR (without docker)"
 	@echo "  make docker-login       - Docker login using docker_login/docker_token from .env"
 	@echo "  make push-backend-image - Build+push backend image ($(BUILD_PLATFORM))"
-	@echo "  make push-frontend-image- Build+push frontend image ($(BUILD_PLATFORM))"
-	@echo "  make push-images        - Login and push both backend and frontend images"
+	@echo "  make push-frontend-site-image    - Build+push frontend-site image ($(BUILD_PLATFORM))"
+	@echo "  make push-frontend-landing-image - Build+push frontend-landing image ($(BUILD_PLATFORM))"
+	@echo "  make push-frontend-pay-image     - Build+push frontend-pay image ($(BUILD_PLATFORM))"
+	@echo "  make push-frontend-app-image     - Build+push frontend-app image ($(BUILD_PLATFORM))"
+	@echo "  make push-images        - Login and push target app images"
 	@echo "  make deploy             - Push images and restart remote app on clario-landing"
 
 up:
@@ -90,7 +106,7 @@ logs:
 	$(COMPOSE) logs -f --tail=200
 
 logs-frontend:
-	$(COMPOSE) logs -f --tail=200 frontend
+	$(COMPOSE) logs -f --tail=200 frontend-site frontend-landing frontend-pay frontend-app
 
 logs-backend:
 	$(COMPOSE) logs -f --tail=200 backend
@@ -114,7 +130,7 @@ test-logs:
 	$(TEST_COMPOSE) logs -f --tail=200
 
 frontend-build:
-	$(COMPOSE) build $(FULL_BUILD_FLAGS) frontend
+	$(COMPOSE) build $(FULL_BUILD_FLAGS) frontend-site frontend-landing frontend-pay frontend-app
 
 backend-build:
 	$(COMPOSE) build $(FULL_BUILD_FLAGS) backend
@@ -145,7 +161,16 @@ alembic-upgrade:
 alembic-new: alembic-revision alembic-upgrade
 
 frontend-lint:
-	cd frontend && pnpm lint
+	cd frontend_old && pnpm lint
+
+frontend-landing-lint:
+	cd frontend-landing && pnpm lint
+
+frontend-pay-lint:
+	cd frontend-pay && pnpm lint
+
+frontend-app-lint:
+	cd frontend-app && pnpm lint
 
 dev-up:
 	$(DEV_COMPOSE) up -d
@@ -167,14 +192,35 @@ dev-logs:
 dev-logs-backend:
 	$(DEV_COMPOSE) logs -f --tail=200 backend
 
-dev-logs-frontend:
-	$(DEV_COMPOSE) logs -f --tail=200 frontend
+dev-logs-frontend-site:
+	$(DEV_COMPOSE) logs -f --tail=200 frontend-site
+
+dev-logs-frontend-landing:
+	$(DEV_COMPOSE) logs -f --tail=200 frontend-landing
+
+dev-logs-frontend-pay:
+	$(DEV_COMPOSE) logs -f --tail=200 frontend-pay
+
+dev-logs-frontend-app:
+	$(DEV_COMPOSE) logs -f --tail=200 frontend-app
 
 dev-logs-bot:
 	$(DEV_COMPOSE) logs -f --tail=200 bot
 
 dev-frontend:
-	cd frontend && pnpm install --no-frozen-lockfile && pnpm dev --host 0.0.0.0 --port 5173
+	cd frontend_old && pnpm install --no-frozen-lockfile && pnpm dev --host 0.0.0.0 --port 5173
+
+dev-frontend-site:
+	cd frontend-site && pnpm install --no-frozen-lockfile && pnpm dev --host 0.0.0.0 --port 5175
+
+dev-frontend-landing:
+	cd frontend-landing && pnpm install --no-frozen-lockfile && pnpm dev --host 0.0.0.0 --port 5174
+
+dev-frontend-pay:
+	cd frontend-pay && pnpm install --no-frozen-lockfile && pnpm dev --host 0.0.0.0 --port 5176
+
+dev-frontend-app:
+	cd frontend-app && pnpm install --no-frozen-lockfile && pnpm dev --host 0.0.0.0 --port 5177
 
 docker-login:
 	@docker_login="$$(grep -m1 '^docker_login=' .env | sed 's/^[^=]*=//')"; \
@@ -187,7 +233,13 @@ push-backend-image:
 	docker build --platform "$(BUILD_PLATFORM)" $(FULL_BUILD_FLAGS) -f backend/Dockerfile -t "$(BACKEND_IMAGE)" .
 	@$(call docker_push_retry,$(BACKEND_IMAGE))
 
-push-frontend-image:
+push-frontend-site-image:
+	docker build --platform "$(BUILD_PLATFORM)" \
+		$(FULL_BUILD_FLAGS) \
+		-f frontend-site/Dockerfile -t "$(FRONTEND_SITE_IMAGE)" .
+	@$(call docker_push_retry,$(FRONTEND_SITE_IMAGE))
+
+push-frontend-landing-image:
 	@VITE_MOBI_SLON_URL="$$(grep -m1 '^VITE_MOBI_SLON_URL=' .env | sed 's/^[^=]*=//')"; \
 	VITE_MOBI_SLON_CAMPAIGN_KEY="$$(grep -m1 '^VITE_MOBI_SLON_CAMPAIGN_KEY=' .env | sed 's/^[^=]*=//')"; \
 	VITE_FB_PIXEL_ID="$$(grep -m1 '^VITE_FB_PIXEL_ID=' .env | sed 's/^[^=]*=//')"; \
@@ -195,19 +247,51 @@ push-frontend-image:
 	VITE_TRACKING_DEBUG="$$(grep -m1 '^VITE_TRACKING_DEBUG=' .env | sed 's/^[^=]*=//')"; \
 	docker build --platform "$(BUILD_PLATFORM)" \
 		$(FULL_BUILD_FLAGS) \
+		--build-arg APP_SURFACE="landing" \
+		--build-arg API_BASE_URL="https://api.flirto.guru" \
+		--build-arg PAY_PUBLIC_BASE_URL="https://pay.flirto.guru" \
 		--build-arg VITE_MOBI_SLON_URL="$$VITE_MOBI_SLON_URL" \
 		--build-arg VITE_MOBI_SLON_CAMPAIGN_KEY="$$VITE_MOBI_SLON_CAMPAIGN_KEY" \
 		--build-arg VITE_FB_PIXEL_ID="$$VITE_FB_PIXEL_ID" \
 		--build-arg VITE_YANDEX_METRIKA_ID="$$VITE_YANDEX_METRIKA_ID" \
 		--build-arg VITE_TRACKING_DEBUG="$$VITE_TRACKING_DEBUG" \
-		-f frontend/Dockerfile -t "$(FRONTEND_IMAGE)" .
-	@$(call docker_push_retry,$(FRONTEND_IMAGE))
+		-f frontend-landing/Dockerfile -t "$(FRONTEND_LANDING_IMAGE)" .
+	@$(call docker_push_retry,$(FRONTEND_LANDING_IMAGE))
+
+push-frontend-pay-image:
+	@VITE_MOBI_SLON_URL="$$(grep -m1 '^VITE_MOBI_SLON_URL=' .env | sed 's/^[^=]*=//')"; \
+	VITE_MOBI_SLON_CAMPAIGN_KEY="$$(grep -m1 '^VITE_MOBI_SLON_CAMPAIGN_KEY=' .env | sed 's/^[^=]*=//')"; \
+	VITE_FB_PIXEL_ID="$$(grep -m1 '^VITE_FB_PIXEL_ID=' .env | sed 's/^[^=]*=//')"; \
+	VITE_YANDEX_METRIKA_ID="$$(grep -m1 '^VITE_YANDEX_METRIKA_ID=' .env | sed 's/^[^=]*=//')"; \
+	VITE_TRACKING_DEBUG="$$(grep -m1 '^VITE_TRACKING_DEBUG=' .env | sed 's/^[^=]*=//')"; \
+	docker build --platform "$(BUILD_PLATFORM)" \
+		$(FULL_BUILD_FLAGS) \
+		--build-arg APP_SURFACE="pay" \
+		--build-arg API_BASE_URL="https://api.flirto.guru" \
+		--build-arg PAY_PUBLIC_BASE_URL="https://pay.flirto.guru" \
+		--build-arg VITE_MOBI_SLON_URL="$$VITE_MOBI_SLON_URL" \
+		--build-arg VITE_MOBI_SLON_CAMPAIGN_KEY="$$VITE_MOBI_SLON_CAMPAIGN_KEY" \
+		--build-arg VITE_FB_PIXEL_ID="$$VITE_FB_PIXEL_ID" \
+		--build-arg VITE_YANDEX_METRIKA_ID="$$VITE_YANDEX_METRIKA_ID" \
+		--build-arg VITE_TRACKING_DEBUG="$$VITE_TRACKING_DEBUG" \
+		-f frontend-pay/Dockerfile -t "$(FRONTEND_PAY_IMAGE)" .
+	@$(call docker_push_retry,$(FRONTEND_PAY_IMAGE))
+
+push-frontend-app-image:
+	docker build --platform "$(BUILD_PLATFORM)" \
+		$(FULL_BUILD_FLAGS) \
+		--build-arg APP_SURFACE="app" \
+		--build-arg API_BASE_URL="https://api.flirto.guru" \
+		--build-arg PAY_PUBLIC_BASE_URL="https://pay.flirto.guru" \
+		--build-arg APP_PUBLIC_BASE_URL="https://app.flirto.guru" \
+		-f frontend-app/Dockerfile -t "$(FRONTEND_APP_IMAGE)" .
+	@$(call docker_push_retry,$(FRONTEND_APP_IMAGE))
 
 push-bot-image:
 	docker build --platform "$(BUILD_PLATFORM)" $(FULL_BUILD_FLAGS) -f bot/Dockerfile -t "$(BOT_IMAGE)" .
 	@$(call docker_push_retry,$(BOT_IMAGE))
 
-push-images: docker-login push-backend-image push-frontend-image push-bot-image
+push-images: docker-login push-backend-image push-frontend-site-image push-frontend-landing-image push-frontend-pay-image push-frontend-app-image push-bot-image
 
 deploy: push-images
-	ssh clario-landing 'cd /opt/seranking-app && docker compose pull && docker compose up -d --force-recreate'
+	ssh clario-landing 'cd /opt/flirto-guru && docker compose up -d --force-recreate'

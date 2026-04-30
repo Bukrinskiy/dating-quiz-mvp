@@ -10,6 +10,7 @@ import time
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
 from app.api.router import api_router
@@ -118,6 +119,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="quiz-backend", lifespan=lifespan, )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_allow_origins_list,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+)
 app.include_router(api_router)
 
 

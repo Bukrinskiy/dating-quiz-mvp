@@ -54,7 +54,7 @@ def run_migrations_offline() -> None:
 
     with context.begin_transaction():
         if not is_sqlite:
-            context.execute('CREATE SCHEMA IF NOT EXISTS "seranking"')
+            context.execute('CREATE SCHEMA IF NOT EXISTS "flirto"')
         context.run_migrations()
 
 
@@ -71,7 +71,7 @@ def run_migrations_online() -> None:
     with connectable.connect() as connection:
         is_sqlite = connection.dialect.name == "sqlite"
         if not is_sqlite:
-            connection.exec_driver_sql('CREATE SCHEMA IF NOT EXISTS "seranking"')
+            connection.exec_driver_sql('CREATE SCHEMA IF NOT EXISTS "flirto"')
             connection.commit()
         context.configure(
             connection=connection,

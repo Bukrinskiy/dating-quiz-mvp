@@ -17,9 +17,9 @@ flowchart TD
     I -->|Да| F
     I -->|Нет| J["Показ кнопки 'Оплатить доступ' (pay URL)"]
 
-    J --> K["Web: /pay -> POST /api/payment/checkout-session"]
-    K --> L["Stripe checkout -> /pay/success"]
-    L --> M["Backend: GET /api/payment/session-status"]
+    J --> K["Web: BOT_PAY_URL -> default /ru/pay/manage?tg_chat_id=..."]
+    K --> L["Pay surface /:lang/pay/manage -> payment flow on pay.flirto.guru"]
+    L --> M["Stripe completion -> /:lang/pay/success + GET /api/payment/order-status or /api/payment/session-status"]
     M --> N["Пользователь возвращается в бота по deep-link /start <token>"]
 
     A --> O["Команда /restore (если доступ потерян)"]
@@ -75,8 +75,9 @@ flowchart TD
 
 2. `Оплата (если доступа нет)`
 - Пользователь нажимает кнопку `Оплатить доступ`.
-- На вебе: `POST /api/payment/checkout-session` -> Stripe checkout.
-- После оплаты: `/pay/success` читает `GET /api/payment/session-status`.
+- Bot открывает `BOT_PAY_URL`; если он не задан, используется fallback `${PAY_PUBLIC_BASE_URL}/ru/pay/manage`.
+- Перед открытием ссылки bot добавляет `tg_chat_id` в query params.
+- На pay surface дальнейший flow идет через canonical pay routes (`/:lang/pay/manage`, `/:lang/pay/success`) и backend API.
 - Пользователь возвращается в бота и снова проходит `/start` с activation token.
 
 3. `Команда /restore`
@@ -138,6 +139,10 @@ flowchart TD
 12. `Команда /help`
 - Показывает список доступных команд.
 - Фактически для unpaid-пользователя через middleware разрешены только `/start` и `/restore`; остальные команды требуют paid/grace.
+
+## Примечание по миграции Flirto Guru
+- В v1 bot flow не ведет пользователя в landing funnel и не использует `BOT_LANDING_URL`.
+- Browser-owned `pay_success` не используется: terminal payment event отправляется server-side из Stripe webhook.
 
 ## Карточка 3: Что передается в OpenAI и что приходит обратно (JSON-контракты)
 

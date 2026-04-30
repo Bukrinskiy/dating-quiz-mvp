@@ -1,0 +1,22 @@
+<svg width="300" height="64" viewBox="0 0 300 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="boldFullGrad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f41c5d"/>
+      <stop offset="1" stop-color="#8244a2"/>
+    </linearGradient>
+    <linearGradient id="boldFullAccent" x1="24" y1="28" x2="42" y2="40" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f41c5d"/>
+      <stop offset="1" stop-color="#fd7f72"/>
+    </linearGradient>
+  </defs>
+  <!-- Icon -->
+  <rect x="4" y="4" width="56" height="56" rx="8" fill="#3b2b5b"/>
+  <path d="M14 12 H23 V52 H14 Z" fill="url(#boldFullGrad)"/>
+  <path d="M23 12 H48 L44 22 H23 Z" fill="url(#boldFullGrad)"/>
+  <path d="M23 30 H40 L37 39 H23 Z" fill="url(#boldFullAccent)"/>
+  <line x1="48" y1="28" x2="52" y2="24" stroke="#f41c5d" stroke-width="1.5" opacity="0.3" stroke-linecap="round"/>
+  <line x1="48" y1="34" x2="52" y2="30" stroke="#f41c5d" stroke-width="1.5" opacity="0.2" stroke-linecap="round"/>
+  <!-- Bold text -->
+  <text x="76" y="40" fill="#3b2b5b" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="30" font-weight="900" letter-spacing="-0.5">FLIRTO</text>
+  <text x="206" y="40" fill="#f41c5d" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="30" font-weight="900" letter-spacing="-0.5">.GURU</text>
+</svg>

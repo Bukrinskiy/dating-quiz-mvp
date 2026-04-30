@@ -1,0 +1,128 @@
+.thinking-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.thinking-overlay__card {
+  padding: 14px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-md);
+}
+
+.thinking-overlay__label::after {
+  content: ".";
+  animation: thinking-dots 1.6s steps(1) infinite;
+}
+
+.toast-stack {
+  position: fixed;
+  top: calc(8px + env(safe-area-inset-top));
+  right: 12px;
+  left: 12px;
+  z-index: 55;
+  display: grid;
+  gap: 8px;
+}
+
+.toast {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-md);
+}
+
+.toast--error {
+  border-color: var(--red-line);
+  background: color-mix(in srgb, var(--surface) 88%, var(--red) 12%);
+  color: var(--red);
+}
+
+.toast--warning {
+  border-color: rgba(242, 185, 75, 0.36);
+}
+
+.toast--success {
+  border-color: rgba(47, 143, 91, 0.28);
+}
+
+.toast__copy p {
+  margin: 2px 0 0;
+  color: var(--ink2);
+}
+
+.toast--error .toast__copy strong,
+.toast--error .toast__copy p,
+.toast--error .toast__action,
+.toast--error .toast__dismiss {
+  color: var(--red);
+}
+
+.toast--error .toast__action,
+.toast--error .toast__dismiss {
+  background: color-mix(in srgb, var(--surface2) 82%, var(--red) 18%);
+}
+
+.toast__actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.toast__action,
+.toast__dismiss {
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: var(--surface2);
+  color: var(--ink);
+}
+
+.skeleton {
+  display: grid;
+  gap: 8px;
+}
+
+.skeleton__line {
+  display: block;
+  height: 18px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--surface2) 0%, var(--surface) 50%, var(--surface2) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes thinking-dots {
+  0% {
+    content: ".";
+  }
+  33% {
+    content: "..";
+  }
+  66% {
+    content: "...";
+  }
+  100% {
+    content: ".";
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}

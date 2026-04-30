@@ -13,7 +13,7 @@ services:
       timeout: 5s
       retries: 20
     ports:
-      - "5432:5432"
+      - "15432:5432"
     volumes:
       - dev_postgres_data:/var/lib/postgresql/data
 
@@ -25,10 +25,11 @@ services:
       - .env
     environment:
       APP_LOG_LEVEL: INFO
-      APP_BASE_URL: http://localhost:5173
-      PAY_SUCCESS_URL: http://localhost:5173/pay/success
-      PAY_CANCEL_URL: http://localhost:5173/pay/cancel
-      PAY_PORTAL_RETURN_URL: http://localhost:5173/pay/manage
+      SITE_PUBLIC_BASE_URL: http://localhost:5175
+      PAY_PUBLIC_BASE_URL: http://localhost:5176
+      APP_PUBLIC_BASE_URL: http://localhost:5177
+      API_PUBLIC_BASE_URL: http://localhost:8000
+      BACKEND_CORS_ALLOW_ORIGINS: http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:5177
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,7 +52,9 @@ services:
     environment:
       BOT_MODE: polling
       BOT_BACKEND_BASE_URL: http://backend:8000
-      APP_PUBLIC_BASE_URL: http://localhost:5173
+      APP_PUBLIC_BASE_URL: http://localhost:5175
+      PAY_PUBLIC_BASE_URL: http://localhost:5176
+      BOT_PAY_URL: http://localhost:5176/ru/pay/manage
     depends_on:
       - backend
     command: ["uv", "run", "--no-sync", "python", "-m", "app.main"]
@@ -60,30 +63,95 @@ services:
     volumes:
       - ./bot/app:/app/app
 
-  frontend:
+  frontend-site:
+    image: node:22-alpine
+    working_dir: /app
+    environment:
+      API_BASE_URL: ${SITE_API_BASE_URL:-http://localhost:8000}
+      PRIMARY_LANDING_URL: ${SITE_PRIMARY_LANDING_URL:-http://localhost:5174/en/quiz/1}
+    command: >
+      sh -lc "corepack enable &&
+      pnpm install --no-frozen-lockfile &&
+      pnpm dev --host 0.0.0.0 --port 5175"
+    volumes:
+      - ./frontend-site:/app
+      - frontend_site_node_modules:/app/node_modules
+    ports:
+      - "5175:5175"
+
+  frontend-landing:
     image: node:22-alpine
     working_dir: /app
     depends_on:
       - backend
     environment:
-      VITE_API_PROXY_TARGET: http://backend:8000
+      APP_SURFACE: landing
+      API_BASE_URL: ${LANDING_API_BASE_URL:-http://localhost:8000}
+      PAY_PUBLIC_BASE_URL: ${LANDING_PAY_PUBLIC_BASE_URL:-http://localhost:5176}
       VITE_MOBI_SLON_URL: ${VITE_MOBI_SLON_URL:-https://mobi-slon.com/index.php}
       VITE_MOBI_SLON_CAMPAIGN_KEY: ${VITE_MOBI_SLON_CAMPAIGN_KEY:-}
       VITE_FB_PIXEL_ID: ${VITE_FB_PIXEL_ID:-}
       VITE_YANDEX_METRIKA_ID: ${VITE_YANDEX_METRIKA_ID:-}
       VITE_TRACKING_DEBUG: ${VITE_TRACKING_DEBUG:-0}
-      VITE_TELEGRAM_BOT_URL: ${VITE_TELEGRAM_BOT_URL:-}
     command: >
       sh -lc "corepack enable &&
       pnpm install --no-frozen-lockfile &&
-      pnpm dev --host 0.0.0.0 --port 5173"
+      pnpm dev --host 0.0.0.0 --port 5174"
     volumes:
-      - ./frontend:/app
-      - frontend_node_modules:/app/node_modules
+      - ./frontend-landing:/app
+      - frontend_landing_node_modules:/app/node_modules
     ports:
-      - "5173:5173"
+      - "5174:5174"
+
+  frontend-pay:
+    image: node:22-alpine
+    working_dir: /app
+    depends_on:
+      - backend
+    environment:
+      APP_SURFACE: pay
+      API_BASE_URL: ${PAY_API_BASE_URL:-http://localhost:8000}
+      PAY_PUBLIC_BASE_URL: ${PAY_PUBLIC_BASE_URL:-http://localhost:5176}
+      VITE_MOBI_SLON_URL: ${VITE_MOBI_SLON_URL:-https://mobi-slon.com/index.php}
+      VITE_MOBI_SLON_CAMPAIGN_KEY: ${VITE_MOBI_SLON_CAMPAIGN_KEY:-}
+      VITE_FB_PIXEL_ID: ${VITE_FB_PIXEL_ID:-}
+      VITE_YANDEX_METRIKA_ID: ${VITE_YANDEX_METRIKA_ID:-}
+      VITE_TRACKING_DEBUG: ${VITE_TRACKING_DEBUG:-0}
+    command: >
+      sh -lc "corepack enable &&
+      pnpm install --no-frozen-lockfile &&
+      pnpm dev --host 0.0.0.0 --port 5176"
+    volumes:
+      - ./frontend-pay:/app
+      - ./frontend-landing/public:/frontend-landing/public:ro
+      - frontend_pay_node_modules:/app/node_modules
+    ports:
+      - "5176:5176"
+
+  frontend-app:
+    image: node:22-alpine
+    working_dir: /app
+    depends_on:
+      - backend
+    environment:
+      APP_SURFACE: app
+      API_BASE_URL: ${APP_API_BASE_URL:-http://localhost:8000}
+      PAY_PUBLIC_BASE_URL: ${PAY_PUBLIC_BASE_URL:-http://localhost:5176}
+      APP_PUBLIC_BASE_URL: ${APP_APP_PUBLIC_BASE_URL:-http://localhost:5177}
+    command: >
+      sh -lc "corepack enable &&
+      pnpm install --no-frozen-lockfile &&
+      pnpm dev --host 0.0.0.0 --port 5177"
+    volumes:
+      - ./frontend-app:/app
+      - frontend_app_node_modules:/app/node_modules
+    ports:
+      - "5177:5177"
 
 volumes:
-  frontend_node_modules:
+  frontend_site_node_modules:
+  frontend_landing_node_modules:
+  frontend_pay_node_modules:
+  frontend_app_node_modules:
   dev_postgres_data:
   backend_venv:

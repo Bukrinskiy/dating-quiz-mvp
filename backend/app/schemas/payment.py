@@ -11,6 +11,10 @@ class CheckoutSessionRequest(BaseModel):
     locale: str | None = None
     telegram_chat_id: str | None = None
     promo_code: str | None = None
+    brand: str | None = None
+    landing_id: str | None = None
+    entry_host: str | None = None
+    entry_path: str | None = None
 
 
 class CheckoutSessionResponse(BaseModel):
@@ -26,6 +30,10 @@ class PaymentIntentRequest(BaseModel):
     locale: str | None = None
     telegram_chat_id: str | None = None
     promo_code: str | None = None
+    brand: str | None = None
+    landing_id: str | None = None
+    entry_host: str | None = None
+    entry_path: str | None = None
 
 
 class PaymentIntentResponse(BaseModel):
@@ -99,3 +107,60 @@ class MobiSlonEventRequest(BaseModel):
 class MobiSlonEventResponse(BaseModel):
     accepted: bool
     forwarded: bool
+
+
+class SessionCurrencyRequest(BaseModel):
+    locale: str | None = None
+
+
+class SessionCurrencyResponse(BaseModel):
+    currency: str
+    locale: str
+
+
+class SessionCreateRequest(BaseModel):
+    locale: str | None = None
+    currency: str | None = None
+    clickid: str | None = None
+    brand: str | None = None
+    landing_id: str | None = None
+    entry_host: str | None = None
+    entry_path: str | None = None
+    tracking_params: dict[str, str] = Field(default_factory=dict)
+    answers: dict[str, str | int | list[str] | dict[str, str] | None] = Field(default_factory=dict)
+
+
+class SessionCreateResponse(BaseModel):
+    uuid: str
+
+
+class SessionUpdateEmailRequest(BaseModel):
+    uuid: str = Field(min_length=1)
+    email: str = Field(min_length=3)
+
+
+class SessionPlanDataRequest(BaseModel):
+    uuid: str = Field(min_length=1)
+    promo_code: str | None = None
+
+
+class SessionPlanDataResponse(BaseModel):
+    uuid: str
+    locale: str
+    currency: str
+    email: str | None = None
+    plans: list[PublicPlanResponse]
+
+
+class SessionPaymentIntentRequest(BaseModel):
+    uuid: str = Field(min_length=1)
+    plan: str = Field(min_length=1)
+    email: str = Field(min_length=3)
+    clickid: str | None = None
+    locale: str | None = None
+    telegram_chat_id: str | None = None
+    promo_code: str | None = None
+    brand: str | None = None
+    landing_id: str | None = None
+    entry_host: str | None = None
+    entry_path: str | None = None

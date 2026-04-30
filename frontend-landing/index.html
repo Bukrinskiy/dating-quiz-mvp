@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flirto Guru Landing</title>
+    <script src="/runtime-config.js"></script>
+    <script>
+      var BPixelJS;
+      (function () {
+        "use strict";
+
+        var FBC_WAIT_TIMEOUT_MS = 2000;
+        var FBC_WAIT_INTERVAL_MS = 150;
+
+        function onPixelLoaded(handler) {
+          if (!window.isPixelLoaded && window.isPixelLoading) {
+            window.pixelLoadedHandlers = window.pixelLoadedHandlers || [];
+            window.pixelLoadedHandlers.push(handler);
+            return;
+          }
+          handler();
+        }
+
+        function getConfig(name) {
+          return window.BPIXEL_JS_CONFIG?.[name];
+        }
+
+        function logError() {
+          console.error.apply(console, arguments);
+        }
+
+        function mergeConfig(config) {
+          window.BPIXEL_JS_CONFIG = Object.assign({}, window.BPIXEL_JS_CONFIG, config);
+        }
+
+        function readCookie(name) {
+          var escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          var match = document.cookie.match(new RegExp("(?:^|; )" + escaped + "=([^;]*)"));
+          if (!match || !match[1]) {
+            return null;
+          }
+
+          try {
+            return decodeURIComponent(match[1]);
+          } catch {
+            return match[1];
+          }
+        }
+
+        function getTrackingParam(name) {
+          var params = new URLSearchParams(window.location.search);
+          var value = params.get(name);
+          return value && typeof value === "string" ? value : null;
+        }
+
+        function buildFbcFromFbclid(fbclid) {
+          if (!fbclid) {
+            return null;
+          }
+          return "fb.1." + String(Date.now()) + "." + fbclid;
+        }
+
+        function resolveBinomFbclid() {
+          var fbc = readCookie("_fbc");
+          if (fbc) {
+            return fbc;
+          }
+
+          var rawFbclid = getTrackingParam("fbclid");
+          if (!rawFbclid) {
+            return null;
+          }
+
+          return buildFbcFromFbclid(rawFbclid);
+        }
+
+        function waitForBinomFbclid() {
+          var immediate = readCookie("_fbc");
+          if (immediate) {
+            return Promise.resolve(immediate);
+          }
+
+          return new Promise(function (resolve) {
+            var startedAt = Date.now();
+
+            function finish() {
+              resolve(resolveBinomFbclid());
+            }
+
+            function poll() {
+              var fbc = readCookie("_fbc");
+              if (fbc) {
+                resolve(fbc);
+                return;
+              }
+
+              if (Date.now() - startedAt >= FBC_WAIT_TIMEOUT_MS) {
+                finish();
+                return;
+              }
+
+              window.setTimeout(poll, FBC_WAIT_INTERVAL_MS);
+            }
+
+            poll();
+          });
+        }
+
+        function getClickId() {
+          var tokenBcid =
+            typeof window.tokens === "object" && window.tokens && typeof window.tokens.bcid === "string"
+              ? window.tokens.bcid
+              : null;
+          if (tokenBcid) {
+            return tokenBcid;
+          }
+
+          return readCookie("bcid") || getTrackingParam("bcid");
+        }
+
+        function joinUrl(base, query) {
+          return "" + base + query;
+        }
+
+        function buildQuery(base, params) {
+          var search = new URLSearchParams(base || "");
+          Object.entries(params).forEach(function (entry) {
+            var key = entry[0];
+            var value = entry[1];
+            if (value === null) {
+              search.delete(key);
+              return;
+            }
+            if (value !== undefined && value !== "") {
+              search.set(key, String(value));
+            }
+          });
+          var serialized = search.toString();
+          return serialized ? "?" + serialized : "";
+        }
+
+        function fireImage(url) {
+          var image = new Image();
+          image.src = url;
+          image.referrerPolicy = "no-referrer-when-downgrade";
+        }
+
+        function handlePixelLoaded() {
+          window.isPixelLoading = false;
+          window.isPixelLoaded = true;
+          (window.pixelLoadedHandlers || []).forEach(function (handler) {
+            handler();
+          });
+
+          var clickId = getClickId();
+          if (!clickId) {
+            logError("Can't find click id");
+            return;
+          }
+
+          [
+            {
+              elements: document.querySelectorAll("a"),
+              getHref: function (element) {
+                return element.getAttribute("href");
+              },
+              setHref: function (element, value) {
+                element.setAttribute("href", value);
+              },
+            },
+            {
+              elements: document.querySelectorAll("[data-href]"),
+              getHref: function (element) {
+                return element.dataset.href || null;
+              },
+              setHref: function (element, value) {
+                element.dataset.href = value;
+              },
+            },
+          ].forEach(function (group) {
+            group.elements.forEach(function (element) {
+              var href = group.getHref(element);
+              if (
+                href &&
+                (/[?&]event[_\d]+=/.test(href) ||
+                  /[?&]cnv_id=OPTIONAL(&|$)/.test(href) ||
+                  /[?&]lp=(1|data_upd)(&|$)/.test(href))
+              ) {
+                group.setHref(element, "" + href + "&bcid=" + clickId);
+              }
+            });
+          });
+        }
+
+        BPixelJS = {
+          config: function (config) {
+            mergeConfig(config);
+          },
+          run: function (options) {
+            var resolved = options || {};
+            window.isPixelLoading = true;
+
+            var url = resolved.url ?? getConfig("url");
+            var campaignKey = resolved.campaignKey ?? getConfig("campaignKey");
+            var tokens = resolved.tokens ?? {};
+
+            if (url === undefined) {
+              logError('"url" param must be passed');
+              window.isPixelLoading = false;
+              return;
+            }
+            if (campaignKey === undefined) {
+              logError('"campaignKey" param must be passed');
+              window.isPixelLoading = false;
+              return;
+            }
+
+            waitForBinomFbclid().then(function (binomFbclid) {
+              var requestParams = Object.assign({}, tokens, {
+                key: campaignKey,
+                lp_type: "pixel",
+              });
+
+              if (binomFbclid) {
+                requestParams.fbclid = binomFbclid;
+              }
+
+              var script = document.createElement("script");
+              script.src = joinUrl(url, buildQuery(window.location.search, requestParams));
+              script.async = false;
+              script.onload = handlePixelLoaded;
+              document.head.appendChild(script);
+            });
+          },
+          update: function (options) {
+            var resolved = options || {};
+            var url = resolved.url ?? getConfig("url");
+            var updateKey = resolved.updateKey ?? getConfig("updateKey");
+            var tokens = resolved.tokens ?? {};
+
+            onPixelLoaded(function () {
+              if (url === undefined) {
+                logError('"url" param must be passed');
+                return;
+              }
+              if (updateKey === undefined) {
+                logError('"updateKey" param must be passed');
+                return;
+              }
+
+              var clickId = getClickId();
+              if (!clickId) {
+                logError("Can't find click id");
+                return;
+              }
+
+              fireImage(
+                joinUrl(
+                  url,
+                  buildQuery("?", Object.assign({}, tokens, { upd_clickid: clickId, upd_key: updateKey })),
+                ),
+              );
+            });
+          },
+          conversion: function (options) {
+            var resolved = options || {};
+            var url = resolved.url ?? getConfig("url");
+            var tokens = resolved.tokens ?? {};
+
+            onPixelLoaded(function () {
+              if (url === undefined) {
+                logError('"url" param must be passed');
+                return;
+              }
+
+              var clickId = getClickId();
+              if (!clickId) {
+                console.warn("Can't find click id");
+              }
+
+              fireImage(
+                joinUrl(
+                  url,
+                  buildQuery("?", Object.assign({}, tokens, { cnv_id: clickId || "conversion_pixel" })),
+                ),
+              );
+            });
+          },
+          onPixelLoaded: onPixelLoaded,
+          useTokens: function (handler) {
+            onPixelLoaded(function () {
+              if (document.readyState !== "loading") {
+                handler(window.tokens ?? {});
+                return;
+              }
+              document.addEventListener("DOMContentLoaded", function () {
+                handler(window.tokens ?? {});
+              });
+            });
+          },
+        };
+      })();
+    </script>
+    <script>
+      BPixelJS.config({
+        url: ((window.__APP_CONFIG__ && window.__APP_CONFIG__.VITE_MOBI_SLON_URL) || "bla-bla-bla"),
+        campaignKey: ((window.__APP_CONFIG__ && window.__APP_CONFIG__.VITE_MOBI_SLON_CAMPAIGN_KEY) || ""),
+      });
+      BPixelJS.run();
+    </script>
+    <script>
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      var fbPixelId = (window.__APP_CONFIG__ && window.__APP_CONFIG__.VITE_FB_PIXEL_ID) || '';
+      if (fbPixelId) {
+        fbq('init', fbPixelId);
+        fbq('track', 'PageView');
+      }
+    </script>
+    <script>
+      (function () {
+        var rawMetrikaId = ((window.__APP_CONFIG__ && window.__APP_CONFIG__.VITE_YANDEX_METRIKA_ID) || "").trim();
+        if (!/^[1-9]\d*$/.test(rawMetrikaId)) {
+          return;
+        }
+        var metrikaId = Number(rawMetrikaId);
+        (function (m, e, t, r, i, k, a) {
+          m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments); };
+          m[i].l = 1 * new Date();
+          for (var j = 0; j < document.scripts.length; j += 1) {
+            if (document.scripts[j].src === r) {
+              return;
+            }
+          }
+          k = e.createElement(t);
+          a = e.getElementsByTagName(t)[0];
+          k.async = 1;
+          k.src = r;
+          a.parentNode.insertBefore(k, a);
+        })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+        window.ym(metrikaId, "init", {
+          clickmap: true,
+          trackLinks: true,
+          accurateTrackBounce: true,
+          webvisor: true,
+        });
+      })();
+    </script>
+  </head>
+  <body>
+    <noscript>
+      <img
+        height="1"
+        width="1"
+        style="display: none"
+        src="https://www.facebook.com/tr?id=&ev=PageView&noscript=1"
+      />
+    </noscript>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

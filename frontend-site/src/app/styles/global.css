@@ -1,0 +1,848 @@
+@font-face {
+  font-family: "FlirtistJost";
+  src: url("/flirtist-approved/fonts/9dd75fadc5b3df29-s.p.woff2") format("woff2");
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "FlirtistJost";
+  src: url("/flirtist-approved/fonts/b8c37bb59076c047-s.woff2") format("woff2");
+  font-weight: 700;
+}
+
+@font-face {
+  font-family: "FlirtistPoppins";
+  src: url("/flirtist-approved/fonts/eafabf029ad39a43-s.p.woff2") format("woff2");
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "FlirtistPoppins";
+  src: url("/flirtist-approved/fonts/0484562807a97172-s.p.woff2") format("woff2");
+  font-weight: 600;
+}
+
+:root {
+  color-scheme: light;
+  font-family: "FlirtistPoppins", Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #1f1f1f;
+  background:
+    radial-gradient(circle at top, rgba(253, 214, 222, 0.38), transparent 34%),
+    linear-gradient(180deg, #fffaf7 0%, #fff4f6 100%);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 248, 250, 0.76), rgba(255, 248, 250, 0.95)),
+    url("/flirtist-approved/images/homepage-bg-image.webp") top center/cover no-repeat;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+a {
+  transition: transform 120ms ease, opacity 120ms ease, background-color 120ms ease;
+}
+
+button:hover,
+a:hover {
+  transform: translateY(-1px);
+}
+
+.site-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.site-container {
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  backdrop-filter: blur(12px);
+  background: transparent;
+  border-bottom: 0;
+}
+
+.site-header__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 0;
+}
+
+.site-header__brand,
+.site-footer__brand {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.site-header__brand {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.site-header__logo,
+.site-footer__logo {
+  display: block;
+  width: auto;
+  height: 34px;
+}
+
+.site-header__logo {
+  height: 72px;
+}
+
+.site-footer__logo {
+  filter: brightness(0) invert(1);
+}
+
+.site-header__nav,
+.site-footer__legal {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.site-header__nav-link,
+.site-footer__legal-link {
+  font-size: 0.92rem;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.site-header__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: #fff;
+  color: #111;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.lang-switcher {
+  display: inline-flex;
+  align-items: center;
+}
+
+.lang-toggle {
+  display: inline-grid;
+  grid-auto-flow: column;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  border: 1px solid #cfbee4;
+  background: #f0ebf8;
+  box-shadow: inset 0 0 0 1px #ffffffcc, 0 2px 8px #8d54b21f;
+}
+
+.lang-toggle__item {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  color: #6a5a8f;
+  font-family: "FlirtJost", "Jost", "Segoe UI", sans-serif;
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 8px 14px;
+  min-width: 56px;
+  transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.lang-toggle__item[data-state="on"] {
+  color: #ffffff;
+  background: linear-gradient(90deg, #fd7f72 0%, #f61468 100%);
+  box-shadow: 0 2px 6px #f6146840;
+}
+
+.lang-toggle__item[data-state="off"]:hover {
+  color: #4f3f7a;
+  background: #ffffffb3;
+}
+
+.site-main {
+  flex: 1;
+  padding: 0 0 64px;
+}
+
+.site-hero-shell {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 40px;
+  background-color: #140a26;
+  background:
+    linear-gradient(180deg, rgba(32, 20, 49, 0.34), rgba(32, 20, 49, 0.54)),
+    url("/flirtist-approved/images/homepage-bg-image.webp") center top/cover no-repeat;
+}
+
+.site-hero-shell > .site-container {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: flex-start;
+}
+
+.hero-cta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  align-items: center;
+}
+
+.hero-cta__content {
+  min-width: 0;
+}
+
+.hero-cta__panel,
+.legal-layout,
+.not-found {
+  border: 1px solid rgba(31, 31, 31, 0.06);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 32px rgba(31, 31, 31, 0.05);
+}
+
+.hero-cta__panel {
+  padding: 20px 40px 24px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.hero-cta__title {
+  margin: 12px 0 10px;
+  max-width: 12ch;
+  font-family: "FlirtistJost", Arial, sans-serif;
+  font-size: clamp(2.2rem, 5.6vw, 4.35rem);
+  line-height: 0.94;
+  letter-spacing: -0.03em;
+  color: #fff;
+}
+
+.hero-cta__lead,
+.legal-layout__updated,
+.legal-layout__intro,
+.not-found__body,
+.page-card__body,
+.review-card__text,
+.site-footer__copy,
+.legal-layout__section-body {
+  font-family: inherit;
+}
+
+.hero-cta__lead {
+  margin: 0 0 18px;
+  font-size: 0.98rem;
+  color: rgba(255, 255, 255, 0.9);
+  max-width: 30rem;
+}
+
+.hero-cta__actions {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 0;
+}
+
+.hero-cta__button,
+.hero-cta__secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 20px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.hero-cta__button {
+  background: linear-gradient(90deg, #ff7c7c 0%, #f41c5d 100%);
+  color: #fff;
+}
+
+.hero-cta__secondary {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.hero-cta__trust {
+  display: grid;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.95rem;
+}
+
+.hero-cta__trust strong {
+  color: #fff;
+  font-size: 1rem;
+}
+
+.hero-cta__visual-wrap {
+  display: none;
+}
+
+.hero-cta__visual {
+  display: none;
+}
+
+.hero-cta__visual-bg {
+  display: none;
+}
+
+.hero-cta__visual-bg img {
+  display: none;
+}
+
+.hero-cta__chat {
+  display: none;
+}
+
+.hero-cta__chat--1 {
+  display: none;
+}
+
+.hero-cta__chat--2 {
+  display: none;
+}
+
+.page-section {
+  margin-top: 32px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.intro-copy {
+  padding: 48px 0 40px;
+  text-align: center;
+}
+
+.intro-copy__title {
+  margin: 0 auto 14px;
+  max-width: 16ch;
+  font-family: "FlirtistJost", Arial, sans-serif;
+  font-size: clamp(2rem, 5vw, 2.9rem);
+}
+
+.intro-copy__body {
+  margin: 0 auto;
+  max-width: 48rem;
+  color: rgba(31, 31, 31, 0.72);
+}
+
+.ultimate-section {
+  padding: 48px 32px 56px;
+  border-radius: 24px;
+  background: #0b0b0b;
+}
+
+.ultimate-section__title {
+  margin: 0 auto 32px;
+  max-width: 20ch;
+  text-align: center;
+  font-family: "FlirtistJost", Arial, sans-serif;
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  color: #fff;
+}
+
+.page-card {
+  padding: 24px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(31, 31, 31, 0.06);
+  box-shadow: 0 10px 24px rgba(31, 31, 31, 0.04);
+}
+
+.page-card__image {
+  width: 100%;
+  border-radius: 18px;
+  margin-bottom: 16px;
+}
+
+.page-card--dark {
+  min-height: 320px;
+  padding: 24px;
+  display: flex;
+  align-items: flex-end;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  border: 0;
+  overflow: hidden;
+}
+
+.page-card__overlay {
+  width: 100%;
+  padding: 10px 4px 4px;
+}
+
+.page-card__kicker {
+  display: inline-flex;
+  margin-bottom: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 93, 128, 0.1);
+  color: #d44364;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.page-card__title {
+  margin: 0 0 12px;
+  font-family: "FlirtistJost", Arial, sans-serif;
+  font-size: 1.2rem;
+}
+
+.page-card--dark .page-card__title,
+.page-card--dark .page-card__body {
+  color: #fff;
+}
+
+.how-it-works {
+  margin-top: 48px;
+}
+
+.how-it-works__heading {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.how-it-works__steps-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.how-it-works__step-card {
+  padding: 0;
+  border-radius: 20px;
+  background: #fff;
+  overflow: hidden;
+  border: 1px solid rgba(31, 31, 31, 0.06);
+}
+
+.how-it-works__step-card-image-wrap {
+  height: 200px;
+  overflow: hidden;
+}
+
+.how-it-works__step-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.how-it-works__step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 20px 0;
+}
+
+.how-it-works__step-badge {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #f4eff9;
+  color: #3b2b5b;
+  font-family: "FlirtistJost", Arial, sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.how-it-works__step-title {
+  margin: 0;
+  font-family: "FlirtistJost", Arial, sans-serif;
+  font-size: 1.25rem;
+}
+
+.how-it-works__step-body {
+  margin: 8px 0 0;
+  padding: 0 20px 24px;
+  font-size: 0.95rem;
+  color: rgba(31, 31, 31, 0.66);
+}
+
+.how-it-works__cta-wrap {
+  margin-top: 28px;
+  text-align: center;
+}
+
+.page-card__body {
+  margin: 0;
+  color: rgba(31, 31, 31, 0.68);
+}
+
+.reviews-block {
+  margin-top: 48px;
+  padding: 16px 0 0;
+}
+
+.reviews-block__header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.reviews-block__lead {
+  margin: 8px auto 0;
+  max-width: 36rem;
+  color: rgba(31, 31, 31, 0.66);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  padding: 22px 28px;
+  border-radius: 20px;
+  text-align: center;
+}
+
+.stat-card strong {
+  display: block;
+  font-family: "FlirtistJost", Arial, sans-serif;
+  font-size: 2rem;
+}
+
+.stat-card span {
+  display: block;
+  margin-top: 6px;
+}
+
+.stat-card--1 {
+  background: #fceeef;
+}
+
+.stat-card--2 {
+  background: #f4eff9;
+}
+
+.stat-card--3 {
+  background: #e9e8ff;
+}
+
+.reviews-block__visual {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 28px;
+}
+
+.reviews-block__title {
+  margin: 0 0 10px;
+  font-family: "FlirtistJost", Arial, sans-serif;
+  font-size: 2rem;
+}
+
+.reviews-block__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.review-card {
+  padding: 22px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(31, 31, 31, 0.06);
+  box-shadow: 0 10px 24px rgba(31, 31, 31, 0.04);
+}
+
+.review-card__stars {
+  margin-bottom: 12px;
+  color: #ec7394;
+  letter-spacing: 0.08em;
+}
+
+.review-card__stars-image {
+  width: 110px;
+  margin-bottom: 12px;
+}
+
+.final-cta-block {
+  margin-top: 48px;
+  padding: 56px 32px;
+  border-radius: 24px;
+  background: #261941;
+  color: #fff;
+  text-align: center;
+}
+
+.final-cta-block__title {
+  margin: 0 0 12px;
+  font-family: "FlirtistJost", Arial, sans-serif;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+}
+
+.final-cta-block__body {
+  margin: 0 auto 28px;
+  max-width: 32rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.review-card__text {
+  margin: 0;
+  color: rgba(31, 31, 31, 0.7);
+}
+
+.legal-layout,
+.not-found {
+  padding: 28px;
+}
+
+.legal-layout__title,
+.not-found__title {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 5vw, 2.7rem);
+}
+
+.legal-layout__updated {
+  margin: 0 0 18px;
+  color: rgba(31, 31, 31, 0.52);
+}
+
+.legal-layout__intro {
+  margin: 0 0 24px;
+  color: rgba(31, 31, 31, 0.68);
+}
+
+.legal-layout__section + .legal-layout__section {
+  margin-top: 24px;
+}
+
+.legal-layout__section--nested {
+  margin-top: 20px;
+  padding-left: 16px;
+  border-left: 2px solid rgba(31, 31, 31, 0.08);
+}
+
+.legal-layout__section-title {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+}
+
+.legal-layout__section-body {
+  margin: 0;
+  color: rgba(31, 31, 31, 0.74);
+}
+
+.legal-layout__section-body + .legal-layout__section-body {
+  margin-top: 12px;
+}
+
+.legal-layout__list {
+  margin: 14px 0 0;
+  padding-left: 22px;
+  color: rgba(31, 31, 31, 0.74);
+}
+
+.legal-layout__list-item + .legal-layout__list-item {
+  margin-top: 8px;
+}
+
+.legal-layout__email {
+  color: #ef476f;
+  text-decoration: none;
+}
+
+.legal-layout__email:hover {
+  text-decoration: underline;
+}
+
+.site-footer {
+  margin-top: 48px;
+  padding: 32px 40px;
+  background: #261941;
+  color: #fff;
+}
+
+.site-footer__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.site-footer__stack {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.site-footer__copy {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+  max-width: 280px;
+}
+
+.site-footer__legal {
+  display: flex;
+  gap: 20px;
+}
+
+.not-found__actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .hero-cta,
+  .page-section,
+  .how-it-works__steps-row,
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reviews-block__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-cta__panel {
+    padding: 32px 24px;
+    text-align: center;
+  }
+
+  .hero-cta__title {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hero-cta__lead {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hero-cta__actions {
+    justify-content: center;
+  }
+
+  .intro-copy {
+    padding-top: 48px;
+  }
+
+  .ultimate-section {
+    padding: 40px 16px 45px;
+  }
+
+  .page-card--dark {
+    min-height: 340px;
+  }
+
+  .site-footer {
+    padding: 24px 16px;
+  }
+
+  .site-footer__row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .site-footer__stack {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .site-footer__legal {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  body {
+    background:
+      linear-gradient(180deg, rgba(255, 248, 250, 0.86), rgba(255, 248, 250, 0.98)),
+      url("/flirtist-approved/images/homepage-bg-image-mobile.webp") top center/cover no-repeat;
+  }
+
+  .site-hero-shell {
+    min-height: 100svh;
+    padding: 0 0 40px;
+    background:
+      linear-gradient(180deg, rgba(32, 20, 49, 0.34), rgba(32, 20, 49, 0.58)),
+      url("/flirtist-approved/images/homepage-bg-image-mobile.webp") center top/cover no-repeat;
+  }
+
+  .site-hero-shell > .site-container {
+    display: block;
+  }
+
+  .site-header__row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .hero-cta__panel,
+  .legal-layout,
+  .not-found {
+    padding: 20px;
+  }
+
+  .hero-cta__title {
+    font-size: clamp(2.1rem, 10vw, 3.8rem);
+  }
+
+  .hero-cta__lead {
+    font-size: 0.94rem;
+  }
+
+  .final-cta-block {
+    padding: 40px 20px;
+  }
+}

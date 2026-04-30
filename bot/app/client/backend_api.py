@@ -113,6 +113,42 @@ class BackendApiClient:
             {"email": email, "otp": otp, "telegram_user_id": telegram_user_id},
         )
 
+    async def admin_grant_access(
+        self,
+        *,
+        email: str,
+        expires_at: str,
+        admin_telegram_user_id: str,
+        admin_telegram_username: str | None,
+    ) -> dict:
+        return await self._request(
+            "POST",
+            "/api/bot/admin/access/grant",
+            {
+                "email": email,
+                "expires_at": expires_at,
+                "admin_telegram_user_id": admin_telegram_user_id,
+                "admin_telegram_username": admin_telegram_username,
+            },
+        )
+
+    async def admin_revoke_access(
+        self,
+        *,
+        email: str,
+        admin_telegram_user_id: str,
+        admin_telegram_username: str | None,
+    ) -> dict:
+        return await self._request(
+            "POST",
+            "/api/bot/admin/access/revoke",
+            {
+                "email": email,
+                "admin_telegram_user_id": admin_telegram_user_id,
+                "admin_telegram_username": admin_telegram_username,
+            },
+        )
+
     async def session_start(self, *, telegram_user_id: str, mode: str) -> dict:
         return await self._request("POST", "/api/bot/session/start", {"telegram_user_id": telegram_user_id, "mode": mode})
 

@@ -13,15 +13,18 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_plan_map, get_subscription_plan_catalog
 from app.core.mobi_slon_events import MOBI_SLON_EVENT_SET
-from app.core.models.payment import AccessBinding, AccessToken, Order, PaymentEvent, PromoOffer, RestoreOTP
+from app.core.models.payment import AccessBinding, AccessToken, Order, PaymentEvent, PromoOffer, QuizSession, RestoreOTP
 from app.core.notifications import TelegramSender, build_email_sender
 from app.core.security import generate_otp, hash_value, make_access_token, mask_email, parse_access_token, utcnow
+from app.services.entitlement_service import EntitlementService
 
 logger = logging.getLogger("quiz.payments")
 SAFE_CLICK_ID_RE = re.compile(r"[^a-zA-Z0-9_.-]")
 SAFE_STATUS_RE = re.compile(r"^[a-z0-9_]{1,64}$")
 SAFE_PARAM_KEY_RE = re.compile(r"^[a-zA-Z0-9_.-]{1,64}$")
 SAFE_PROMO_CODE_RE = re.compile(r"^[A-Z0-9_-]{2,64}$")
+QUESTION_COMPLETED_STATUS_RE = re.compile(r"^[1-9][0-9]{0,2}_question_completed$")
+CHECKOUT_PLAN_SELECTED_STATUS_RE = re.compile(r"^checkout_plan_(7d|30d|90d)_selected$")
 
 
 class MobiSlonPostbackResult(TypedDict):
@@ -33,6 +36,13 @@ class MobiSlonPostbackResult(TypedDict):
     error_class: str | None
     error_message: str | None
     attempt_count: int
+
+
+class AttributionPayload(TypedDict):
+    brand: str | None
+    landing_id: str | None
+    entry_host: str | None
+    entry_path: str | None
 
 
 class PaymentService:
@@ -63,7 +73,12 @@ class PaymentService:
         status = raw_status.strip().lower()
         if not status or not SAFE_STATUS_RE.match(status):
             raise HTTPException(status_code=400, detail="Invalid status")
-        if status not in MOBI_SLON_EVENT_SET:
+        if (
+            status not in MOBI_SLON_EVENT_SET
+            and not QUESTION_COMPLETED_STATUS_RE.match(status)
+            and not CHECKOUT_PLAN_SELECTED_STATUS_RE.match(status)
+            and status not in {"email_question_completed", "payment_started"}
+        ):
             raise HTTPException(status_code=400, detail="Unknown status")
         return status
 
@@ -83,6 +98,42 @@ class PaymentService:
                 continue
             sanitized[key] = value[:512]
         return sanitized
+
+    @staticmethod
+    def _sanitize_text_field(raw_value: str | None, *, max_length: int) -> str | None:
+        value = str(raw_value or "").strip()
+        if not value:
+            return None
+        return value[:max_length]
+
+    def sanitize_attribution(
+        self,
+        *,
+        brand: str | None,
+        landing_id: str | None,
+        entry_host: str | None,
+        entry_path: str | None,
+    ) -> AttributionPayload:
+        return {
+            "brand": self._sanitize_text_field(brand, max_length=64),
+            "landing_id": self._sanitize_text_field(landing_id, max_length=128),
+            "entry_host": self._sanitize_text_field(entry_host, max_length=255),
+            "entry_path": self._sanitize_text_field(entry_path, max_length=1024),
+        }
+
+    @staticmethod
+    def _merge_attribution(
+        base: Mapping[str, str | None] | None,
+        override: Mapping[str, str | None] | None = None,
+    ) -> AttributionPayload:
+        base_payload = dict(base or {})
+        override_payload = dict(override or {})
+        return {
+            "brand": override_payload.get("brand") or base_payload.get("brand"),
+            "landing_id": override_payload.get("landing_id") or base_payload.get("landing_id"),
+            "entry_host": override_payload.get("entry_host") or base_payload.get("entry_host"),
+            "entry_path": override_payload.get("entry_path") or base_payload.get("entry_path"),
+        }
 
     @staticmethod
     def _format_amount_minor(amount_minor: int, currency: str) -> str:
@@ -161,6 +212,8 @@ class PaymentService:
             return offer.sub_weekly_amount_minor
         if plan_code == "sub_monthly":
             return offer.sub_monthly_amount_minor
+        if plan_code == "sub_quarterly":
+            return offer.sub_yearly_amount_minor
         if plan_code == "sub_yearly":
             return offer.sub_yearly_amount_minor
         return None
@@ -168,7 +221,7 @@ class PaymentService:
     def list_public_subscription_plans(self, promo_code: str | None = None) -> list[dict[str, Any]]:
         promo_offer = self._get_active_promo_offer(promo_code) if promo_code else None
         catalog: list[dict[str, Any]] = []
-        for plan in self.subscription_plans:
+        for plan in sorted(self.subscription_plans, key=lambda item: (item.sort_order, item.code)):
             promo_amount_minor = self._resolve_promo_amount_minor(plan.code, promo_offer) if promo_offer else None
             has_promo = promo_amount_minor is not None
             current_currency = promo_offer.currency if promo_offer else plan.currency
@@ -180,47 +233,31 @@ class PaymentService:
                 else plan.per_day_amount_minor
             )
 
+            compare_at_price_amount_minor = (
+                plan.base_amount_minor
+                if has_promo or plan.discount_percent > 0
+                else None
+            )
             compare_at_price = (
-                (
-                    {
-                        "amount_minor": (
-                            plan.compare_at_amount_minor
-                            if plan.code == "sub_weekly" and plan.compare_at_amount_minor is not None
-                            else plan.amount_minor
-                        ),
-                        "currency": plan.currency,
-                    }
-                    if has_promo
-                    else (
-                        {
-                            "amount_minor": plan.compare_at_amount_minor,
-                            "currency": plan.currency,
-                        }
-                        if plan.compare_at_amount_minor is not None
-                        else None
-                    )
-                )
+                {
+                    "amount_minor": compare_at_price_amount_minor,
+                    "currency": plan.currency,
+                }
+                if compare_at_price_amount_minor is not None
+                else None
+            )
+            compare_at_per_day_amount_minor = (
+                plan.base_per_day_amount_minor
+                if plan.base_per_day_amount_minor is not None and (has_promo or plan.discount_percent > 0)
+                else None
             )
             compare_at_per_day_price = (
-                (
-                    {
-                        "amount_minor": (
-                            plan.compare_at_per_day_amount_minor
-                            if plan.code == "sub_weekly" and plan.compare_at_per_day_amount_minor is not None
-                            else plan.per_day_amount_minor
-                        ),
-                        "currency": plan.currency,
-                    }
-                    if has_promo and plan.per_day_amount_minor is not None
-                    else (
-                        {
-                            "amount_minor": plan.compare_at_per_day_amount_minor,
-                            "currency": plan.currency,
-                        }
-                        if plan.compare_at_per_day_amount_minor is not None
-                        else None
-                    )
-                )
+                {
+                    "amount_minor": compare_at_per_day_amount_minor,
+                    "currency": plan.currency,
+                }
+                if compare_at_per_day_amount_minor is not None
+                else None
             )
 
             catalog.append(
@@ -251,8 +288,125 @@ class PaymentService:
             )
         return catalog
 
-    def _build_success_url(self) -> str:
-        success_url = self.settings.resolved_pay_success_url
+    def resolve_session_currency(self, locale: str | None = None) -> dict[str, str]:
+        normalized_locale = self.normalize_locale(locale)
+        # Keep same currency as existing catalog to avoid breaking payment setup.
+        fallback_currency = "usd"
+        if self.subscription_plans:
+            fallback_currency = (self.subscription_plans[0].currency or fallback_currency).lower()
+        return {"currency": fallback_currency, "locale": normalized_locale}
+
+    def create_quiz_session(
+        self,
+        *,
+        locale: str | None,
+        currency: str | None,
+        clickid: str | None,
+        brand: str | None,
+        landing_id: str | None,
+        entry_host: str | None,
+        entry_path: str | None,
+        tracking_params: Mapping[str, str] | None,
+        answers: Mapping[str, Any] | None,
+    ) -> str:
+        resolved = self.resolve_session_currency(locale)
+        clickid_value = self.sanitize_clickid((clickid or "").strip()) if clickid else "direct"
+        payload_answers = dict(answers or {})
+        attribution = self.sanitize_attribution(
+            brand=brand,
+            landing_id=landing_id,
+            entry_host=entry_host,
+            entry_path=entry_path,
+        )
+        session = QuizSession(
+            locale=self.normalize_locale(locale),
+            currency=(currency or resolved["currency"]).strip().lower() or resolved["currency"],
+            brand=attribution["brand"],
+            landing_id=attribution["landing_id"],
+            entry_host=attribution["entry_host"],
+            entry_path=attribution["entry_path"],
+            clickid=clickid_value or "direct",
+            tracking_params=self.sanitize_tracking_params(tracking_params),
+            answers=payload_answers,
+            checkout_state="created",
+        )
+        self.db.add(session)
+        self.db.commit()
+        return session.id
+
+    def _get_quiz_session_or_404(self, session_uuid: str) -> QuizSession:
+        session = self.db.scalar(select(QuizSession).where(QuizSession.id == session_uuid))
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return session
+
+    def update_quiz_session_email(self, *, session_uuid: str, email: str) -> None:
+        session = self._get_quiz_session_or_404(session_uuid)
+        session.email = email.strip().lower()
+        session.checkout_state = "email_set"
+        self.db.commit()
+
+    def get_quiz_session_plan_data(self, *, session_uuid: str, promo_code: str | None) -> dict[str, Any]:
+        session = self._get_quiz_session_or_404(session_uuid)
+        return {
+            "uuid": session.id,
+            "locale": session.locale,
+            "currency": session.currency,
+            "email": session.email,
+            "plans": self.list_public_subscription_plans(promo_code=promo_code),
+        }
+
+    def create_subscription_intent_for_quiz_session(
+        self,
+        *,
+        session_uuid: str,
+        plan: str,
+        email: str,
+        clickid: str | None,
+        locale: str | None,
+        telegram_chat_id: str | None,
+        promo_code: str | None,
+        brand: str | None,
+        landing_id: str | None,
+        entry_host: str | None,
+        entry_path: str | None,
+    ) -> tuple[str, str, str, str]:
+        session = self._get_quiz_session_or_404(session_uuid)
+        effective_email = (email or session.email or "").strip().lower()
+        if not effective_email:
+            raise HTTPException(status_code=400, detail="Email is required")
+        session.email = effective_email
+        session.checkout_state = "checkout_started"
+        self.db.commit()
+        attribution = self._merge_attribution(
+            {
+                "brand": session.brand,
+                "landing_id": session.landing_id,
+                "entry_host": session.entry_host,
+                "entry_path": session.entry_path,
+            },
+            self.sanitize_attribution(
+                brand=brand,
+                landing_id=landing_id,
+                entry_host=entry_host,
+                entry_path=entry_path,
+            ),
+        )
+        return self.create_subscription_intent(
+            plan=plan,
+            email=effective_email,
+            clickid=(clickid or session.clickid or "direct"),
+            locale=locale or session.locale,
+            telegram_chat_id=telegram_chat_id,
+            promo_code=promo_code,
+            brand=attribution["brand"],
+            landing_id=attribution["landing_id"],
+            entry_host=attribution["entry_host"],
+            entry_path=attribution["entry_path"],
+        )
+
+    def _build_success_url(self, locale: str | None) -> str:
+        success_url = self.settings.build_pay_success_url(locale)
         if "?" in success_url:
             return f"{success_url}&session_id={{CHECKOUT_SESSION_ID}}"
         return f"{success_url}?session_id={{CHECKOUT_SESSION_ID}}"
@@ -313,6 +467,10 @@ class PaymentService:
             "mode": mode,
             "email": email,
         }
+        if order.brand:
+            metadata["brand"] = order.brand
+        if order.landing_id:
+            metadata["landing_id"] = order.landing_id
         if promo_offer is not None:
             metadata["promo_code"] = promo_offer.code
         return metadata
@@ -383,6 +541,10 @@ class PaymentService:
         locale: str | None,
         telegram_chat_id: str | None,
         promo_code: str | None,
+        brand: str | None,
+        landing_id: str | None,
+        entry_host: str | None,
+        entry_path: str | None,
     ) -> tuple[str, str, str]:
         order_clickid, plan_cfg, promo_offer, applied_amount_minor, applied_currency = self._resolve_order_payload(
             mode=mode,
@@ -390,9 +552,19 @@ class PaymentService:
             clickid=clickid,
             promo_code=promo_code,
         )
+        attribution = self.sanitize_attribution(
+            brand=brand,
+            landing_id=landing_id,
+            entry_host=entry_host,
+            entry_path=entry_path,
+        )
 
         order = Order(
             email=email,
+            brand=attribution["brand"],
+            landing_id=attribution["landing_id"],
+            entry_host=attribution["entry_host"],
+            entry_path=attribution["entry_path"],
             clickid=order_clickid,
             telegram_chat_id=telegram_chat_id,
             mode=mode,
@@ -428,8 +600,8 @@ class PaymentService:
             session = stripe.checkout.Session.create(
                 mode=stripe_mode,
                 line_items=cast(list[Any], [line_item]),
-                success_url=self._build_success_url(),
-                cancel_url=self.settings.resolved_pay_cancel_url,
+                success_url=self._build_success_url(locale),
+                cancel_url=self.settings.build_pay_cancel_url(locale),
                 customer_email=email,
                 metadata=metadata,
             )
@@ -456,6 +628,10 @@ class PaymentService:
         locale: str | None,
         telegram_chat_id: str | None,
         promo_code: str | None,
+        brand: str | None,
+        landing_id: str | None,
+        entry_host: str | None,
+        entry_path: str | None,
     ) -> tuple[str, str, str, str]:
         if not self.settings.stripe_publishable_key.strip():
             raise HTTPException(status_code=503, detail="Stripe publishable key is not configured")
@@ -466,9 +642,19 @@ class PaymentService:
             clickid=clickid,
             promo_code=promo_code,
         )
+        attribution = self.sanitize_attribution(
+            brand=brand,
+            landing_id=landing_id,
+            entry_host=entry_host,
+            entry_path=entry_path,
+        )
 
         order = Order(
             email=email,
+            brand=attribution["brand"],
+            landing_id=attribution["landing_id"],
+            entry_host=attribution["entry_host"],
+            entry_path=attribution["entry_path"],
             clickid=order_clickid,
             telegram_chat_id=telegram_chat_id,
             mode="subscription",
@@ -570,7 +756,7 @@ class PaymentService:
         try:
             session = stripe.billing_portal.Session.create(
                 customer=order.stripe_customer_id,
-                return_url=self.settings.resolved_pay_portal_return_url,
+                return_url=self.settings.build_pay_manage_url(order.locale),
             )
         except Exception as exc:
             raise HTTPException(status_code=502, detail=f"Stripe error: {exc}") from exc
@@ -621,6 +807,7 @@ class PaymentService:
         elif event_type == "invoice.paid":
             period_end_ts = (((obj.get("lines") or {}).get("data") or [{}])[0].get("period") or {}).get("end")
             order = self._find_order_by_subscription(obj.get("subscription"), obj.get("customer"))
+            was_paid_before = bool(order is not None and order.status == "paid")
             self._apply_subscription_access_update(
                 order=order,
                 payment_status="paid",
@@ -630,6 +817,10 @@ class PaymentService:
             )
             if order is not None:
                 self._ensure_access_delivery(order)
+                # New quiz checkout uses intent/subscription flow and may not emit
+                # checkout.session.completed. Send pay_success here once on first paid transition.
+                if not was_paid_before and not order.stripe_session_id:
+                    postback_payload = (order.clickid, self._format_amount_minor(order.amount_minor, order.currency))
         elif event_type == "invoice.payment_failed":
             period_end_ts = (((obj.get("lines") or {}).get("data") or [{}])[0].get("period") or {}).get("end")
             order = self._find_order_by_subscription(obj.get("subscription"), obj.get("customer"))
@@ -664,7 +855,7 @@ class PaymentService:
 
         self.db.commit()
         logger.info("stripe_webhook_processed event_id=%s event_type=%s", event_id, event_type)
-        if event_type == "checkout.session.completed" and postback_payload:
+        if postback_payload:
             postback_result = self._send_mobi_slon_postback(
                 status="pay_success",
                 clickid=postback_payload[0],
@@ -794,7 +985,7 @@ class PaymentService:
                 locale=locale,
             )
         except Exception as exc:  # noqa: BLE001
-            logger.warning("otp_delivery_failed", extra={"email": mask_email(email), "error": str(exc)})
+            logger.warning("otp_delivery_failed email=%s error=%s", mask_email(email), str(exc))
             raise HTTPException(status_code=502, detail="Failed to send OTP email") from exc
         return {"status": "otp_logged"}
 
@@ -853,48 +1044,7 @@ class PaymentService:
         }
 
     def get_access_status_by_telegram_user(self, telegram_user_id: str) -> dict[str, str | bool | None]:
-        active_binding = self.db.scalar(
-            select(AccessBinding)
-            .where(AccessBinding.telegram_user_id == telegram_user_id, AccessBinding.status == "active")
-            .order_by(desc(AccessBinding.bound_at))
-        )
-        if active_binding is not None:
-            order = self.db.scalar(select(Order).where(Order.id == active_binding.order_id))
-            if order is not None:
-                return {
-                    "is_paid": order.access_status == "active" or order.status in {"paid", "active"},
-                    "order_id": order.id,
-                    "plan": order.plan,
-                    "access_status": order.access_status,
-                }
-
-        latest_binding = self.db.scalar(
-            select(AccessBinding).where(AccessBinding.telegram_user_id == telegram_user_id).order_by(desc(AccessBinding.bound_at))
-        )
-        if latest_binding is not None:
-            order = self.db.scalar(select(Order).where(Order.id == latest_binding.order_id))
-            if order is not None:
-                return {
-                    "is_paid": False,
-                    "order_id": order.id,
-                    "plan": order.plan,
-                    "access_status": order.access_status,
-                }
-
-        fallback_order = self.db.scalar(
-            select(Order)
-            .where(Order.telegram_chat_id == telegram_user_id)
-            .order_by(desc(Order.updated_at))
-        )
-        if fallback_order is None:
-            return {"is_paid": False, "order_id": None, "plan": None, "access_status": None}
-
-        return {
-            "is_paid": fallback_order.access_status == "active" or fallback_order.status in {"paid", "active"},
-            "order_id": fallback_order.id,
-            "plan": fallback_order.plan,
-            "access_status": fallback_order.access_status,
-        }
+        return EntitlementService(self.db).resolve_bot_access_status(telegram_user_id)
 
     def _update_order_status_by_session(self, session_id: str | None, *, status: str) -> None:
         if not session_id:
@@ -1081,7 +1231,10 @@ class PaymentService:
         last_error: Exception | None = None
         last_status_code: int | None = None
         last_response_body: str | None = None
-        for attempt in range(1, 4):
+        # Frontend relay events must be delivered at most once to avoid duplicate
+        # conversions when the upstream accepts the request but the response is lost.
+        max_attempts = 1 if source == "frontend_relay" else 3
+        for attempt in range(1, max_attempts + 1):
             try:
                 logger.info(
                     "mobi_slon_postback_attempt status=%s clickid=%s attempt=%d source=%s params=%d",
@@ -1154,5 +1307,5 @@ class PaymentService:
             "upstream_response_body": last_response_body,
             "error_class": last_error.__class__.__name__ if last_error else None,
             "error_message": str(last_error) if last_error else None,
-            "attempt_count": 3,
+            "attempt_count": max_attempts,
         }

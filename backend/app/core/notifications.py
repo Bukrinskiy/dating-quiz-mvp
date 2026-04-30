@@ -33,6 +33,12 @@ class LogOnlyEmailSender:
             payload["otp"] = otp
         logger.info("otp_delivery_skipped", extra=payload)
 
+    def send_app_login_code(self, *, email: str, code: str, allow_plain_code: bool, locale: str) -> None:
+        payload: dict[str, str] = {"email": mask_email(email), "locale": locale}
+        if allow_plain_code:
+            payload["code"] = code
+        logger.info("app_login_code_delivery_skipped", extra=payload)
+
 
 class SmtpEmailSender:
     def __init__(self, settings: Settings) -> None:
@@ -50,7 +56,7 @@ class SmtpEmailSender:
             return "en"
         return "ru" if locale.strip().lower().startswith("ru") else "en"
 
-    def _send_message(self, *, recipient: str, subject: str, body: str) -> None:
+    def _send_message(self, *, recipient: str, subject: str, body: str, smtp_debug: bool = False) -> None:
         if not self._login or not self._password or not self._sender:
             raise RuntimeError("SMTP credentials are not fully configured")
 
@@ -60,18 +66,35 @@ class SmtpEmailSender:
         message["Subject"] = subject
         message.set_content(body)
 
-        with smtplib.SMTP(self._host, self._port, timeout=self._timeout) as smtp:
-            smtp.ehlo()
-            if self._use_tls:
-                smtp.starttls()
+        try:
+            with smtplib.SMTP(self._host, self._port, timeout=self._timeout) as smtp:
+                if smtp_debug:
+                    smtp.set_debuglevel(1)
                 smtp.ehlo()
-            smtp.login(self._login, self._password)
-            smtp.send_message(message)
+                if self._use_tls:
+                    smtp.starttls()
+                    smtp.ehlo()
+                smtp.login(self._login, self._password)
+                smtp.send_message(message)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "smtp_send_failed recipient=%s host=%s port=%s tls=%s error=%s",
+                mask_email(recipient),
+                self._host,
+                self._port,
+                self._use_tls,
+                str(exc),
+            )
+            raise
+
+    def send_test_email(self, *, email: str, subject: str, body: str, smtp_debug: bool = False) -> None:
+        self._send_message(recipient=email, subject=subject, body=body, smtp_debug=smtp_debug)
+        logger.info("test_email_sent", extra={"email": mask_email(email)})
 
     def send_access_email(self, *, email: str, order_id: str, activation_link: str, locale: str) -> None:
         normalized = self._normalize_locale(locale)
         if normalized == "ru":
-            subject = "Seranking: активация доступа"
+            subject = "Flirto Guru: активация доступа"
             body = (
                 "Оплата подтверждена.\n\n"
                 f"Заказ: {order_id}\n"
@@ -79,7 +102,7 @@ class SmtpEmailSender:
                 "Если это письмо отправлено не вам, просто игнорируйте его."
             )
         else:
-            subject = "Seranking: access activation"
+            subject = "Flirto Guru: access activation"
             body = (
                 "Payment confirmed.\n\n"
                 f"Order: {order_id}\n"
@@ -92,14 +115,14 @@ class SmtpEmailSender:
     def send_otp(self, *, email: str, otp: str, allow_plain_otp: bool, locale: str) -> None:
         normalized = self._normalize_locale(locale)
         if normalized == "ru":
-            subject = "Seranking: код восстановления"
+            subject = "Flirto Guru: код восстановления"
             body = (
                 "Ваш OTP-код восстановления:\n\n"
                 f"{otp}\n\n"
                 "Код одноразовый и скоро истечет."
             )
         else:
-            subject = "Seranking: restore OTP"
+            subject = "Flirto Guru: restore OTP"
             body = (
                 "Your restore OTP code:\n\n"
                 f"{otp}\n\n"
@@ -110,6 +133,28 @@ class SmtpEmailSender:
         if allow_plain_otp:
             log_payload["otp"] = otp
         logger.info("otp_delivery_sent", extra=log_payload)
+
+    def send_app_login_code(self, *, email: str, code: str, allow_plain_code: bool, locale: str) -> None:
+        normalized = self._normalize_locale(locale)
+        if normalized == "ru":
+            subject = "Flirto Guru: код входа в приложение"
+            body = (
+                "Ваш код входа в приложение Flirto Guru:\n\n"
+                f"{code}\n\n"
+                "Код одноразовый и скоро истечет."
+            )
+        else:
+            subject = "Flirto Guru: app sign-in code"
+            body = (
+                "Your Flirto Guru app sign-in code:\n\n"
+                f"{code}\n\n"
+                "The code is one-time and expires soon."
+            )
+        self._send_message(recipient=email, subject=subject, body=body)
+        log_payload: dict[str, str] = {"email": mask_email(email), "locale": normalized}
+        if allow_plain_code:
+            log_payload["code"] = code
+        logger.info("app_login_code_delivery_sent", extra=log_payload)
 
 
 def build_email_sender(settings: Settings) -> LogOnlyEmailSender | SmtpEmailSender:
