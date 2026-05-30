@@ -159,7 +159,7 @@ test("useSession rolls back deleted message when api fails", async () => {
   await waitFor(() => {
     expect(result.current.messages).toHaveLength(1);
     expect(result.current.messages[0]?.text).toBe("Первый фрагмент");
-    expect(onToast).toHaveBeenCalledWith({ message: "Не получилось удалить фрагмент.", tone: "error" });
+    expect(onToast).toHaveBeenCalledWith({ message: "Could not delete the fragment.", tone: "error" });
   });
 });
 

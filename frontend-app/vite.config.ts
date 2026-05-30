@@ -1,6 +1,10 @@
+import path from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
+
+const appDir = path.resolve(process.cwd());
+const sharedDir = path.resolve(process.cwd(), "../shared");
 
 export default defineConfig({
   plugins: [
@@ -83,6 +87,11 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    fs: {
+      allow: [appDir, sharedDir],
+    },
+  },
   test: {
     environment: "jsdom",
     globals: true,

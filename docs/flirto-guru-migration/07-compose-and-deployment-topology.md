@@ -134,7 +134,9 @@ Production edge не управляется из `docker compose`. Source of tru
 - `PAY_PUBLIC_BASE_URL`
 - Tracking runtime env:
   - `VITE_MOBI_SLON_URL`
-  - `VITE_MOBI_SLON_CAMPAIGN_KEY`
+  - `VITE_MOBI_SLON_CAMPAIGN_KEY_FACEBOOK`
+  - `VITE_MOBI_SLON_CAMPAIGN_KEY_GOOGLE`
+  - `VITE_GOOGLE_ADS_ID`
   - `VITE_FB_PIXEL_ID`
   - `VITE_YANDEX_METRIKA_ID`
   - `VITE_TRACKING_DEBUG`

@@ -1,4 +1,5 @@
 import type { ToastItem } from "../types";
+import { useI18n } from "../i18n";
 import { PrototypeIcon } from "./icons";
 
 type ToastViewportProps = {
@@ -7,6 +8,7 @@ type ToastViewportProps = {
 };
 
 export function ToastViewport({ items, onDismiss }: ToastViewportProps) {
+  const { messages } = useI18n();
   return (
     <div className="toast-stack" aria-live="polite">
       {items.map((item) => (
@@ -21,7 +23,7 @@ export function ToastViewport({ items, onDismiss }: ToastViewportProps) {
                 {item.action.label}
               </button>
             ) : null}
-            <button aria-label="Закрыть" className="toast__dismiss" onClick={() => onDismiss(item.id)}>
+            <button aria-label={messages.shell.close} className="toast__dismiss" onClick={() => onDismiss(item.id)}>
               <PrototypeIcon.close />
             </button>
           </div>

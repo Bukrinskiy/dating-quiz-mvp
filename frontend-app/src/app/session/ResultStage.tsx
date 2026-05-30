@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { asTextList } from "../api";
-import { appCopy } from "../copy";
+import { useI18n, type AppMessages } from "../i18n";
 import type { SessionGeneratePayload, SessionMode } from "../types";
 import { PrototypeIcon, renderResultIcon } from "../ui/icons";
 import { BottomSheet } from "../ui/BottomSheet";
@@ -23,13 +23,14 @@ type Field = {
 };
 
 export function ResultStage({ busy, mode, payload, onRefine, readOnly = false }: ResultStageProps) {
+  const { messages } = useI18n();
   const [customOpen, setCustomOpen] = useState(false);
   const [custom, setCustom] = useState("");
   const [copied, setCopied] = useState(false);
   const copyResetTimeoutRef = useRef<number | null>(null);
-  const heroLabel = mode === "write_now" ? "Готовый ответ" : "Разбор ситуации";
+  const heroLabel = mode === "write_now" ? messages.session.resultTitle : messages.session.sceneCollectSubtitle;
   const heroText = String(mode === "write_now" ? payload.primary_message || "" : payload.diagnosis || "");
-  const fields = useMemo(() => buildFields(mode, payload), [mode, payload]);
+  const fields = useMemo(() => buildFields(mode, payload, messages), [mode, payload, messages]);
 
   useEffect(() => {
     return () => {
@@ -62,10 +63,10 @@ export function ResultStage({ busy, mode, payload, onRefine, readOnly = false }:
             }}
             type="button"
           >
-            {copied ? appCopy.session.copied : (
+            {copied ? messages.session.copied : (
               <>
                 <PrototypeIcon.copy />
-                {appCopy.session.copy}
+                {messages.session.copy}
               </>
             )}
           </button>
@@ -102,21 +103,21 @@ export function ResultStage({ busy, mode, payload, onRefine, readOnly = false }:
 
       <div className="result-actions">
         <div className="result-actions__chips">
-          {appCopy.session.refinePresets.map((item) => (
+          {messages.session.refinePresets.map((item) => (
             <button className="chip" disabled={busy || readOnly} key={item} onClick={() => void onRefine(item)} type="button">
               {item}
             </button>
           ))}
         </div>
         <button className="button button--secondary button--lg button--full" disabled={busy || readOnly} onClick={() => setCustomOpen(true)} type="button">
-          {appCopy.session.refineCustom}
+          {messages.session.refineCustom}
         </button>
       </div>
 
-      <BottomSheet open={customOpen} title={appCopy.session.refineTitle} onClose={() => setCustomOpen(false)}>
+      <BottomSheet open={customOpen} title={messages.session.refineTitle} onClose={() => setCustomOpen(false)}>
         <textarea
           className="sheet-textarea"
-          placeholder={appCopy.session.refinePlaceholder}
+          placeholder={messages.session.refinePlaceholder}
           rows={4}
           value={custom}
           onChange={(event) => setCustom(event.target.value)}
@@ -131,31 +132,31 @@ export function ResultStage({ busy, mode, payload, onRefine, readOnly = false }:
           }}
           type="button"
         >
-          {appCopy.session.refineSend}
+          {messages.session.refineSend}
         </button>
       </BottomSheet>
     </section>
   );
 }
 
-function buildFields(mode: SessionMode, payload: SessionGeneratePayload): Field[] {
+function buildFields(mode: SessionMode, payload: SessionGeneratePayload, messages: AppMessages): Field[] {
   if (mode === "write_now") {
     return [
-      { key: "why", label: appCopy.session.cards.why, value: String(payload.why || ""), icon: "why" },
-      { key: "risks", label: appCopy.session.cards.risks, value: asTextList(payload.risks), icon: "risks" },
-      { key: "avoid_list", label: appCopy.session.cards.avoid, value: asTextList(payload.avoid_list), icon: "avoid" },
-      { key: "next_step", label: appCopy.session.cards.nextStep, value: String(payload.next_step || ""), icon: "next" },
-      { key: "fallback_simple_version", label: appCopy.session.cards.simpleVersion, value: String(payload.fallback_simple_version || ""), icon: "simple" },
-      { key: "alternatives", label: appCopy.session.cards.alternatives, value: asTextList(payload.alternatives), icon: "alt" },
+      { key: "why", label: messages.session.cards.why, value: String(payload.why || ""), icon: "why" },
+      { key: "risks", label: messages.session.cards.risks, value: asTextList(payload.risks), icon: "risks" },
+      { key: "avoid_list", label: messages.session.cards.avoid, value: asTextList(payload.avoid_list), icon: "avoid" },
+      { key: "next_step", label: messages.session.cards.nextStep, value: String(payload.next_step || ""), icon: "next" },
+      { key: "fallback_simple_version", label: messages.session.cards.simpleVersion, value: String(payload.fallback_simple_version || ""), icon: "simple" },
+      { key: "alternatives", label: messages.session.cards.alternatives, value: asTextList(payload.alternatives), icon: "alt" },
     ];
   }
 
   return [
-    { key: "core_leverage", label: appCopy.session.cards.leverage, value: String(payload.core_leverage || ""), icon: "leverage" },
-    { key: "plan_24h", label: appCopy.session.cards.plan24, value: asTextList(payload.plan_24h), icon: "plan24" },
-    { key: "plan_if_reply", label: appCopy.session.cards.ifReply, value: asTextList(payload.plan_if_reply), icon: "ifReply" },
-    { key: "plan_if_no_reply", label: appCopy.session.cards.ifNoReply, value: asTextList(payload.plan_if_no_reply), icon: "ifNoReply" },
-    { key: "message_template", label: appCopy.session.cards.template, value: String(payload.message_template || ""), icon: "template" },
-    { key: "avoid_list", label: appCopy.session.cards.avoid, value: asTextList(payload.avoid_list), icon: "avoid" },
+    { key: "core_leverage", label: messages.session.cards.leverage, value: String(payload.core_leverage || ""), icon: "leverage" },
+    { key: "plan_24h", label: messages.session.cards.plan24, value: asTextList(payload.plan_24h), icon: "plan24" },
+    { key: "plan_if_reply", label: messages.session.cards.ifReply, value: asTextList(payload.plan_if_reply), icon: "ifReply" },
+    { key: "plan_if_no_reply", label: messages.session.cards.ifNoReply, value: asTextList(payload.plan_if_no_reply), icon: "ifNoReply" },
+    { key: "message_template", label: messages.session.cards.template, value: String(payload.message_template || ""), icon: "template" },
+    { key: "avoid_list", label: messages.session.cards.avoid, value: asTextList(payload.avoid_list), icon: "avoid" },
   ];
 }

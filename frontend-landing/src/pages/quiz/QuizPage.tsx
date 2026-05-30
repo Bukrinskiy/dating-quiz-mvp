@@ -177,10 +177,6 @@ export const QuizPage = ({ manifest }: QuizPageProps) => {
       }
       track("new_quiz_view");
       track("quiz_start");
-      const dataLayer = (window as Window & { dataLayer?: unknown[] }).dataLayer;
-      if (Array.isArray(dataLayer)) {
-        dataLayer.push({ event: "quiz_start" });
-      }
       reachYandexMetrikaGoal("start_quiz");
       startQuizSentRef.current = true;
       clearPoll();

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { appCopy, roleLabels } from "../copy";
+import { useI18n } from "../i18n";
 import type { RoleMeta } from "../types";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
@@ -13,6 +13,7 @@ type RoleMetaSheetProps = {
 };
 
 export function RoleMetaSheet({ open, value, onClose, onApply }: RoleMetaSheetProps) {
+  const { messages, roleLabels } = useI18n();
   const [draft, setDraft] = useState<RoleMeta>(value);
 
   useEffect(() => {
@@ -22,8 +23,8 @@ export function RoleMetaSheet({ open, value, onClose, onApply }: RoleMetaSheetPr
   }, [open, value]);
 
   return (
-    <BottomSheet onClose={onClose} open={open} title={appCopy.session.roleTitle}>
-      <p className="sheet-copy">{appCopy.session.roleHint}</p>
+    <BottomSheet onClose={onClose} open={open} title={messages.session.roleTitle}>
+      <p className="sheet-copy">{messages.session.roleHint}</p>
       <div className="sheet-choice-grid">
         {Object.entries(roleLabels).map(([role, label]) => (
           <button
@@ -36,11 +37,11 @@ export function RoleMetaSheet({ open, value, onClose, onApply }: RoleMetaSheetPr
         ))}
       </div>
       <label className="sheet-field">
-        <span>{appCopy.session.roleName}</span>
+        <span>{messages.session.roleName}</span>
         <input value={draft.display_name} onChange={(event) => setDraft((current) => ({ ...current, display_name: event.target.value }))} />
       </label>
       <label className="sheet-field">
-        <span>{appCopy.session.roleDate}</span>
+        <span>{messages.session.roleDate}</span>
         <input
           type="datetime-local"
           value={draft.sent_at}
@@ -54,7 +55,7 @@ export function RoleMetaSheet({ open, value, onClose, onApply }: RoleMetaSheetPr
           onClose();
         }}
       >
-        {appCopy.session.roleApply}
+        {messages.session.roleApply}
       </Button>
     </BottomSheet>
   );

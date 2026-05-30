@@ -1,14 +1,15 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 
+import { renderWithI18n } from "../../test/renderWithI18n";
 import { Composer } from "./Composer";
 
 test("Composer sends text with role metadata", async () => {
   const user = userEvent.setup();
   const onSend = vi.fn(async () => undefined);
 
-  render(
+  renderWithI18n(
     <Composer
       busy={false}
       meta={{ role: "USER_PEER", display_name: "Она", sent_at: "2026-04-14T10:30" }}
@@ -18,6 +19,7 @@ test("Composer sends text with role metadata", async () => {
       onSendAudio={vi.fn(async () => undefined)}
       onSendImage={vi.fn(async () => undefined)}
     />,
+    { locale: "ru" },
   );
 
   await user.type(screen.getByPlaceholderText("Опиши ситуацию или вставь переписку…"), "Привет");
@@ -60,7 +62,7 @@ test("Composer swaps textarea for recorder block after mic click", async () => {
 
   vi.stubGlobal("MediaRecorder", MediaRecorderMock as unknown as typeof MediaRecorder);
 
-  render(
+  renderWithI18n(
     <Composer
       busy={false}
       meta={{ role: "USER_PEER", display_name: "Она", sent_at: "2026-04-14T10:30" }}
@@ -70,6 +72,7 @@ test("Composer swaps textarea for recorder block after mic click", async () => {
       onSendAudio={vi.fn(async () => undefined)}
       onSendImage={vi.fn(async () => undefined)}
     />,
+    { locale: "ru" },
   );
 
   await user.click(screen.getByRole("button", { name: "Нажми для записи" }));

@@ -33,6 +33,7 @@ export type PaymentStatus = {
   fulfillment_status: string;
   access_status: string;
   activation_link: string | null;
+  access_link: string | null;
 };
 
 export type CreatePaymentIntentRequest = {

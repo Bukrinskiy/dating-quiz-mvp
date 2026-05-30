@@ -1,4 +1,4 @@
-import { appCopy } from "../copy";
+import { useI18n } from "../i18n";
 
 type BatchCloseBarProps = {
   busy: boolean;
@@ -7,7 +7,8 @@ type BatchCloseBarProps = {
 };
 
 export function BatchCloseBar({ busy, count, onDone }: BatchCloseBarProps) {
-  const label = count === 1 ? "фрагмент" : count < 5 ? "фрагмента" : "фрагментов";
+  const { messages } = useI18n();
+  const label = count === 1 ? messages.session.fragmentOne : count < 5 ? messages.session.fragmentFew : messages.session.fragmentMany;
 
   return (
     <div className="batch-close-bar">
@@ -15,10 +16,10 @@ export function BatchCloseBar({ busy, count, onDone }: BatchCloseBarProps) {
         <strong>
           {count} {label}
         </strong>
-        <span>Готово к разбору</span>
+        <span>{messages.session.readyForAnalysis}</span>
       </div>
       <button className="button button--primary button--sm" disabled={busy} onClick={onDone} type="button">
-        {appCopy.session.batchClose}
+        {messages.session.batchClose}
       </button>
     </div>
   );

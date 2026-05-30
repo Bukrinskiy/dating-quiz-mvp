@@ -3,6 +3,9 @@ export type DeferredInstallPrompt = Event & {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 };
 
+export type InstallPlatform = "ios" | "android" | "desktop";
+export type InstallFlowOutcome = "accepted" | "dismissed" | "opened_share" | "manual" | "unavailable";
+
 let deferredPrompt: DeferredInstallPrompt | null = null;
 
 if (typeof window !== "undefined") {
@@ -16,7 +19,7 @@ export const isStandaloneDisplay = (): boolean => {
   if (typeof window === "undefined") {
     return false;
   }
-  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  return Boolean(window.matchMedia?.("(display-mode: standalone)").matches) || window.navigator.standalone === true;
 };
 
 export const getInstallPrompt = () => deferredPrompt;
@@ -30,3 +33,63 @@ export const consumeInstallPrompt = async (): Promise<"accepted" | "dismissed" |
   deferredPrompt = null;
   return choice.outcome;
 };
+
+export const startInstallFlow = async ({
+  title,
+  text,
+  url,
+}: {
+  title?: string;
+  text?: string;
+  url?: string;
+} = {}): Promise<InstallFlowOutcome> => {
+  const nativeOutcome = await consumeInstallPrompt();
+  if (nativeOutcome !== "unavailable") {
+    return nativeOutcome;
+  }
+  if (typeof window === "undefined") {
+    return "unavailable";
+  }
+  if (getInstallPlatform() === "ios" && typeof window.navigator.share === "function") {
+    try {
+      await window.navigator.share({
+        title,
+        text,
+        url: url ?? window.location.href,
+      });
+      return "opened_share";
+    } catch {
+      return "manual";
+    }
+  }
+  return "manual";
+};
+
+export function detectInstallPlatform({
+  userAgent,
+  maxTouchPoints = 0,
+  platform = "",
+}: {
+  userAgent: string;
+  maxTouchPoints?: number;
+  platform?: string;
+}): InstallPlatform {
+  if (/Android/i.test(userAgent)) {
+    return "android";
+  }
+  if (/iPhone|iPad|iPod/i.test(userAgent) || (platform === "MacIntel" && maxTouchPoints > 1)) {
+    return "ios";
+  }
+  return "desktop";
+}
+
+export function getInstallPlatform(): InstallPlatform {
+  if (typeof window === "undefined") {
+    return "desktop";
+  }
+  return detectInstallPlatform({
+    userAgent: window.navigator.userAgent,
+    maxTouchPoints: window.navigator.maxTouchPoints,
+    platform: window.navigator.platform,
+  });
+}

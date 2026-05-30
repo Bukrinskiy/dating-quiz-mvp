@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import { messages as ruMessages, roleLabels as ruRoleLabels } from "../i18n/messages/ru";
 import type { SessionMessage } from "../types";
 import { buildConfirmSummaryItems, buildConfirmTimelineItems, stripServiceTags } from "./confirmStageFormat";
 
@@ -25,7 +26,7 @@ describe("confirmStageFormat", () => {
       { id: "4", kind: "system", text: "Контекст собран." },
     ];
 
-    expect(buildConfirmTimelineItems(messages)).toEqual([
+    expect(buildConfirmTimelineItems(messages, ruMessages, ruRoleLabels)).toEqual([
       { id: "1", author: "Я", kindLabel: "Сообщение", text: "Привет", sentAt: null },
       { id: "2", author: "Аня", kindLabel: "Скриншот", text: "Скрин диалога", sentAt: "2026-04-20T09:30:00.000Z" },
       { id: "3", author: "Собеседник", kindLabel: "Голосовое", text: "Голосом объяснил", sentAt: null },

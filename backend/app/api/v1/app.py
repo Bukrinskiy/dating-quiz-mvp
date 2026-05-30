@@ -9,11 +9,13 @@ from app.core.config import Settings, get_settings
 from app.core.db.session import get_db
 from app.core.notifications import TelegramSender
 from app.schemas.app import (
+    AppAccessCodeRedeemRequest,
     AppAccessStatusResponse,
     AppAuthResponse,
     AppEmailCodeConfirmRequest,
     AppEmailCodeRequest,
     AppEmailCodeResponse,
+    AppLocaleUpdateRequest,
     AppSessionDeleteAssetResponse,
     AppSessionDetailResponse,
     AppSessionListItemResponse,
@@ -30,6 +32,7 @@ from app.schemas.app import (
     AppSessionStartResponse,
     AppTextAssetRequest,
 )
+from app.services.access_code_service import AccessCodeService
 from app.services.app_auth_service import AppAuthService
 from app.services.bot_session_service import BotSessionService
 
@@ -130,10 +133,31 @@ def app_me(user=Depends(_require_app_user), db: Session = Depends(get_db)) -> Ap
     return AppAuthResponse.model_validate(AppAuthService(get_settings(), db)._auth_response(user))
 
 
+@router.post("/api/app/auth/locale", response_model=AppAuthResponse)
+def app_update_locale(
+    payload: AppLocaleUpdateRequest,
+    user=Depends(_require_app_user),
+    db: Session = Depends(get_db),
+) -> AppAuthResponse:
+    auth_payload = AppAuthService(get_settings(), db).update_locale(user=user, locale=payload.locale)
+    return AppAuthResponse.model_validate(auth_payload)
+
+
 @router.get("/api/app/access-status", response_model=AppAccessStatusResponse)
 def app_access_status(user=Depends(_require_app_user), db: Session = Depends(get_db)) -> AppAccessStatusResponse:
     payload = AppAuthService(get_settings(), db).entitlements.resolve_by_email(user.email)
     return AppAccessStatusResponse.model_validate(payload)
+
+
+@router.post("/api/app/access-code/redeem", response_model=AppAuthResponse)
+def app_redeem_access_code(
+    payload: AppAccessCodeRedeemRequest,
+    user=Depends(_require_app_user),
+    db: Session = Depends(get_db),
+) -> AppAuthResponse:
+    AccessCodeService(db).redeem_code(email=user.email, code=payload.code)
+    auth_payload = AppAuthService(get_settings(), db)._auth_response(user)
+    return AppAuthResponse.model_validate(auth_payload)
 
 
 @router.post("/api/app/support")
@@ -338,6 +362,7 @@ def app_session_generate(
         constraints=payload.constraints,
         tried_actions=payload.tried_actions,
         target_outcome=payload.target_outcome,
+        locale=user.locale,
     )
     return AppSessionGenerateResponse.model_validate(result)
 
@@ -349,7 +374,7 @@ def app_session_refine(
     user=Depends(_require_paid_app_user),
     db: Session = Depends(get_db),
 ) -> AppSessionRefineResponse:
-    result = BotSessionService(get_settings(), db).refine_app(session_id=session_id, app_user_id=user.id, command=payload.command)
+    result = BotSessionService(get_settings(), db).refine_app(session_id=session_id, app_user_id=user.id, command=payload.command, locale=user.locale)
     return AppSessionRefineResponse.model_validate(result)
 
 

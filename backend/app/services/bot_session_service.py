@@ -29,6 +29,34 @@ logger = logging.getLogger("quiz.bot_sessions")
 ASSISTANT_CONTEXT_PREFIX = "__APP_AI_CONTEXT__:"
 
 
+def _normalize_locale(locale: str | None) -> str:
+    if not locale:
+        return "en"
+    normalized = locale.strip().lower()
+    for supported in ("en", "ru", "fr", "es"):
+        if normalized.startswith(supported):
+            return supported
+    return "en"
+
+
+def _locale_language(locale: str | None) -> str:
+    return {
+        "en": "English",
+        "ru": "Russian",
+        "fr": "French",
+        "es": "Spanish",
+    }[_normalize_locale(locale)]
+
+
+def _localized_next_step(locale: str | None) -> str:
+    return {
+        "en": "Refine or finish",
+        "ru": "Уточните или завершите",
+        "fr": "Affiner ou terminer",
+        "es": "Ajustar o finalizar",
+    }[_normalize_locale(locale)]
+
+
 def _format_lines(items: list[str], prefix: str = "- ") -> str:
     return "\n".join(f"{prefix}{item}" for item in items if item)
 
@@ -617,10 +645,49 @@ class BotSessionService:
             raise HTTPException(status_code=400, detail="Session context is empty")
         return "\n\n".join(text for _, text in chunks)
 
-    def _generate_prompt_app_analyze_case(self, request: BotSessionGenerateRequest, transcript: str) -> str:
-        constraints = ", ".join(request.constraints) if request.constraints else "нет"
-        tried_actions = ", ".join(request.tried_actions) if request.tried_actions else "ничего"
-        target = request.target_outcome or "снизить напряжение и вернуть диалог"
+    def _generate_prompt_app_analyze_case(self, request: BotSessionGenerateRequest, transcript: str, locale: str | None = "ru") -> str:
+        normalized_locale = _normalize_locale(locale)
+        language = _locale_language(normalized_locale)
+        empty_constraints = {"en": "none", "ru": "нет", "fr": "aucune", "es": "ninguna"}
+        empty_tried_actions = {"en": "nothing", "ru": "ничего", "fr": "rien", "es": "nada"}
+        default_target = {
+            "en": "reduce tension and restart the conversation",
+            "ru": "снизить напряжение и вернуть диалог",
+            "fr": "réduire la tension et relancer la conversation",
+            "es": "reducir la tensión y reactivar la conversación",
+        }
+        constraints = ", ".join(request.constraints) if request.constraints else empty_constraints[normalized_locale]
+        tried_actions = ", ".join(request.tried_actions) if request.tried_actions else empty_tried_actions[normalized_locale]
+        target = request.target_outcome or default_target[normalized_locale]
+        if normalized_locale != "ru":
+            return (
+                "Create JSON for AnalyzeCaseResponseSchema.\n"
+                "Domain: dating, conversation, attraction, and respectful communication with a woman.\n"
+                f"Goal: {target}\n"
+                f"What has already been tried: {tried_actions}\n"
+                f"Constraints: {constraints}\n"
+                "Chronological consultation history:\n"
+                f"{transcript}\n"
+                "How to read the history:\n"
+                "- [user] blocks are facts, context, chat excerpts, OCR, and audio transcripts from the user.\n"
+                "- [assistant] blocks are previous system advice, not facts from the chat and not the woman's words.\n"
+                "- Latest [user] blocks override earlier [assistant] conclusions when they conflict.\n"
+                "Requirements:\n"
+                "- Return JSON only, no markdown.\n"
+                "- Allowed keys only: diagnosis, core_leverage, plan_24h, plan_if_reply, plan_if_no_reply, message_template, avoid_list.\n"
+                "- No extra keys and no wrapper objects.\n"
+                "- Keep continuity with prior [assistant] answers, but do not copy them verbatim.\n"
+                "- If a new [user] fact changes the situation, update diagnosis, core_leverage, plan, and message_template.\n"
+                "- message_template must be the next best message for the current moment.\n"
+                "- plan_24h, plan_if_reply, plan_if_no_reply: at least 1 item each.\n"
+                "- avoid_list: at least 3 items.\n"
+                "- All plan_* and avoid_list items must be strings.\n"
+                "- Each plan_* item must be one concrete imperative action and start with a verb, for example: 'Send...', 'Ask...', 'Suggest...'.\n"
+                "- Do not start plan_* items with 'If...', 'When...', or 'In case...'. Put conditions after the verb when needed.\n"
+                "- Each plan_* item must be at least 6 words and include specifics: what to do plus why or when.\n"
+                f"- Write all user-visible values in natural {language}.\n"
+                "- Use concrete actions, no accusations, no pressure, no manipulation."
+            )
         return (
             "Сформируй JSON для схемы AnalyzeCaseResponseSchema.\n"
             "Домен: знакомство/общение/соблазнение с девушкой.\n"
@@ -763,6 +830,7 @@ class BotSessionService:
         constraints: list[str],
         tried_actions: list[str],
         target_outcome: str | None,
+        locale: str | None = None,
     ) -> dict[str, Any]:
         session = self._get_session_for_owner(session_id, owner_kind="app", owner_id=app_user_id)
         if session.state not in {"ready_to_generate", "awaiting_refinement"}:
@@ -779,7 +847,7 @@ class BotSessionService:
             target_outcome=target_outcome,
         )
         context = self._build_app_context_history_text(session_id)
-        prompt = self._generate_prompt_app_analyze_case(payload, context)
+        prompt = self._generate_prompt_app_analyze_case(payload, context, locale)
         raw = self.openai.generate_analyze_case(prompt)
         try:
             ui_payload = BotUiPayloadAnalyzeCase(**raw).model_dump()
@@ -808,7 +876,15 @@ class BotSessionService:
             "ui_payload": ui_payload,
         }
 
-    def _refine_for_owner(self, *, session_id: str, owner_kind: str, owner_id: str, payload: BotSessionRefineRequest) -> dict[str, Any]:
+    def _refine_for_owner(
+        self,
+        *,
+        session_id: str,
+        owner_kind: str,
+        owner_id: str,
+        payload: BotSessionRefineRequest,
+        locale: str | None = "ru",
+    ) -> dict[str, Any]:
         session = self._get_session_for_owner(session_id, owner_kind=owner_kind, owner_id=owner_id)
         if session.state != "awaiting_refinement":
             raise HTTPException(status_code=400, detail="Session is not awaiting refinement")
@@ -823,9 +899,9 @@ class BotSessionService:
 
         response_payload = latest_generate.response_payload or {}
         if session.mode == "write_now":
-            result = self._refine_write_now(response_payload=response_payload, command=payload.command)
+            result = self._refine_write_now(response_payload=response_payload, command=payload.command, locale=locale)
         elif session.mode == "analyze_case":
-            result = self._refine_analyze_case(response_payload=response_payload, command=payload.command)
+            result = self._refine_analyze_case(response_payload=response_payload, command=payload.command, locale=locale)
         else:
             raise HTTPException(status_code=400, detail="Unsupported session mode")
 
@@ -854,25 +930,43 @@ class BotSessionService:
             "alternatives": result.get("alternatives", []),
         }
 
-    def _refine_write_now(self, *, response_payload: Any, command: str) -> dict[str, Any]:
+    def _refine_write_now(self, *, response_payload: Any, command: str, locale: str | None = "ru") -> dict[str, Any]:
         base_text = ""
         if isinstance(response_payload, dict):
             base_text = str(response_payload.get("primary_message") or response_payload.get("message_template") or "")
 
-        refine_prompt = (
-            "Верни только JSON-объект без markdown с ключами:\n"
-            "- primary_message (str)\n"
-            "- why (str)\n"
-            "- fallback_simple_version (str)\n"
-            "- alternatives (array of str, можно пустой)\n"
-            f"Исходное сообщение: {base_text}\n"
-            f"Уточнения пользователя: {command}\n"
-            "Требования:\n"
-            "- Сохрани намерение исходного сообщения.\n"
-            "- Учти все уточнения пользователя.\n"
-            "- primary_message <= 420 символов.\n"
-            "- Ответ на русском."
-        )
+        normalized_locale = _normalize_locale(locale)
+        if normalized_locale != "ru":
+            language = _locale_language(normalized_locale)
+            refine_prompt = (
+                "Return only a JSON object without markdown with keys:\n"
+                "- primary_message (str)\n"
+                "- why (str)\n"
+                "- fallback_simple_version (str)\n"
+                "- alternatives (array of str, can be empty)\n"
+                f"Original message: {base_text}\n"
+                f"User refinement: {command}\n"
+                "Requirements:\n"
+                "- Preserve the intent of the original message.\n"
+                "- Apply every user refinement.\n"
+                "- primary_message <= 420 characters.\n"
+                f"- Write all user-visible values in natural {language}."
+            )
+        else:
+            refine_prompt = (
+                "Верни только JSON-объект без markdown с ключами:\n"
+                "- primary_message (str)\n"
+                "- why (str)\n"
+                "- fallback_simple_version (str)\n"
+                "- alternatives (array of str, можно пустой)\n"
+                f"Исходное сообщение: {base_text}\n"
+                f"Уточнения пользователя: {command}\n"
+                "Требования:\n"
+                "- Сохрани намерение исходного сообщения.\n"
+                "- Учти все уточнения пользователя.\n"
+                "- primary_message <= 420 символов.\n"
+                "- Ответ на русском."
+            )
         raw = self.openai.refine_message(refine_prompt)
         primary_message = str(raw.get("primary_message") or "").strip()
         why = str(raw.get("why") or "").strip()
@@ -886,7 +980,7 @@ class BotSessionService:
             "why": why,
             "risks": response_payload.get("risks", []) if isinstance(response_payload, dict) else [],
             "avoid_list": response_payload.get("avoid_list", []) if isinstance(response_payload, dict) else [],
-            "next_step": "Уточните или завершите",
+            "next_step": _localized_next_step(locale),
             "fallback_simple_version": fallback_simple_version,
             "alternatives": [str(item) for item in alternatives],
         }
@@ -898,36 +992,66 @@ class BotSessionService:
             "alternatives": [str(item) for item in alternatives],
         }
 
-    def _refine_analyze_case(self, *, response_payload: Any, command: str) -> dict[str, Any]:
+    def _refine_analyze_case(self, *, response_payload: Any, command: str, locale: str | None = "ru") -> dict[str, Any]:
         if not isinstance(response_payload, dict):
             raise HTTPException(status_code=502, detail="Previous analyze_case payload is invalid")
 
-        refine_prompt = (
-            "Верни только JSON-объект без markdown с ключами:\n"
-            "- diagnosis (str)\n"
-            "- core_leverage (str)\n"
-            "- plan_24h (array of str)\n"
-            "- plan_if_reply (array of str)\n"
-            "- plan_if_no_reply (array of str)\n"
-            "- message_template (str)\n"
-            "- avoid_list (array of str)\n"
-            "Текущий разбор:\n"
-            f"- diagnosis: {response_payload.get('diagnosis', '')}\n"
-            f"- core_leverage: {response_payload.get('core_leverage', '')}\n"
-            f"- plan_24h: {response_payload.get('plan_24h', [])}\n"
-            f"- plan_if_reply: {response_payload.get('plan_if_reply', [])}\n"
-            f"- plan_if_no_reply: {response_payload.get('plan_if_no_reply', [])}\n"
-            f"- message_template: {response_payload.get('message_template', '')}\n"
-            f"- avoid_list: {response_payload.get('avoid_list', [])}\n"
-            f"Уточнения пользователя: {command}\n"
-            "Требования:\n"
-            "- Сохрани структуру разбор-ситуации.\n"
-            "- Учти все уточнения пользователя.\n"
-            "- plan_24h, plan_if_reply, plan_if_no_reply: минимум по 1 пункту.\n"
-            "- avoid_list: минимум 3 пункта.\n"
-            "- Все элементы списков должны быть строками.\n"
-            "- Ответ на русском."
-        )
+        normalized_locale = _normalize_locale(locale)
+        if normalized_locale != "ru":
+            language = _locale_language(normalized_locale)
+            refine_prompt = (
+                "Return only a JSON object without markdown with keys:\n"
+                "- diagnosis (str)\n"
+                "- core_leverage (str)\n"
+                "- plan_24h (array of str)\n"
+                "- plan_if_reply (array of str)\n"
+                "- plan_if_no_reply (array of str)\n"
+                "- message_template (str)\n"
+                "- avoid_list (array of str)\n"
+                "Current analysis:\n"
+                f"- diagnosis: {response_payload.get('diagnosis', '')}\n"
+                f"- core_leverage: {response_payload.get('core_leverage', '')}\n"
+                f"- plan_24h: {response_payload.get('plan_24h', [])}\n"
+                f"- plan_if_reply: {response_payload.get('plan_if_reply', [])}\n"
+                f"- plan_if_no_reply: {response_payload.get('plan_if_no_reply', [])}\n"
+                f"- message_template: {response_payload.get('message_template', '')}\n"
+                f"- avoid_list: {response_payload.get('avoid_list', [])}\n"
+                f"User refinement: {command}\n"
+                "Requirements:\n"
+                "- Preserve the situation-analysis structure.\n"
+                "- Apply every user refinement.\n"
+                "- plan_24h, plan_if_reply, plan_if_no_reply: at least 1 item each.\n"
+                "- avoid_list: at least 3 items.\n"
+                "- All list items must be strings.\n"
+                f"- Write all user-visible values in natural {language}."
+            )
+        else:
+            refine_prompt = (
+                "Верни только JSON-объект без markdown с ключами:\n"
+                "- diagnosis (str)\n"
+                "- core_leverage (str)\n"
+                "- plan_24h (array of str)\n"
+                "- plan_if_reply (array of str)\n"
+                "- plan_if_no_reply (array of str)\n"
+                "- message_template (str)\n"
+                "- avoid_list (array of str)\n"
+                "Текущий разбор:\n"
+                f"- diagnosis: {response_payload.get('diagnosis', '')}\n"
+                f"- core_leverage: {response_payload.get('core_leverage', '')}\n"
+                f"- plan_24h: {response_payload.get('plan_24h', [])}\n"
+                f"- plan_if_reply: {response_payload.get('plan_if_reply', [])}\n"
+                f"- plan_if_no_reply: {response_payload.get('plan_if_no_reply', [])}\n"
+                f"- message_template: {response_payload.get('message_template', '')}\n"
+                f"- avoid_list: {response_payload.get('avoid_list', [])}\n"
+                f"Уточнения пользователя: {command}\n"
+                "Требования:\n"
+                "- Сохрани структуру разбор-ситуации.\n"
+                "- Учти все уточнения пользователя.\n"
+                "- plan_24h, plan_if_reply, plan_if_no_reply: минимум по 1 пункту.\n"
+                "- avoid_list: минимум 3 пункта.\n"
+                "- Все элементы списков должны быть строками.\n"
+                "- Ответ на русском."
+            )
         raw = self.openai.refine_analyze_case(refine_prompt)
         try:
             ui_payload = BotUiPayloadAnalyzeCase(**raw).model_dump()
@@ -947,7 +1071,7 @@ class BotSessionService:
             payload=payload,
         )
 
-    def refine_app(self, *, session_id: str, app_user_id: str, command: str) -> dict[str, Any]:
+    def refine_app(self, *, session_id: str, app_user_id: str, command: str, locale: str | None = None) -> dict[str, Any]:
         payload = BotSessionRefineRequest(
             telegram_user_id=self._fallback_telegram_user_id(owner_kind="app", owner_id=app_user_id),
             command=command,
@@ -957,6 +1081,7 @@ class BotSessionService:
             owner_kind="app",
             owner_id=app_user_id,
             payload=payload,
+            locale=locale,
         )
 
     def reset(self, *, session_id: str, telegram_user_id: str) -> BotSession:

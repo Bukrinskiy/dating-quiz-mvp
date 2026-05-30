@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 from app.core.request_logging import decode_body, headers_to_dict, write_mobi_slon_request_log
 from app.schemas.payment import (
     ActivateAccessRequest,
+    BinomGaLinkRequest,
+    BinomGaLinkResponse,
     CheckoutSessionRequest,
     CheckoutSessionResponse,
     CustomerPortalRequest,
@@ -199,6 +201,7 @@ def session_status(session_id: str = Query(min_length=1), db: Session = Depends(
         fulfillment_status=cast(str, payload["fulfillment_status"]),
         access_status=cast(str, payload["access_status"]),
         activation_link=cast(str | None, payload["activation_link"]),
+        access_link=cast(str | None, payload["access_link"]),
     )
 
 
@@ -211,6 +214,7 @@ def order_status(order_id: str = Query(min_length=1), db: Session = Depends(get_
         fulfillment_status=cast(str, payload["fulfillment_status"]),
         access_status=cast(str, payload["access_status"]),
         activation_link=cast(str | None, payload["activation_link"]),
+        access_link=cast(str | None, payload["access_link"]),
     )
 
 
@@ -298,6 +302,67 @@ def relay_mobi_slon_event(payload: MobiSlonEventRequest, request: Request, db: S
         error_message=postback_result["error_message"],
     )
     return MobiSlonEventResponse(accepted=True, forwarded=postback_result["sent"])
+
+
+@router.post("/api/events/binom-ga-link", response_model=BinomGaLinkResponse)
+def relay_binom_ga_link(
+    payload: BinomGaLinkRequest, request: Request, db: Session = Depends(get_db)
+) -> BinomGaLinkResponse:
+    logger.info(
+        "binom_ga_link_http_in clickid=%s ga_client_id_len=%d session_id=%s",
+        payload.clickid[:64],
+        len(payload.ga_client_id),
+        (payload.session_id or "")[:64],
+    )
+    service = PaymentService(get_settings(), db)
+    try:
+        postback_result = service.relay_binom_ga_link(
+            clickid=payload.clickid,
+            ga_client_id=payload.ga_client_id,
+            session_id=payload.session_id,
+            page_path=payload.page_path,
+        )
+    except HTTPException as exc:
+        write_mobi_slon_request_log(
+            request_id=getattr(request.state, "request_id", None),
+            transport="binom_ga_link",
+            incoming_path=request.url.path,
+            status="ga_client_link",
+            clickid=payload.clickid,
+            session_id=payload.session_id,
+            page_path=payload.page_path,
+            tracking_params={"ga_client_id": payload.ga_client_id},
+            request_headers=headers_to_dict(request.headers),
+            raw_body=decode_body(getattr(request.state, "raw_body", None)),
+            accepted=False,
+            forwarded=False,
+            error_class="HTTPException",
+            error_message=str(exc.detail),
+        )
+        raise
+
+    write_mobi_slon_request_log(
+        request_id=getattr(request.state, "request_id", None),
+        transport="binom_ga_link",
+        incoming_path=request.url.path,
+        status="ga_client_link",
+        clickid=payload.clickid,
+        session_id=payload.session_id,
+        page_path=payload.page_path,
+        tracking_params={"ga_client_id": payload.ga_client_id},
+        request_headers=headers_to_dict(request.headers),
+        raw_body=decode_body(getattr(request.state, "raw_body", None)),
+        accepted=True,
+        forwarded=postback_result["sent"],
+        upstream_url=postback_result["upstream_url"],
+        upstream_params=postback_result["upstream_params"],
+        upstream_status_code=postback_result["upstream_status_code"],
+        upstream_response_body=postback_result["upstream_response_body"],
+        attempt_count=postback_result["attempt_count"],
+        error_class=postback_result["error_class"],
+        error_message=postback_result["error_message"],
+    )
+    return BinomGaLinkResponse(accepted=True, forwarded=postback_result["sent"])
 
 
 @router.get("/api/events/mobi-slon", response_model=MobiSlonEventResponse)

@@ -8,6 +8,7 @@ import { SiteFooter } from "../../shared/ui/SiteFooter";
 import { quizCheckoutContent } from "../../features/email-capture/newCheckoutContent";
 import { buildPayHandoffUrl } from "../../features/handoff-to-pay/lib/buildPayHandoffUrl";
 import type { LandingManifest } from "../../entities/landing-manifest";
+import { resolveInitialEmail } from "./emailQuery";
 
 const isValidEmail = (value: string): boolean => /\S+@\S+\.\S+/.test(value.trim());
 
@@ -19,7 +20,7 @@ export const EmailPage = ({ manifest }: EmailPageProps) => {
   const { uuid, lang: langParam } = useParams<{ uuid: string; lang?: string }>();
   const location = useLocation();
   const lang = isQuizLang(langParam) ? langParam : DEFAULT_QUIZ_LANG;
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => resolveInitialEmail(location.search));
   const [busy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);

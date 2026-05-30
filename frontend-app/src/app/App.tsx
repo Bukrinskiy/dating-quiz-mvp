@@ -3,11 +3,13 @@ import type { ReactElement } from "react";
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 
 import { createAppApi } from "./api";
-import { appCopy } from "./copy";
 import { AccessStatusProvider, useAccessStatus } from "./hooks/useAccessStatus";
 import { ThinkingProvider } from "./hooks/useThinking";
 import { ToastProvider, useToast } from "./hooks/useToast";
+import { I18nProvider, normalizeAppLocale, useI18n } from "./i18n";
+import { AppOnboardingOverlay } from "./onboarding/AppOnboardingOverlay";
 import { AppHomePage } from "./pages/AppHomePage";
+import { AppLegalDocumentPage } from "./pages/AppLegalDocumentPage";
 import { LoginPage } from "./pages/LoginPage";
 import { PaywallPage } from "./pages/PaywallPage";
 import { ProfilePage } from "./pages/ProfilePage";
@@ -26,6 +28,7 @@ export function App() {
   const [bootstrapping, setBootstrapping] = useState(true);
   const [offlineBoot, setOfflineBoot] = useState(false);
   const [theme, setTheme] = useState<AppTheme>(() => readTheme());
+  const activeLocale = normalizeAppLocale(auth?.user.locale);
 
   const refreshAuth = async (): Promise<AuthPayload | null> => {
     const response = await apiFetch("/api/app/auth/refresh", { method: "POST" });
@@ -55,6 +58,10 @@ export function App() {
     writeTheme(theme);
   }, [theme]);
 
+  useEffect(() => {
+    document.documentElement.lang = activeLocale;
+  }, [activeLocale]);
+
   const authApi = useMemo<AppAuthApi>(
     () => ({
       auth,
@@ -68,31 +75,61 @@ export function App() {
     [auth],
   );
 
+  return (
+    <I18nProvider locale={activeLocale}>
+      <LocalizedApp
+        auth={auth}
+        authApi={authApi}
+        bootstrapping={bootstrapping}
+        offlineBoot={offlineBoot}
+        onRetryBootstrap={async () => {
+          setBootstrapping(true);
+          try {
+            await refreshAuth();
+            setOfflineBoot(false);
+          } catch {
+            setOfflineBoot(true);
+          } finally {
+            setBootstrapping(false);
+          }
+        }}
+        onThemeChange={setTheme}
+        theme={theme}
+      />
+    </I18nProvider>
+  );
+}
+
+function LocalizedApp({
+  auth,
+  authApi,
+  bootstrapping,
+  offlineBoot,
+  onRetryBootstrap,
+  theme,
+  onThemeChange,
+}: {
+  auth: AuthPayload | null;
+  authApi: AppAuthApi;
+  bootstrapping: boolean;
+  offlineBoot: boolean;
+  onRetryBootstrap: () => Promise<void>;
+  theme: AppTheme;
+  onThemeChange: (value: AppTheme) => void;
+}) {
+  const { messages } = useI18n();
+
   if (bootstrapping) {
-    return <div className="app-boot">{appCopy.shell.boot}</div>;
+    return <div className="app-boot">{messages.shell.boot}</div>;
   }
 
   if (offlineBoot && !auth) {
     return (
       <div className="app-boot">
         <Card className="offline-card" padding="lg" tone="strong">
-          <h1>{appCopy.offline.title}</h1>
-          <p>{appCopy.offline.body}</p>
-          <Button
-            onClick={async () => {
-              setBootstrapping(true);
-              try {
-                await refreshAuth();
-                setOfflineBoot(false);
-              } catch {
-                setOfflineBoot(true);
-              } finally {
-                setBootstrapping(false);
-              }
-            }}
-          >
-            {appCopy.shell.retry}
-          </Button>
+          <h1>{messages.offline.title}</h1>
+          <p>{messages.offline.body}</p>
+          <Button onClick={onRetryBootstrap}>{messages.shell.retry}</Button>
         </Card>
       </div>
     );
@@ -102,7 +139,7 @@ export function App() {
     <ToastProvider>
       <ThinkingProvider>
         <AccessStatusProvider authApi={authApi}>
-          <AppRoutes authApi={authApi} theme={theme} onThemeChange={setTheme} />
+          <AppRoutes authApi={authApi} theme={theme} onThemeChange={onThemeChange} />
         </AccessStatusProvider>
       </ThinkingProvider>
     </ToastProvider>
@@ -120,6 +157,7 @@ function AppRoutes({
 }) {
   const { status } = useAccessStatus();
   const { push } = useToast();
+  const { messages } = useI18n();
   const navigate = useNavigate();
   const api = useMemo(
     () =>
@@ -138,7 +176,8 @@ function AppRoutes({
   };
 
   return (
-    <AppLayout onLogout={authApi.logout}>
+    <AppLayout isAuthenticated={Boolean(authApi.auth)} onLogout={authApi.logout}>
+      <AppOnboardingOverlay enabled={Boolean(authApi.auth)} />
       <Routes>
         <Route path="/" element={<Navigate to={authApi.auth ? (authApi.auth.access.has_access ? "/app" : "/paywall") : "/login"} replace />} />
         <Route
@@ -169,7 +208,7 @@ function AppRoutes({
                 authApi={authApi}
                 onSubmit={async (text) => {
                   await api.submitSupport(text);
-                  push({ message: appCopy.support.success, tone: "success" });
+                  push({ message: messages.support.success, tone: "success" });
                 }}
               />
             </RequireAuth>
@@ -182,12 +221,16 @@ function AppRoutes({
             <RequireAuth auth={authApi.auth}>
               <ProfilePage
                 authApi={authApi}
+                onLocaleChange={(locale) => api.updateLocale(locale).then((payload) => authApi.setAuth(payload))}
                 onThemeChange={onThemeChange}
                 theme={theme}
               />
             </RequireAuth>
           }
         />
+        <Route path="/legal/terms" element={<AppLegalDocumentPage document="terms" />} />
+        <Route path="/legal/privacy" element={<AppLegalDocumentPage document="privacy" />} />
+        <Route path="/legal/refund" element={<AppLegalDocumentPage document="refund" />} />
         <Route path="/help" element={<StaticPage kind="help" />} />
         <Route path="/premium" element={<StaticPage kind="premium" />} />
       </Routes>

@@ -1,4 +1,5 @@
 import type { SessionMessage } from "../types";
+import type { AppMessages, RoleLabels } from "../i18n";
 import { getConfirmAuthorLabel } from "./messageAuthor";
 
 export type ConfirmSummaryItem = {
@@ -37,23 +38,23 @@ export function buildConfirmSummaryItems(preview: string): ConfirmSummaryItem[] 
     .map((text, index) => ({ id: `summary-${index}`, text }));
 }
 
-function resolveKindLabel(message: SessionMessage): string {
+function resolveKindLabel(message: SessionMessage, messages: AppMessages): string {
   if (message.kind === "image") {
-    return "Скриншот";
+    return messages.session.screenshot;
   }
   if (message.kind === "audio") {
-    return "Голосовое";
+    return messages.session.voiceNote;
   }
-  return "Сообщение";
+  return messages.session.message;
 }
 
-export function buildConfirmTimelineItems(messages: SessionMessage[]): ConfirmTimelineItem[] {
-  return messages
+export function buildConfirmTimelineItems(items: SessionMessage[], messages: AppMessages, roleLabels: RoleLabels): ConfirmTimelineItem[] {
+  return items
     .filter((message) => message.kind !== "system")
     .map((message) => ({
       id: message.id,
-      author: getConfirmAuthorLabel(message),
-      kindLabel: resolveKindLabel(message),
+      author: getConfirmAuthorLabel(message, messages, roleLabels),
+      kindLabel: resolveKindLabel(message, messages),
       text: stripServiceTags(message.text || ""),
       sentAt: message.sentAt || null,
     }))

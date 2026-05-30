@@ -314,7 +314,7 @@ test("useSession does not restart on session ownership mismatch", async () => {
   await waitFor(() => {
     expect(onForbidden).toHaveBeenCalled();
     expect(onToast).toHaveBeenCalledWith({
-      message: "Эта сессия принадлежит другому входу или устарела.",
+      message: "This session belongs to another login or is outdated.",
       tone: "warning",
     });
   });
@@ -427,7 +427,7 @@ test("useSession shows pending voice tag instead of file name while audio upload
   });
 
   await waitFor(() => {
-    expect(result.current.messages.some((item) => item.text === "[ГОЛОСОВОЕ]" && item.pending)).toBe(true);
+    expect(result.current.messages.some((item) => item.text === "[VOICE]" && item.pending)).toBe(true);
     expect(result.current.messages.some((item) => item.text === "voice-note.webm")).toBe(false);
   });
 
@@ -442,7 +442,7 @@ test("useSession shows pending voice tag instead of file name while audio upload
   });
 
   await waitFor(() => {
-    expect(result.current.messages.some((item) => item.text === "[ГОЛОСОВОЕ]: Привет как дела" && !item.pending)).toBe(true);
+    expect(result.current.messages.some((item) => item.text === "[VOICE]: Привет как дела" && !item.pending)).toBe(true);
     expect(result.current.messages.some((item) => item.kind === "system")).toBe(false);
   });
 });
@@ -504,7 +504,7 @@ test("useSession shows inline image transcript without system message", async ()
   });
 
   await waitFor(() => {
-    expect(result.current.messages.some((item) => item.text === "[ИЗОБРАЖЕНИЕ]" && item.pending)).toBe(true);
+    expect(result.current.messages.some((item) => item.text === "[IMAGE]" && item.pending)).toBe(true);
   });
 
   await act(async () => {
@@ -567,8 +567,8 @@ test("useSession removes pending voice bubble and shows toast when audio decodin
   });
 
   await waitFor(() => {
-    expect(result.current.messages.some((item) => item.text === "[ГОЛОСОВОЕ]")).toBe(false);
-    expect(onToast).toHaveBeenCalledWith({ message: "Не получилось расшифровать голосовое.", tone: "error" });
+    expect(result.current.messages.some((item) => item.text === "[VOICE]")).toBe(false);
+    expect(onToast).toHaveBeenCalledWith({ message: "Could not transcribe the voice note.", tone: "error" });
   });
 });
 
@@ -619,7 +619,7 @@ test("useSession hydrates session detail and exposes read-only closed sessions",
     expect(result.current.loading).toBe(false);
     expect(result.current.readOnly).toBe(true);
     expect(result.current.stage).toBe("result");
-    expect(result.current.messages[0]?.text).toBe("[ГОЛОСОВОЕ]: Привет");
+    expect(result.current.messages[0]?.text).toBe("[VOICE]: [ГОЛОСОВОЕ]: Привет");
     expect(result.current.messages[1]?.text).toBe("Привет текстом");
     expect(result.current.generated?.ui_payload.primary_message).toBe("Готовый ответ");
   });

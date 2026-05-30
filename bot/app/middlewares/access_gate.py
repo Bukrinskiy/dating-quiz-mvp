@@ -73,7 +73,7 @@ class AccessGateMiddleware(BaseMiddleware):
         if not telegram_user_id:
             return await handler(event, data)
 
-        admin_commands = {"/grant_access", "/revoke_access"}
+        admin_commands = {"/create_promo_code", "/create_promo_code_until"}
         if command in admin_commands and telegram_user_id in set(get_settings().admin_ids_list):
             return await handler(event, data)
 

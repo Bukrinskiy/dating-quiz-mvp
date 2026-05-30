@@ -49,7 +49,7 @@ flowchart LR
   - `frontend-site/Dockerfile` собирает brand-site surface из `frontend-site/src`.
   - `frontend-landing/Dockerfile` собирает новый landing surface из `frontend-landing/src` и использует runtime contract `APP_SURFACE`, `API_BASE_URL`, `PAY_PUBLIC_BASE_URL`.
   - `frontend-pay/Dockerfile` собирает pay surface из `frontend-pay/src` и использует runtime contract `APP_SURFACE`, `API_BASE_URL`, `PAY_PUBLIC_BASE_URL`.
-  - `frontend-app/Dockerfile` собирает PWA app surface из `frontend-app/src` и использует runtime contract `APP_SURFACE`, `API_BASE_URL`, `PAY_PUBLIC_BASE_URL`, `APP_PUBLIC_BASE_URL`.
+  - `frontend-app/Dockerfile` собирает PWA app surface из `frontend-app/src` и использует runtime contract `APP_SURFACE`, `API_BASE_URL`, `PAY_PUBLIC_BASE_URL`, `APP_PUBLIC_BASE_URL`, `LANDING_PUBLIC_BASE_URL`.
   - `frontend_old/Dockerfile` остается legacy/transitional build path и не является target multi-domain surface.
 - Frontend run-time:
   - каждый новый frontend surface использует свой `nginx:1.29-alpine` runtime и собственный `runtime-config.js`.
@@ -86,4 +86,4 @@ flowchart LR
 - Модель сессии: `collecting_context -> awaiting_context_confirmation -> ready_to_generate -> awaiting_refinement -> closed`.
 - Для media ingestion bot скачивает файл из Telegram API, кодирует в base64 и передает в backend.
 - Backend выполняет OCR/STT через OpenAI (`/responses`, `/audio/transcriptions`) и сохраняет только extracted text + metadata (без сырых bytes).
-- В v1 не используется RAG; генерация и refine идут только через OpenAI и RU prompt'ы.
+- В v1 не используется RAG; генерация и refine идут только через OpenAI. App prompt'ы locale-aware (`en` default, `ru` ручной выбор в профиле), JSON-схема ответа не меняется между языками.

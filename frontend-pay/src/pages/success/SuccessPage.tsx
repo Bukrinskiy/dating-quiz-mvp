@@ -1,4 +1,3 @@
-import { Spinner } from "@radix-ui/themes";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { type PaymentStatus, getPaymentOrderStatus, getPaymentSessionStatus } from "../../shared/api/paymentApi";
@@ -46,8 +45,8 @@ export const SuccessPage = () => {
         setError(null);
         pollAttemptsRef.current += 1;
 
-        const isAwaitingActivationLink = payload.payment_status === "paid" && !payload.activation_link && pollAttemptsRef.current < 20;
-        if (payload.payment_status !== "paid" || isAwaitingActivationLink) {
+        const isAwaitingAccessLink = payload.payment_status === "paid" && !payload.access_link && pollAttemptsRef.current < 20;
+        if (payload.payment_status !== "paid" || isAwaitingAccessLink) {
           timer = window.setTimeout(pollStatus, 3000);
         }
       } catch {
@@ -69,9 +68,9 @@ export const SuccessPage = () => {
   }, [copy.ui.payError, orderId, sessionId]);
 
   const isPaid = status?.payment_status === "paid";
-  const hasActivationLink = Boolean(status?.activation_link);
-  const isPendingStatus = Boolean(orderId || sessionId) && (!isPaid || !hasActivationLink);
-  const openBotHref = status?.activation_link || "";
+  const hasAccessLink = Boolean(status?.access_link);
+  const isPendingStatus = Boolean(orderId || sessionId) && (!isPaid || !hasAccessLink);
+  const openAppHref = status?.access_link || "";
   const retryPayHref = addClickIdToPath(payRoutes.checkout(lang, sessionId), location.search);
 
   useEffect(() => {
@@ -91,14 +90,16 @@ export const SuccessPage = () => {
           </BrandHomeLink>
         </div>
         <section className="source-success__card">
-          <div className="source-success__icon-wrap">
-            <img src="/icons/checkout/affemity-funnel-checkout/green-check-mark.svg" alt="" />
-          </div>
-          <h1>{copy.ui.paySuccessTitle}</h1>
+          {!isPendingStatus ? (
+            <div className="source-success__icon-wrap">
+              <img src="/icons/checkout/affemity-funnel-checkout/green-check-mark.svg" alt="" />
+            </div>
+          ) : null}
+          <h1>{isPendingStatus ? copy.ui.payPendingTitle : copy.ui.paySuccessTitle}</h1>
           {isPendingStatus ? (
             <div className="source-success__pending" role="status" aria-live="polite">
               <span className="source-success__pending-spinner" aria-hidden="true">
-                <Spinner size="3" />
+                <span className="source-success__spinner" />
               </span>
               <span>{copy.ui.paySuccessPending}</span>
             </div>
@@ -106,23 +107,18 @@ export const SuccessPage = () => {
             <p className="source-success__copy">{copy.ui.paySuccessDone}</p>
           )}
           <div className="source-success__actions">
-            {openBotHref ? (
+            {openAppHref ? (
               <a
                 className="source-success__action-btn"
-                href={openBotHref}
+                href={openAppHref}
                 target="_blank"
                 rel="noreferrer"
-                onClick={() => reachYandexMetrikaGoal("open_bot")}
+                onClick={() => reachYandexMetrikaGoal("open_app")}
               >
-                {copy.ui.payOpenBot}
+                {copy.ui.payOpenApp}
               </a>
             ) : (
               <>
-                {isPendingStatus ? (
-                  <button className="source-success__action-btn" type="button" disabled aria-disabled="true">
-                    {copy.ui.paySuccessPending}
-                  </button>
-                ) : null}
                 {!isPendingStatus && sessionId ? (
                   <Link className="source-success__action-link" to={retryPayHref}>
                     {copy.ui.payStart}

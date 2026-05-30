@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiError, ConflictError, NotFoundError, createAppApi } from "../api";
-import { appCopy, roleLabels } from "../copy";
+import { useI18n } from "../i18n";
+import type { AppMessages } from "../i18n";
 import type {
   AppAuthApi,
   RoleMeta,
@@ -34,11 +35,11 @@ const makeMessage = (partial: Omit<SessionMessage, "id">): SessionMessage => ({
   ...partial,
 });
 
-const makeAssistantMessage = (payload: SessionGenerateResponse["ui_payload"]): SessionMessage =>
+const makeAssistantMessage = (payload: SessionGenerateResponse["ui_payload"], messages: AppMessages): SessionMessage =>
   makeMessage({
     kind: "assistant",
     role: null,
-    authorLabel: appCopy.brand.name,
+    authorLabel: messages.brand.name,
     sentAt: new Date().toISOString(),
     text: String(payload.message_template || payload.diagnosis || payload.primary_message || payload.next_step || "").trim(),
     uiPayload: payload,
@@ -58,16 +59,16 @@ const stripServiceTags = (value: string): string =>
     .replace(/^[:\s-]+/, "")
     .trim();
 
-const sanitizeMessageText = (kind: SessionMessage["kind"], value: string): string => {
+const sanitizeMessageText = (kind: SessionMessage["kind"], value: string, messages: AppMessages): string => {
   const clean = stripServiceTags(value);
   if (!clean) {
     return value;
   }
-  if (kind === "audio" && !clean.startsWith(appCopy.session.voicePendingTag)) {
-    return `${appCopy.session.voicePendingTag}: ${clean}`;
+  if (kind === "audio" && !clean.startsWith(messages.session.voicePendingTag)) {
+    return `${messages.session.voicePendingTag}: ${clean}`;
   }
-  if (kind === "image" && !clean.startsWith(appCopy.session.imagePendingTag)) {
-    return `${appCopy.session.imagePendingTag}: ${clean}`;
+  if (kind === "image" && !clean.startsWith(messages.session.imagePendingTag)) {
+    return `${messages.session.imagePendingTag}: ${clean}`;
   }
   return clean;
 };
@@ -103,14 +104,14 @@ const toGeneratedResponse = (detail: SessionDetail): SessionGenerateResponse | n
   };
 };
 
-const normalizeMessages = (items: SessionDetail["messages"]): SessionMessage[] =>
+const normalizeMessages = (items: SessionDetail["messages"], messages: AppMessages): SessionMessage[] =>
   items.map((item) => ({
     id: item.id,
     kind: item.kind,
     role: item.role,
     authorLabel: (item as SessionMessage & { author_label?: string | null }).authorLabel ?? (item as { author_label?: string | null }).author_label ?? null,
     sentAt: (item as SessionMessage & { sent_at?: string | null }).sentAt ?? (item as { sent_at?: string | null }).sent_at ?? null,
-    text: sanitizeMessageText(item.kind, item.text),
+    text: sanitizeMessageText(item.kind, item.text, messages),
     uiPayload: (item as SessionMessage & { ui_payload?: SessionGenerateResponse["ui_payload"] | null }).uiPayload ?? (item as { ui_payload?: SessionGenerateResponse["ui_payload"] | null }).ui_payload ?? null,
     pending: item.pending,
   }));
@@ -155,6 +156,7 @@ export function useSession({
   onToast,
   trackThinking,
 }: UseSessionParams) {
+  const { messages: i18nMessages, roleLabels } = useI18n();
   const accessToken = authApi.auth?.tokens.access_token ?? null;
   const onForbiddenRef = useRef(onForbidden);
   const onToastRef = useRef(onToast);
@@ -203,9 +205,9 @@ export function useSession({
         if (cancelled) {
           return;
         }
-        const nextMessages = normalizeMessages(detail.messages);
+        const nextMessages = normalizeMessages(detail.messages, i18nMessages);
         if (detail.ui_payload && !nextMessages.some((message) => message.kind === "assistant" && message.uiPayload)) {
-          nextMessages.push(makeAssistantMessage(detail.ui_payload));
+          nextMessages.push(makeAssistantMessage(detail.ui_payload, i18nMessages));
         }
         setMessages(nextMessages);
         setContextPreview(detail.context_preview || "");
@@ -217,12 +219,12 @@ export function useSession({
           return;
         }
         if (error instanceof ConflictError && error.status === 403) {
-          onToastRef.current({ message: appCopy.toasts.sessionOwnershipMismatch, tone: "warning" });
+          onToastRef.current({ message: i18nMessages.toasts.sessionOwnershipMismatch, tone: "warning" });
           onForbiddenRef.current();
         } else if (error instanceof NotFoundError) {
-          onToastRef.current({ message: appCopy.toasts.sessionRestart, tone: "warning" });
+          onToastRef.current({ message: i18nMessages.toasts.sessionRestart, tone: "warning" });
         } else {
-          onToastRef.current({ message: "Не получилось загрузить сессию.", tone: "error" });
+          onToastRef.current({ message: i18nMessages.session.loadError, tone: "error" });
         }
       } finally {
         if (!cancelled) {
@@ -234,15 +236,15 @@ export function useSession({
     return () => {
       cancelled = true;
     };
-  }, [api, sessionId]);
+  }, [api, i18nMessages, sessionId]);
 
   const guardReadOnly = useCallback(() => {
     if (!readOnly) {
       return false;
     }
-    onToast({ message: "Эта сессия доступна только для просмотра.", tone: "warning" });
+    onToast({ message: i18nMessages.session.readOnly, tone: "warning" });
     return true;
-  }, [onToast, readOnly]);
+  }, [i18nMessages, onToast, readOnly]);
 
   const withRecovery = useCallback(
     async <T,>(operation: () => Promise<T>): Promise<T> => {
@@ -251,7 +253,7 @@ export function useSession({
       } catch (error) {
         if (error instanceof ConflictError && error.status === 403) {
           onToast({
-            message: appCopy.toasts.sessionOwnershipMismatch,
+            message: i18nMessages.toasts.sessionOwnershipMismatch,
             tone: "warning",
           });
           onForbidden();
@@ -261,9 +263,9 @@ export function useSession({
           const reset = await api.resetActive();
           const next = await api.startSession(mode);
           onToast({
-            message: error instanceof NotFoundError ? appCopy.toasts.sessionRestart : appCopy.toasts.sessionConflict,
+            message: error instanceof NotFoundError ? i18nMessages.toasts.sessionRestart : i18nMessages.toasts.sessionConflict,
             action: {
-              label: appCopy.toasts.startOver,
+              label: i18nMessages.toasts.startOver,
               onClick: () => onRestartSession(next.session_id),
             },
           });
@@ -275,7 +277,7 @@ export function useSession({
         throw error;
       }
     },
-    [api, mode, onForbidden, onRestartSession, onToast],
+    [api, i18nMessages, mode, onForbidden, onRestartSession, onToast],
   );
 
   const sendText = useCallback(
@@ -315,7 +317,7 @@ export function useSession({
         setBusy(false);
       }
     },
-    [api, guardReadOnly, sessionId, withRecovery],
+    [api, guardReadOnly, roleLabels, sessionId, withRecovery],
   );
 
   const uploadMedia = useCallback(
@@ -328,7 +330,7 @@ export function useSession({
         role: meta.role,
         authorLabel: meta.display_name || roleLabels[meta.role],
         sentAt: meta.sent_at,
-        text: kind === "audio" ? appCopy.session.voicePendingTag : appCopy.session.imagePendingTag,
+        text: kind === "audio" ? i18nMessages.session.voicePendingTag : i18nMessages.session.imagePendingTag,
         pending: true,
       });
       setBusy(true);
@@ -352,11 +354,11 @@ export function useSession({
           const nextText =
             kind === "audio"
               ? transcript
-                ? `${appCopy.session.voicePendingTag}: ${transcript}`
-                : appCopy.session.voicePendingTag
+                ? `${i18nMessages.session.voicePendingTag}: ${transcript}`
+                : i18nMessages.session.voicePendingTag
               : transcript
-                ? `${appCopy.session.imagePendingTag}: ${transcript}`
-                : appCopy.session.imagePendingTag;
+                ? `${i18nMessages.session.imagePendingTag}: ${transcript}`
+                : i18nMessages.session.imagePendingTag;
           return current.map((message) =>
             message.id === optimistic.id ? { ...message, pending: false, text: nextText ?? message.text } : message,
           );
@@ -367,8 +369,8 @@ export function useSession({
           onToast({
             message:
               error instanceof ApiError && error.detail
-                ? appCopy.session.voiceDecodeError
-                : appCopy.session.voiceDecodeError,
+                ? i18nMessages.session.voiceDecodeError
+                : i18nMessages.session.voiceDecodeError,
             tone: "error",
           });
           return;
@@ -378,7 +380,7 @@ export function useSession({
         setBusy(false);
       }
     },
-    [api, guardReadOnly, onToast, sessionId, trackThinking, withRecovery],
+    [api, guardReadOnly, i18nMessages, onToast, roleLabels, sessionId, trackThinking, withRecovery],
   );
 
   const closeBatch = useCallback(async () => {
@@ -452,7 +454,7 @@ export function useSession({
         setStage(snapshotStage);
         setGenerated(snapshotGenerated);
         onToast({
-          message: appCopy.session.deleteFragmentError,
+          message: i18nMessages.session.deleteFragmentError,
           tone: "error",
         });
         return false;
@@ -460,7 +462,7 @@ export function useSession({
         setDeletingMessageId(null);
       }
     },
-    [api, contextPreview, deletingMessageId, generated, guardReadOnly, messages, mode, onToast, sessionId, stage, withRecovery],
+    [api, contextPreview, deletingMessageId, generated, guardReadOnly, i18nMessages, messages, mode, onToast, sessionId, stage, withRecovery],
   );
 
   const confirmContext = useCallback(
@@ -493,12 +495,12 @@ export function useSession({
     try {
       const response = await withRecovery(() => trackThinking(api.generate(sessionId)));
       setGenerated(response);
-      setMessages((current) => [...current, makeAssistantMessage(response.ui_payload)]);
+      setMessages((current) => [...current, makeAssistantMessage(response.ui_payload, i18nMessages)]);
       setStage("result");
     } finally {
       setBusy(false);
     }
-  }, [api, guardReadOnly, sessionId, trackThinking, withRecovery]);
+  }, [api, guardReadOnly, i18nMessages, sessionId, trackThinking, withRecovery]);
 
   const finalizeBatch = useCallback(async () => {
     if (guardReadOnly()) {
@@ -518,7 +520,7 @@ export function useSession({
 
       const response = await withRecovery(() => trackThinking(api.generate(sessionId)));
       setGenerated(response);
-      setMessages((current) => [...current, makeAssistantMessage(response.ui_payload)]);
+      setMessages((current) => [...current, makeAssistantMessage(response.ui_payload, i18nMessages)]);
       setStage("result");
     } catch (error) {
       setStage("collect");
@@ -527,7 +529,7 @@ export function useSession({
       setFinalizing(false);
       setBusy(false);
     }
-  }, [api, guardReadOnly, sessionId, trackThinking, withRecovery]);
+  }, [api, guardReadOnly, i18nMessages, sessionId, trackThinking, withRecovery]);
 
   const refine = useCallback(
     async (command: string) => {
@@ -542,13 +544,13 @@ export function useSession({
       try {
         const response = await withRecovery(() => trackThinking(api.refine(sessionId, command.trim())));
         setGenerated(response);
-        setMessages((current) => [...current, makeAssistantMessage(response.ui_payload)]);
+        setMessages((current) => [...current, makeAssistantMessage(response.ui_payload, i18nMessages)]);
         setStage("result");
       } finally {
         setBusy(false);
       }
     },
-    [api, guardReadOnly, sessionId, trackThinking, withRecovery],
+    [api, guardReadOnly, i18nMessages, sessionId, trackThinking, withRecovery],
   );
 
   const reset = useCallback(async () => {
@@ -566,11 +568,11 @@ export function useSession({
 
   const returnToCollect = useCallback(() => {
     if (readOnly) {
-      onToast({ message: "Эта сессия доступна только для просмотра.", tone: "warning" });
+      onToast({ message: i18nMessages.session.readOnly, tone: "warning" });
       return;
     }
     setStage("collect");
-  }, [onToast, readOnly]);
+  }, [i18nMessages, onToast, readOnly]);
 
   return {
     messages,

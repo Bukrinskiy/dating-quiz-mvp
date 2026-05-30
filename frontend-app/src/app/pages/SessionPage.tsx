@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
-import { appCopy } from "../copy";
 import { useSession } from "../hooks/useSession";
 import { useToast } from "../hooks/useToast";
+import { useI18n } from "../i18n";
 import { rememberRecentSession, updateRecentSessionPreview } from "../local-state";
 import { ChatScreen } from "../session/ChatScreen";
 import { RoleMetaSheet } from "../session/RoleMetaSheet";
@@ -28,6 +28,7 @@ export function SessionPage({ authApi }: SessionPageProps) {
   const [metaOpen, setMetaOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { push } = useToast();
+  const { messages } = useI18n();
   const mode = (searchParams.get("mode") || "analyze_case") as SessionMode;
   const handleForbidden = useCallback(() => navigate("/app", { replace: true }), [navigate]);
   const handleRestartSession = useCallback(
@@ -71,7 +72,7 @@ export function SessionPage({ authApi }: SessionPageProps) {
           hasAssets={session.hasAssets}
           messages={session.messages}
           meta={meta}
-          onAudioDenied={() => push({ message: appCopy.session.microphoneDenied, tone: "warning" })}
+          onAudioDenied={() => push({ message: messages.session.microphoneDenied, tone: "warning" })}
           onCloseBatch={session.actions.finalizeBatch}
           onDeleteMessage={(messageId) => session.actions.deleteMessage(messageId)}
           onOpenRoleMeta={() => setMetaOpen(true)}
@@ -81,7 +82,7 @@ export function SessionPage({ authApi }: SessionPageProps) {
         />
       </div>
       <RoleMetaSheet open={metaOpen} value={meta} onApply={setMeta} onClose={() => setMetaOpen(false)} />
-      <BottomSheet open={menuOpen} title={appCopy.session.sessionMenu} onClose={() => setMenuOpen(false)}>
+      <BottomSheet open={menuOpen} title={messages.session.sessionMenu} onClose={() => setMenuOpen(false)}>
         <div className="sheet-choice-grid">
           <button
             className="button button--secondary button--lg button--full"
@@ -91,13 +92,13 @@ export function SessionPage({ authApi }: SessionPageProps) {
             }}
             type="button"
           >
-            {appCopy.session.roleTitle}
+            {messages.session.roleTitle}
           </button>
           <button
             className="button button--danger button--lg button--full"
             onClick={async () => {
               setMenuOpen(false);
-              const approved = window.confirm(`${appCopy.session.sessionExitTitle}\n\n${appCopy.session.sessionExitBody}`);
+              const approved = window.confirm(`${messages.session.sessionExitTitle}\n\n${messages.session.sessionExitBody}`);
               if (!approved) {
                 return;
               }
@@ -106,7 +107,7 @@ export function SessionPage({ authApi }: SessionPageProps) {
             }}
             type="button"
           >
-            {appCopy.session.resetSession}
+            {messages.session.resetSession}
           </button>
         </div>
       </BottomSheet>

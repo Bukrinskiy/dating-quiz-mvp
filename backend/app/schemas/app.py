@@ -16,6 +16,7 @@ class AppAccessStatusResponse(BaseModel):
     order_id: str | None = None
     plan: str | None = None
     access_status: str | None = None
+    status_label: Literal["Inactive", "Active", "Promo"] = "Inactive"
     expires_at: str | None = None
 
 
@@ -41,6 +42,14 @@ class AppEmailCodeConfirmRequest(BaseModel):
 
 class AppEmailCodeResponse(BaseModel):
     status: str
+
+
+class AppLocaleUpdateRequest(BaseModel):
+    locale: str = Field(min_length=1, max_length=8)
+
+
+class AppAccessCodeRedeemRequest(BaseModel):
+    code: str = Field(min_length=2, max_length=64)
 
 
 class AppSupportRequest(BaseModel):

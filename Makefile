@@ -26,7 +26,7 @@ echo "Push failed for $(1) after $(PUSH_RETRIES) attempts" >&2; \
 exit 1
 endef
 
-.PHONY: help up down restart build rebuild ps logs logs-frontend logs-backend logs-bot test-up test-down test-restart test-ps test-logs test-backend test-backend-local frontend-build backend-build bot-build backend-lint frontend-lint frontend-landing-lint frontend-pay-lint frontend-app-lint alembic-revision alembic-upgrade alembic-new dev-up dev-build dev-down dev-restart dev-logs dev-logs-backend dev-logs-frontend-site dev-logs-frontend-landing dev-logs-frontend-pay dev-logs-frontend-app dev-logs-bot dev-ps dev-frontend dev-frontend-site dev-frontend-landing dev-frontend-pay dev-frontend-app docker-login push-backend-image push-frontend-site-image push-frontend-landing-image push-frontend-pay-image push-frontend-app-image push-bot-image push-images deploy
+.PHONY: help up down restart build rebuild ps logs logs-frontend logs-backend logs-bot test-up test-down test-restart test-ps test-logs test-backend test-backend-local frontend-build backend-build bot-build backend-lint frontend-lint frontend-landing-lint frontend-pay-lint frontend-app-lint alembic-revision alembic-upgrade alembic-new dev-up dev-build dev-down dev-restart dev-logs dev-logs-backend dev-logs-frontend-site dev-logs-frontend-landing dev-logs-frontend-pay dev-logs-frontend-app dev-logs-bot dev-ps dev-frontend dev-frontend-site dev-frontend-landing dev-frontend-pay dev-frontend-app docker-login push-backend-image push-frontend-site-image push-frontend-landing-image push-frontend-pay-image push-frontend-app-image push-bot-image push-images install-hestia-proxy deploy
 
 help:
 	@echo "Available targets:"
@@ -82,7 +82,8 @@ help:
 	@echo "  make push-frontend-pay-image     - Build+push frontend-pay image ($(BUILD_PLATFORM))"
 	@echo "  make push-frontend-app-image     - Build+push frontend-app image ($(BUILD_PLATFORM))"
 	@echo "  make push-images        - Login and push target app images"
-	@echo "  make deploy             - Push images and restart remote app on clario-landing"
+	@echo "  make install-hestia-proxy - Sync infra/hestia/ to prod and (re)install Apache reverse-proxy includes"
+	@echo "  make deploy             - Push images, sync Hestia proxy config, restart remote app on clario-landing"
 
 up:
 	$(COMPOSE) build $(FULL_BUILD_FLAGS)
@@ -241,7 +242,9 @@ push-frontend-site-image:
 
 push-frontend-landing-image:
 	@VITE_MOBI_SLON_URL="$$(grep -m1 '^VITE_MOBI_SLON_URL=' .env | sed 's/^[^=]*=//')"; \
-	VITE_MOBI_SLON_CAMPAIGN_KEY="$$(grep -m1 '^VITE_MOBI_SLON_CAMPAIGN_KEY=' .env | sed 's/^[^=]*=//')"; \
+	VITE_MOBI_SLON_CAMPAIGN_KEY_FACEBOOK="$$(grep -m1 '^VITE_MOBI_SLON_CAMPAIGN_KEY_FACEBOOK=' .env | sed 's/^[^=]*=//')"; \
+	VITE_MOBI_SLON_CAMPAIGN_KEY_GOOGLE="$$(grep -m1 '^VITE_MOBI_SLON_CAMPAIGN_KEY_GOOGLE=' .env | sed 's/^[^=]*=//')"; \
+	VITE_GOOGLE_ADS_ID="$$(grep -m1 '^VITE_GOOGLE_ADS_ID=' .env | sed 's/^[^=]*=//')"; \
 	VITE_FB_PIXEL_ID="$$(grep -m1 '^VITE_FB_PIXEL_ID=' .env | sed 's/^[^=]*=//')"; \
 	VITE_YANDEX_METRIKA_ID="$$(grep -m1 '^VITE_YANDEX_METRIKA_ID=' .env | sed 's/^[^=]*=//')"; \
 	VITE_TRACKING_DEBUG="$$(grep -m1 '^VITE_TRACKING_DEBUG=' .env | sed 's/^[^=]*=//')"; \
@@ -251,7 +254,9 @@ push-frontend-landing-image:
 		--build-arg API_BASE_URL="https://api.flirto.guru" \
 		--build-arg PAY_PUBLIC_BASE_URL="https://pay.flirto.guru" \
 		--build-arg VITE_MOBI_SLON_URL="$$VITE_MOBI_SLON_URL" \
-		--build-arg VITE_MOBI_SLON_CAMPAIGN_KEY="$$VITE_MOBI_SLON_CAMPAIGN_KEY" \
+		--build-arg VITE_MOBI_SLON_CAMPAIGN_KEY_FACEBOOK="$$VITE_MOBI_SLON_CAMPAIGN_KEY_FACEBOOK" \
+		--build-arg VITE_MOBI_SLON_CAMPAIGN_KEY_GOOGLE="$$VITE_MOBI_SLON_CAMPAIGN_KEY_GOOGLE" \
+		--build-arg VITE_GOOGLE_ADS_ID="$$VITE_GOOGLE_ADS_ID" \
 		--build-arg VITE_FB_PIXEL_ID="$$VITE_FB_PIXEL_ID" \
 		--build-arg VITE_YANDEX_METRIKA_ID="$$VITE_YANDEX_METRIKA_ID" \
 		--build-arg VITE_TRACKING_DEBUG="$$VITE_TRACKING_DEBUG" \
@@ -259,9 +264,7 @@ push-frontend-landing-image:
 	@$(call docker_push_retry,$(FRONTEND_LANDING_IMAGE))
 
 push-frontend-pay-image:
-	@VITE_MOBI_SLON_URL="$$(grep -m1 '^VITE_MOBI_SLON_URL=' .env | sed 's/^[^=]*=//')"; \
-	VITE_MOBI_SLON_CAMPAIGN_KEY="$$(grep -m1 '^VITE_MOBI_SLON_CAMPAIGN_KEY=' .env | sed 's/^[^=]*=//')"; \
-	VITE_FB_PIXEL_ID="$$(grep -m1 '^VITE_FB_PIXEL_ID=' .env | sed 's/^[^=]*=//')"; \
+	@VITE_FB_PIXEL_ID="$$(grep -m1 '^VITE_FB_PIXEL_ID=' .env | sed 's/^[^=]*=//')"; \
 	VITE_YANDEX_METRIKA_ID="$$(grep -m1 '^VITE_YANDEX_METRIKA_ID=' .env | sed 's/^[^=]*=//')"; \
 	VITE_TRACKING_DEBUG="$$(grep -m1 '^VITE_TRACKING_DEBUG=' .env | sed 's/^[^=]*=//')"; \
 	docker build --platform "$(BUILD_PLATFORM)" \
@@ -269,8 +272,6 @@ push-frontend-pay-image:
 		--build-arg APP_SURFACE="pay" \
 		--build-arg API_BASE_URL="https://api.flirto.guru" \
 		--build-arg PAY_PUBLIC_BASE_URL="https://pay.flirto.guru" \
-		--build-arg VITE_MOBI_SLON_URL="$$VITE_MOBI_SLON_URL" \
-		--build-arg VITE_MOBI_SLON_CAMPAIGN_KEY="$$VITE_MOBI_SLON_CAMPAIGN_KEY" \
 		--build-arg VITE_FB_PIXEL_ID="$$VITE_FB_PIXEL_ID" \
 		--build-arg VITE_YANDEX_METRIKA_ID="$$VITE_YANDEX_METRIKA_ID" \
 		--build-arg VITE_TRACKING_DEBUG="$$VITE_TRACKING_DEBUG" \
@@ -284,6 +285,7 @@ push-frontend-app-image:
 		--build-arg API_BASE_URL="https://api.flirto.guru" \
 		--build-arg PAY_PUBLIC_BASE_URL="https://pay.flirto.guru" \
 		--build-arg APP_PUBLIC_BASE_URL="https://app.flirto.guru" \
+		--build-arg LANDING_PUBLIC_BASE_URL="https://lp1.flirto.guru" \
 		-f frontend-app/Dockerfile -t "$(FRONTEND_APP_IMAGE)" .
 	@$(call docker_push_retry,$(FRONTEND_APP_IMAGE))
 
@@ -293,5 +295,12 @@ push-bot-image:
 
 push-images: docker-login push-backend-image push-frontend-site-image push-frontend-landing-image push-frontend-pay-image push-frontend-app-image push-bot-image
 
-deploy: push-images
+HESTIA_REMOTE_DIR ?= /tmp/flirto-hestia-install
+
+install-hestia-proxy:
+	ssh clario-landing 'mkdir -p $(HESTIA_REMOTE_DIR)'
+	rsync -az --delete infra/hestia/ clario-landing:$(HESTIA_REMOTE_DIR)/
+	ssh clario-landing 'sudo bash $(HESTIA_REMOTE_DIR)/install.sh'
+
+deploy: push-images install-hestia-proxy
 	ssh clario-landing 'cd /opt/flirto-guru && docker compose up -d --force-recreate'

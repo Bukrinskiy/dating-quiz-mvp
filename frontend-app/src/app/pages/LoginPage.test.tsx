@@ -1,8 +1,9 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
 
+import { renderWithI18n } from "../../test/renderWithI18n";
 import { LoginPage } from "./LoginPage";
 
 const authApi = {
@@ -16,10 +17,11 @@ test("LoginPage reveals code field only after successful request", async () => {
   const user = userEvent.setup();
   const onRequestCode = vi.fn(async () => undefined);
 
-  render(
+  renderWithI18n(
     <MemoryRouter>
       <LoginPage authApi={authApi} onConfirmCode={vi.fn(async () => undefined)} onRequestCode={onRequestCode} />
     </MemoryRouter>,
+    { locale: "ru" },
   );
 
   expect(screen.queryByLabelText("Код из письма")).not.toBeInTheDocument();
@@ -43,10 +45,11 @@ test("LoginPage shows spinner while requesting code", async () => {
       }),
   );
 
-  render(
+  renderWithI18n(
     <MemoryRouter>
       <LoginPage authApi={authApi} onConfirmCode={vi.fn(async () => undefined)} onRequestCode={onRequestCode} />
     </MemoryRouter>,
+    { locale: "ru" },
   );
 
   await user.type(screen.getByLabelText("Email"), "user@example.com");

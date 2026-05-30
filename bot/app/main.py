@@ -67,8 +67,8 @@ async def _sync_bot_commands(bot: Bot) -> None:
             BotCommand(command="reset", description="Сбросить активную сессию"),
             BotCommand(command="restore", description="Восстановить доступ"),
             BotCommand(command="support", description="Написать в поддержку"),
-            BotCommand(command="grant_access", description="Выдать ручной доступ по email"),
-            BotCommand(command="revoke_access", description="Отозвать ручной доступ по email"),
+            BotCommand(command="create_promo_code", description="Создать промокод на 7 дней"),
+            BotCommand(command="create_promo_code_until", description="Создать промокод до даты"),
         ]
     )
 

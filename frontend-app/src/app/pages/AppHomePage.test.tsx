@@ -1,11 +1,11 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
 
+import { renderWithI18n } from "../../test/renderWithI18n";
 import { createAppApi } from "../api";
 import { AppHomePage } from "./AppHomePage";
-import { ONBOARDING_STORAGE_KEY } from "../local-state";
+import { INSTALL_HINT_STORAGE_KEY, ONBOARDING_STORAGE_KEY } from "../local-state";
 
 vi.mock("../api", async () => {
   const actual = await vi.importActual<typeof import("../api")>("../api");
@@ -28,31 +28,24 @@ const authApi = {
   logout: vi.fn(async () => undefined),
 };
 
-test("AppHomePage stores onboarding dismissal", async () => {
-  const user = userEvent.setup();
-  window.localStorage.removeItem(ONBOARDING_STORAGE_KEY);
-  mockedCreateAppApi.mockReturnValue({ listSessions: vi.fn(async () => []) } as ReturnType<typeof createAppApi>);
-
-  render(
-    <MemoryRouter>
-      <AppHomePage accessStatus={null} authApi={authApi} onStartMode={vi.fn(async () => "session-1")} />
-    </MemoryRouter>,
-  );
-
-  expect(screen.getByText("Добавь контекст")).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Пропустить" }));
-
-  expect(window.localStorage.getItem(ONBOARDING_STORAGE_KEY)).toBe("1");
+beforeEach(() => {
+  window.localStorage.clear();
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })),
+  });
 });
 
-test("AppHomePage renders single consultation entry button", () => {
+test("AppHomePage renders single consultation entry button", async () => {
   window.localStorage.setItem(ONBOARDING_STORAGE_KEY, "1");
+  window.localStorage.setItem(INSTALL_HINT_STORAGE_KEY, "1");
   mockedCreateAppApi.mockReturnValue({ listSessions: vi.fn(async () => []) } as ReturnType<typeof createAppApi>);
 
-  render(
+  renderWithI18n(
     <MemoryRouter>
       <AppHomePage accessStatus={null} authApi={authApi} onStartMode={vi.fn(async () => "session-1")} />
     </MemoryRouter>,
+    { locale: "ru" },
   );
 
   expect(screen.getAllByText("Новая консультация")).toHaveLength(2);
@@ -61,10 +54,12 @@ test("AppHomePage renders single consultation entry button", () => {
   expect(screen.queryByRole("link", { name: "U" })).not.toBeInTheDocument();
   expect(screen.queryByText("Что написать")).not.toBeInTheDocument();
   expect(screen.queryByText("Разобрать")).not.toBeInTheDocument();
+  await screen.findByText("История появится здесь");
 });
 
 test("AppHomePage shows the latest 10 recent sessions", async () => {
   window.localStorage.setItem(ONBOARDING_STORAGE_KEY, "1");
+  window.localStorage.setItem(INSTALL_HINT_STORAGE_KEY, "1");
   mockedCreateAppApi.mockReturnValue({
     listSessions: vi.fn(async () =>
       Array.from({ length: 12 }, (_, index) => ({
@@ -82,10 +77,11 @@ test("AppHomePage shows the latest 10 recent sessions", async () => {
     ),
   } as ReturnType<typeof createAppApi>);
 
-  const { container } = render(
+  const { container } = renderWithI18n(
     <MemoryRouter>
       <AppHomePage accessStatus={null} authApi={authApi} onStartMode={vi.fn(async () => "session-1")} />
     </MemoryRouter>,
+    { locale: "ru" },
   );
 
   await waitFor(() => expect(screen.getByText("Диалог завис из-за неопределенности и слишком дли...")).toBeInTheDocument());

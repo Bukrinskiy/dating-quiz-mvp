@@ -17,6 +17,7 @@ os.environ["STRIPE_PUBLISHABLE_KEY"] = "pk_test_dummy"
 os.environ["STRIPE_WEBHOOK_SECRET"] = "whsec_dummy"
 os.environ["SITE_PUBLIC_BASE_URL"] = "https://flirto.guru"
 os.environ["PAY_PUBLIC_BASE_URL"] = "https://pay.flirto.guru"
+os.environ["APP_PUBLIC_BASE_URL"] = "https://app.flirto.guru"
 os.environ["API_PUBLIC_BASE_URL"] = "https://api.flirto.guru"
 os.environ["BACKEND_CORS_ALLOW_ORIGINS"] = "https://flirto.guru,https://pay.flirto.guru,https://lp1.flirto.guru"
 os.environ["ACCESS_TOKEN_SECRET"] = "test-secret"
@@ -35,7 +36,7 @@ from app.main import app
 import app.main as app_main
 from app.core.config import get_settings
 from app.core.db.session import SessionLocal, init_db
-from app.core.models.payment import HttpRequestLog, ManualAccessGrant, MobiSlonRequestLog, Order, PromoOffer, QuizSession, utcnow
+from app.core.models.payment import AccessCode, HttpRequestLog, MobiSlonRequestLog, Order, PromoOffer, QuizSession, utcnow
 
 
 def _create_promo_offer(
@@ -269,15 +270,14 @@ def test_payment_intent_rejects_invalid_promo_code(monkeypatch) -> None:
     assert response.json()["detail"]["code"] == "promo_invalid"
 
 
-def test_bot_admin_grant_and_revoke_access_endpoints() -> None:
+def test_bot_admin_access_code_create_endpoint() -> None:
     headers = {"X-Internal-Token": "test-internal-token"}
     expires_at = (utcnow() + timedelta(days=3)).isoformat()
 
     with TestClient(app) as client:
-        grant_response = client.post(
-            "/api/bot/admin/access/grant",
+        create_response = client.post(
+            "/api/bot/admin/access-code/create",
             json={
-                "email": "manual-endpoint@example.com",
                 "expires_at": expires_at,
                 "admin_telegram_user_id": "111",
                 "admin_telegram_username": "chief_admin",
@@ -285,37 +285,21 @@ def test_bot_admin_grant_and_revoke_access_endpoints() -> None:
             headers=headers,
         )
 
-        assert grant_response.status_code == 200
-        assert grant_response.json()["status"] == "granted"
-        assert grant_response.json()["has_access_after"] is True
-        assert grant_response.json()["access_status"] == "manual_active"
+        assert create_response.status_code == 200
+        assert create_response.json()["status"] == "created"
+        assert create_response.json()["code"].startswith("FG-")
 
         with SessionLocal() as db:
-            grant = db.query(ManualAccessGrant).filter(ManualAccessGrant.email == "manual-endpoint@example.com").one()
-            assert grant.status == "active"
-            assert grant.granted_by_telegram_user_id == "111"
-
-        revoke_response = client.post(
-            "/api/bot/admin/access/revoke",
-            json={
-                "email": "manual-endpoint@example.com",
-                "admin_telegram_user_id": "111",
-                "admin_telegram_username": "chief_admin",
-            },
-            headers=headers,
-        )
-
-        assert revoke_response.status_code == 200
-        assert revoke_response.json()["status"] == "revoked"
-        assert revoke_response.json()["has_access_after"] is False
+            code = db.query(AccessCode).filter(AccessCode.code == create_response.json()["code"]).one()
+            assert code.code == create_response.json()["code"]
+            assert code.created_by_telegram_username == "chief_admin"
 
 
 def test_bot_admin_access_endpoints_require_internal_token() -> None:
     with TestClient(app) as client:
         response = client.post(
-            "/api/bot/admin/access/grant",
+            "/api/bot/admin/access-code/create",
             json={
-                "email": "unauthorized@example.com",
                 "expires_at": (utcnow() + timedelta(days=2)).isoformat(),
                 "admin_telegram_user_id": "111",
             },
@@ -417,6 +401,12 @@ def test_payment_intent_paid_via_invoice_webhook_updates_order_status(monkeypatc
     monkeypatch.setattr("stripe.Product.list", lambda **_: DummyList())
     monkeypatch.setattr("stripe.Product.create", lambda **_: type("DummyProduct", (), {"id": "prod_intent_paid"})())
     monkeypatch.setattr("stripe.Subscription.create", lambda **_: DummySubscription())
+    captured_email: dict[str, str] = {}
+
+    def fake_send_access_email(self, *, email: str, order_id: str, access_link: str, locale: str) -> None:
+        captured_email.update({"email": email, "order_id": order_id, "access_link": access_link, "locale": locale})
+
+    monkeypatch.setattr("app.core.notifications.LogOnlyEmailSender.send_access_email", fake_send_access_email)
 
     with TestClient(app) as client:
         create_response = client.post(
@@ -451,6 +441,9 @@ def test_payment_intent_paid_via_invoice_webhook_updates_order_status(monkeypatc
         payload = status_response.json()
         assert payload["payment_status"] == "paid"
         assert payload["activation_link"]
+        assert payload["access_link"] == "https://app.flirto.guru/"
+        assert captured_email["access_link"] == "https://app.flirto.guru/"
+        assert "t.me" not in captured_email["access_link"]
 
 
 def test_payment_intent_uses_invoice_confirmation_secret_when_payment_intent_missing(monkeypatch) -> None:
@@ -530,6 +523,7 @@ def test_payment_intent_succeeded_webhook_marks_order_paid(monkeypatch) -> None:
         payload = status_response.json()
         assert payload["payment_status"] == "paid"
         assert payload["activation_link"]
+        assert payload["access_link"] == "https://app.flirto.guru/"
 
 
 def test_payment_plans_endpoint_returns_public_subscription_catalog() -> None:
@@ -1313,6 +1307,98 @@ def test_frontend_relay_mobi_slon_event_logs_upstream_failure(monkeypatch) -> No
     assert len(captured_calls) == 1
 
 
+def test_binom_ga_link_post_success(monkeypatch) -> None:
+    class DummyResponse:
+        status_code = 200
+        text = "OK"
+
+    captured_calls: list[dict[str, object]] = []
+
+    def fake_httpx_get(
+        url: str,
+        *,
+        params: dict[str, str],
+        timeout: float,
+    ) -> DummyResponse:
+        captured_calls.append({"url": url, "params": params, "timeout": timeout})
+        return DummyResponse()
+
+    monkeypatch.setattr("httpx.get", fake_httpx_get)
+    settings = get_settings()
+    settings.mobi_slon_postback_url = "https://whitetrack.example/index.php"
+
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/events/binom-ga-link",
+                json={
+                    "clickid": "bcid-abc-123",
+                    "ga_client_id": "1234567890.1710000000",
+                    "session_id": "sess_99",
+                    "page_path": "/en/quiz/1?bcid=bcid-abc-123",
+                },
+            )
+    finally:
+        settings.mobi_slon_postback_url = ""
+
+    assert response.status_code == 200
+    assert response.json() == {"accepted": True, "forwarded": True}
+    assert len(captured_calls) == 1
+    call = captured_calls[0]
+    assert call["url"] == "https://whitetrack.example/click"
+    assert call["params"] == {
+        "upd_clickid": "bcid-abc-123",
+        "client_id": "1234567890.1710000000",
+    }
+
+    with SessionLocal() as db:
+        mobi_log = db.query(MobiSlonRequestLog).order_by(MobiSlonRequestLog.created_at.desc()).first()
+
+    assert mobi_log is not None
+    assert mobi_log.transport == "binom_ga_link"
+    assert mobi_log.status == "ga_client_link"
+    assert mobi_log.accepted is True
+    assert mobi_log.forwarded is True
+
+
+def test_binom_ga_link_post_upstream_failure(monkeypatch) -> None:
+    def fake_httpx_get(url: str, *, params: dict[str, str], timeout: float) -> None:
+        raise RuntimeError("whitetrack down")
+
+    monkeypatch.setattr("httpx.get", fake_httpx_get)
+    settings = get_settings()
+    settings.mobi_slon_postback_url = "https://whitetrack.example/index.php"
+
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/events/binom-ga-link",
+                json={"clickid": "bcid-fail", "ga_client_id": "12.34"},
+            )
+    finally:
+        settings.mobi_slon_postback_url = ""
+
+    assert response.status_code == 200
+    assert response.json() == {"accepted": True, "forwarded": False}
+
+    with SessionLocal() as db:
+        mobi_log = db.query(MobiSlonRequestLog).order_by(MobiSlonRequestLog.created_at.desc()).first()
+
+    assert mobi_log is not None
+    assert mobi_log.forwarded is False
+    assert mobi_log.error_class == "RuntimeError"
+    assert mobi_log.error_message == "whitetrack down"
+
+
+def test_binom_ga_link_rejects_empty_clickid() -> None:
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/events/binom-ga-link",
+            json={"clickid": "!!!", "ga_client_id": "12.34"},
+        )
+    assert response.status_code == 400
+
+
 def test_http_request_middleware_skips_bot_routes() -> None:
     with TestClient(app) as client:
         response = client.post(
@@ -1841,7 +1927,15 @@ def test_bot_session_text_flow_generate_refine_reset(monkeypatch) -> None:
             headers={"X-Internal-Token": "test-internal-token"},
         )
         assert close_resp.status_code == 200
-        assert close_resp.json()["state"] == "ready_to_generate"
+        assert close_resp.json()["state"] == "awaiting_context_confirmation"
+
+        confirm_resp = client.post(
+            f"/api/bot/session/{session_id}/confirm-context",
+            json={"telegram_user_id": "555", "action": "confirm:yes"},
+            headers={"X-Internal-Token": "test-internal-token"},
+        )
+        assert confirm_resp.status_code == 200
+        assert confirm_resp.json()["state"] == "ready_to_generate"
 
         gen_resp = client.post(
             f"/api/bot/session/{session_id}/generate",

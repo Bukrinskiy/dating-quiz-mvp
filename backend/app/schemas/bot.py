@@ -32,27 +32,16 @@ class BotRestoreConfirmRequest(BaseModel):
     telegram_user_id: str = Field(min_length=1)
 
 
-class BotAdminAccessGrantRequest(BaseModel):
-    email: str = Field(min_length=3)
-    expires_at: datetime
+class BotAdminAccessCodeCreateRequest(BaseModel):
+    expires_at: datetime | None = None
     admin_telegram_user_id: str = Field(min_length=1)
     admin_telegram_username: str | None = None
 
 
-class BotAdminAccessRevokeRequest(BaseModel):
-    email: str = Field(min_length=3)
-    admin_telegram_user_id: str = Field(min_length=1)
-    admin_telegram_username: str | None = None
-
-
-class BotAdminAccessResponse(BaseModel):
-    status: Literal["granted", "revoked", "not_found"]
-    email: str
-    expires_at: str | None = None
-    has_access_after: bool
-    order_id: str | None = None
-    plan: str | None = None
-    access_status: str | None = None
+class BotAdminAccessCodeCreateResponse(BaseModel):
+    status: Literal["created"]
+    code: str
+    expires_at: str
 
 
 class BotSessionStartRequest(BaseModel):
@@ -91,7 +80,7 @@ class BotSessionAssetRequest(BaseModel):
     telegram_message_id: int | None = None
 
     @model_validator(mode="after")
-    def validate_payload(self) -> "BotSessionAssetRequest":
+    def validate_payload(self) -> BotSessionAssetRequest:
         if self.asset_type in {"text", "forward"} and not (self.payload.text or "").strip():
             raise ValueError("payload.text is required for text/forward asset")
         if self.asset_type in {"image", "audio"}:
@@ -218,7 +207,7 @@ class BotMediaTranscribeRequest(BaseModel):
     payload: BotAssetPayload
 
     @model_validator(mode="after")
-    def validate_media(self) -> "BotMediaTranscribeRequest":
+    def validate_media(self) -> BotMediaTranscribeRequest:
         if self.payload.media is None:
             raise ValueError("payload.media is required")
         return self

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { appCopy } from "../copy";
+import { useI18n } from "../i18n";
 
 type RefineChipsProps = {
   busy: boolean;
@@ -8,13 +8,14 @@ type RefineChipsProps = {
 };
 
 export function RefineChips({ busy, onRefine }: RefineChipsProps) {
+  const { messages } = useI18n();
   const [custom, setCustom] = useState("");
 
   return (
     <div className="refine-box">
-      <h2>{appCopy.session.refineTitle}</h2>
+      <h2>{messages.session.refineTitle}</h2>
       <div className="refine-box__chips">
-        {appCopy.session.refinePresets.map((item) => (
+        {messages.session.refinePresets.map((item) => (
           <button className="chip" disabled={busy} key={item} onClick={() => void onRefine(item)}>
             {item}
           </button>
@@ -23,7 +24,7 @@ export function RefineChips({ busy, onRefine }: RefineChipsProps) {
       <div className="composer composer--compact">
         <textarea
           className="composer__input"
-          placeholder={appCopy.session.refinePlaceholder}
+          placeholder={messages.session.refinePlaceholder}
           value={custom}
           onChange={(event) => setCustom(event.target.value)}
         />
@@ -35,7 +36,7 @@ export function RefineChips({ busy, onRefine }: RefineChipsProps) {
             setCustom("");
           }}
         >
-          {appCopy.session.refineSend}
+          {messages.session.refineSend}
         </button>
       </div>
     </div>

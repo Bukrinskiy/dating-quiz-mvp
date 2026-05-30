@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { appCopy } from "../copy";
+import { useI18n } from "../i18n";
 import type { AppAuthApi } from "../types";
 
 type LoginPageProps = {
@@ -12,6 +12,7 @@ type LoginPageProps = {
 
 export function LoginPage({ authApi, onRequestCode, onConfirmCode }: LoginPageProps) {
   const navigate = useNavigate();
+  const { messages } = useI18n();
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [step, setStep] = useState<"email" | "code">("email");
@@ -31,22 +32,22 @@ export function LoginPage({ authApi, onRequestCode, onConfirmCode }: LoginPagePr
       </div>
       <div className="login-page__stack">
         <div className="login-page__copy">
-          <h1>{appCopy.login.title}</h1>
+          <h1>{messages.login.title}</h1>
         </div>
 
         <label className="field">
-          <span>{appCopy.login.emailLabel}</span>
-          <input autoComplete="email" placeholder={appCopy.login.emailPlaceholder} type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
+          <span>{messages.login.emailLabel}</span>
+          <input autoComplete="email" placeholder={messages.login.emailPlaceholder} type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
         </label>
 
         {step === "code" ? (
           <label className="field">
-            <span>{appCopy.login.codeLabel}</span>
+            <span>{messages.login.codeLabel}</span>
             <input
               autoComplete="one-time-code"
               inputMode="numeric"
               maxLength={6}
-              placeholder={appCopy.login.codePlaceholder}
+              placeholder={messages.login.codePlaceholder}
               type="tel"
               value={code}
               onChange={(event) => setCode(event.target.value.slice(0, 6))}
@@ -70,16 +71,16 @@ export function LoginPage({ authApi, onRequestCode, onConfirmCode }: LoginPagePr
               try {
                 await onRequestCode(email.trim());
                 setStep("code");
-                setStatus(appCopy.login.requestSuccess);
+                setStatus(messages.login.requestSuccess);
               } catch {
-                setStatus(appCopy.login.requestError);
+                setStatus(messages.login.requestError);
               } finally {
                 setBusy(false);
               }
             }}
             type="button"
           >
-            {appCopy.login.requestCode}
+            {messages.login.requestCode}
           </button>
         ) : (
           <div className="login-page__actions">
@@ -91,14 +92,14 @@ export function LoginPage({ authApi, onRequestCode, onConfirmCode }: LoginPagePr
                 try {
                   await onConfirmCode(email.trim(), code.trim());
                 } catch {
-                  setStatus(appCopy.login.confirmError);
+                  setStatus(messages.login.confirmError);
                 } finally {
                   setBusy(false);
                 }
               }}
               type="button"
             >
-              {appCopy.login.confirmCode}
+              {messages.login.confirmCode}
             </button>
             <button
               className="button button--secondary button--lg button--full"
@@ -110,7 +111,7 @@ export function LoginPage({ authApi, onRequestCode, onConfirmCode }: LoginPagePr
               }}
               type="button"
             >
-              {appCopy.login.resendCode}
+              {messages.login.resendCode}
             </button>
           </div>
         )}

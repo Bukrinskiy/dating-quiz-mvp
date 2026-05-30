@@ -5,7 +5,9 @@ interface WindowAppConfig {
   API_BASE_URL?: string;
   PAY_PUBLIC_BASE_URL?: string;
   VITE_MOBI_SLON_URL?: string;
-  VITE_MOBI_SLON_CAMPAIGN_KEY?: string;
+  VITE_MOBI_SLON_CAMPAIGN_KEY_FACEBOOK?: string;
+  VITE_MOBI_SLON_CAMPAIGN_KEY_GOOGLE?: string;
+  VITE_GOOGLE_ADS_ID?: string;
   VITE_FB_PIXEL_ID?: string;
   VITE_YANDEX_METRIKA_ID?: string;
   VITE_TRACKING_DEBUG?: string;
@@ -16,7 +18,9 @@ interface ImportMetaEnv {
   readonly API_BASE_URL?: string;
   readonly PAY_PUBLIC_BASE_URL?: string;
   readonly VITE_MOBI_SLON_URL?: string;
-  readonly VITE_MOBI_SLON_CAMPAIGN_KEY?: string;
+  readonly VITE_MOBI_SLON_CAMPAIGN_KEY_FACEBOOK?: string;
+  readonly VITE_MOBI_SLON_CAMPAIGN_KEY_GOOGLE?: string;
+  readonly VITE_GOOGLE_ADS_ID?: string;
   readonly VITE_FB_PIXEL_ID?: string;
   readonly VITE_YANDEX_METRIKA_ID?: string;
   readonly VITE_TRACKING_DEBUG?: string;

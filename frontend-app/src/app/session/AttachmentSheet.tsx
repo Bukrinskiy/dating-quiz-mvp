@@ -1,6 +1,6 @@
 import { useId } from "react";
 
-import { appCopy } from "../copy";
+import { useI18n } from "../i18n";
 import { PrototypeIcon } from "../ui/icons";
 import { BottomSheet } from "../ui/BottomSheet";
 
@@ -14,31 +14,32 @@ type AttachmentSheetProps = {
 };
 
 export function AttachmentSheet({ open, onClose, onCamera, onImage, onAudio, onEditMeta }: AttachmentSheetProps) {
+  const { messages } = useI18n();
   const cameraId = useId();
   const imageId = useId();
   const audioId = useId();
   void onEditMeta;
 
   return (
-    <BottomSheet onClose={onClose} open={open} title={appCopy.session.attach}>
+    <BottomSheet onClose={onClose} open={open} title={messages.session.attach}>
       <div className="upload-grid">
         <label className="upload-option upload-option--tile" htmlFor={imageId}>
           <span className="upload-option__icon">
             <PrototypeIcon.image color="var(--accent)" />
           </span>
-          <strong>{appCopy.session.attachImage}</strong>
+          <strong>{messages.session.attachImage}</strong>
         </label>
         <label className="upload-option upload-option--tile" htmlFor={cameraId}>
           <span className="upload-option__icon">
             <PrototypeIcon.camera color="var(--accent)" />
           </span>
-          <strong>{appCopy.session.attachCamera}</strong>
+          <strong>{messages.session.attachCamera}</strong>
         </label>
         <label className="upload-option upload-option--tile" htmlFor={audioId}>
           <span className="upload-option__icon">
             <PrototypeIcon.mic color="var(--accent)" />
           </span>
-          <strong>{appCopy.session.attachVoice}</strong>
+          <strong>{messages.session.attachVoice}</strong>
         </label>
       </div>
       <input

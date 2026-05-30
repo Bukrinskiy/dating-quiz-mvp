@@ -11,6 +11,7 @@ COPY frontend-site/vite.config.ts ./vite.config.ts
 COPY frontend-site/index.html ./index.html
 COPY frontend-site/src ./src
 COPY frontend-site/public ./public
+COPY shared /shared
 
 RUN corepack enable && pnpm install --no-frozen-lockfile && pnpm build
 

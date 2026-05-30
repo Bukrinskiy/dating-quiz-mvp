@@ -1,12 +1,18 @@
+import path from "node:path";
 import { defineConfig, loadEnv, type PluginOption } from "vite";
 import react from "@vitejs/plugin-react";
+
+const appDir = path.resolve(process.cwd());
+const sharedDir = path.resolve(process.cwd(), "../shared");
 
 const RUNTIME_CONFIG_KEYS = [
   "APP_SURFACE",
   "API_BASE_URL",
   "PAY_PUBLIC_BASE_URL",
   "VITE_MOBI_SLON_URL",
-  "VITE_MOBI_SLON_CAMPAIGN_KEY",
+  "VITE_MOBI_SLON_CAMPAIGN_KEY_FACEBOOK",
+  "VITE_MOBI_SLON_CAMPAIGN_KEY_GOOGLE",
+  "VITE_GOOGLE_ADS_ID",
   "VITE_FB_PIXEL_ID",
   "VITE_YANDEX_METRIKA_ID",
   "VITE_TRACKING_DEBUG",
@@ -37,6 +43,9 @@ export default defineConfig(({ mode }) => {
       host: "0.0.0.0",
       port: 5174,
       strictPort: true,
+      fs: {
+        allow: [appDir, sharedDir],
+      },
     },
   };
 });

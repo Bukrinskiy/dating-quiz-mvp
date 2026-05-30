@@ -15,6 +15,7 @@
 - `SITE_PUBLIC_BASE_URL`
 - `PAY_PUBLIC_BASE_URL`
 - `APP_APP_PUBLIC_BASE_URL`
+- `APP_LANDING_PUBLIC_BASE_URL`
 - `API_PUBLIC_BASE_URL`
 - `BACKEND_CORS_ALLOW_ORIGINS`
 - `STRIPE_SECRET_KEY`
@@ -40,6 +41,7 @@
 - `BOT_ALLOWED_PUBLIC_COMMANDS`
 - `EMAIL_DELIVERY_MODE=log_only`
 - `LOG_OTP_IN_NONPROD=true`
+- `SITE_APP_PUBLIC_BASE_URL`
 
 ## Pricing env (backend authority)
 - `PAY_ONE_TIME_BASIC_AMOUNT_MINOR`
@@ -88,6 +90,7 @@
 
 ### Frontend site
 - `API_BASE_URL`
+- `APP_PUBLIC_BASE_URL`
 - `PRIMARY_LANDING_URL`
 
 ### Frontend landing
@@ -95,8 +98,10 @@
 - `API_BASE_URL`
 - `PAY_PUBLIC_BASE_URL`
 - `VITE_MOBI_SLON_URL` (`lp1` production: `https://whitetrack.xyz/index.php`)
-- `VITE_MOBI_SLON_CAMPAIGN_KEY` (`lp1` production pixel campaign key)
-- `VITE_FB_PIXEL_ID`
+- `VITE_MOBI_SLON_CAMPAIGN_KEY_FACEBOOK` (`lp1` production Facebook pixel campaign key)
+- `VITE_MOBI_SLON_CAMPAIGN_KEY_GOOGLE` (`lp1` production Google Binom pixel campaign key; `frontend-landing` uses it when URL query contains `source=ga`, case-insensitive)
+- `VITE_GOOGLE_ADS_ID` (Google Ads global tag ID injected by `frontend-landing` HTML shell)
+- `VITE_FB_PIXEL_ID` (Meta Pixel ID for landing browser script and `noscript` image)
 - `VITE_YANDEX_METRIKA_ID`
 - `VITE_TRACKING_DEBUG`
 
@@ -112,6 +117,7 @@
 - `API_BASE_URL`
 - `PAY_PUBLIC_BASE_URL`
 - `APP_PUBLIC_BASE_URL`
+- `LANDING_PUBLIC_BASE_URL`
 
 ### Bot
 - `BOT_BACKEND_BASE_URL`
@@ -121,10 +127,16 @@
 - `BOT_PORT`
 - `BOT_WEBHOOK_PATH_SECRET`
 
+### Backend tracking
+- `META_PIXEL_ID`
+- `META_ACCESS_TOKEN`
+- `META_GRAPH_API_VERSION`
+
 ## Prod env source of truth
 - В текущем deploy-процессе `docker compose` читает `.env` на сервере.
 - `.env.prod` в репозитории является эталоном значений и должен быть синхронизирован в серверный `.env` перед `make deploy` (или эквивалентным шагом на сервере).
 - Если compose запускается без `--env-file`, изменения только в `.env.prod` не применяются.
+- `make push-frontend-landing-image` читает `VITE_FB_PIXEL_ID` из локального `.env` при сборке образа, а runtime контейнера `frontend-landing` затем подставляет тот же env в `/runtime-config.js` и итоговый `/index.html`.
 - Target production compose должен публиковать loopback-only порты:
   - `SITE_PORT` -> `frontend-site`
   - `LANDING_PORT` -> `frontend-landing`
@@ -133,6 +145,31 @@
   - `BACKEND_PORT` -> `backend`
   - `BOT_PORT` -> `bot`
 - Apache должен проксировать публичные host names в эти loopback ports; прямой internet exposure контейнеров не является source of truth.
+
+## Meta Pixel / CAPI prod rollout
+- Обязательные env:
+  - `VITE_FB_PIXEL_ID=1246315427580945`
+  - `META_PIXEL_ID=1246315427580945`
+  - `META_ACCESS_TOKEN=<актуальный Meta CAPI token>`
+- Где обновлять значения:
+  - `.env.prod` в репозитории как эталон
+  - серверный `/opt/flirto-guru/.env`, который реально читает production `docker compose`
+  - локальный `.env` перед запуском `make deploy`, если деплой делается с локальной машины
+- Какие сервисы должны подхватить изменения:
+  - `frontend-landing` для browser pixel и `noscript`
+  - `backend` для Meta Conversions API relay
+- Порядок rollout:
+  1. Обновить `VITE_FB_PIXEL_ID`, `META_PIXEL_ID`, `META_ACCESS_TOKEN` в `.env.prod`.
+  2. Синхронизировать те же значения в серверный `.env`.
+  3. Перед локальным `make deploy` проверить, что локальный `.env` содержит актуальный `VITE_FB_PIXEL_ID`.
+  4. Выполнить `make deploy`.
+  5. Убедиться, что удаленный `docker compose up -d --force-recreate` перезапустил `frontend-landing` и `backend`.
+- Post-deploy smoke-check:
+  - Проверить `window.__APP_CONFIG__.VITE_FB_PIXEL_ID === "1246315427580945"`.
+  - Проверить, что landing инициализирует `fbq('init', '1246315427580945')`.
+  - Проверить `noscript` URL: `https://www.facebook.com/tr?id=1246315427580945&ev=PageView&noscript=1`.
+  - Пройти `/:lang/quiz/1`, `/:lang/quiz/15`, `/:lang/quiz/26`, `/:lang/quiz/email/:uuid`, `/:lang/terms.html` и убедиться, что route-change `PageView` продолжает отправляться.
+  - Проверить `/api/tracking/meta-event` в среде с production env.
 
 ## Yandex Metrika prod smoke-check
 - После деплоя открыть сайт и проверить в DevTools:

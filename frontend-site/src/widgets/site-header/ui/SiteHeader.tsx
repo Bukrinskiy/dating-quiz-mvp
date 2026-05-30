@@ -23,6 +23,9 @@ export const SiteHeader = ({ locale }: SiteHeaderProps) => {
               {item.label}
             </a>
           ))}
+          <a className="site-header__nav-link" href={runtimeConfig.appPublicBaseUrl}>
+            {copy.navigation.openApp}
+          </a>
           <a className="site-header__cta" href={runtimeConfig.primaryLandingUrl}>
             {copy.navigation.launchLanding}
           </a>

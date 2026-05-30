@@ -70,6 +70,7 @@ services:
       APP_SURFACE: ${SITE_APP_SURFACE:-site}
       APP_BRAND: ${SITE_APP_BRAND:-Flirto Guru}
       API_BASE_URL: ${SITE_API_BASE_URL:-https://api.flirto.guru}
+      APP_PUBLIC_BASE_URL: ${SITE_APP_PUBLIC_BASE_URL:-https://app.flirto.guru}
       PRIMARY_LANDING_URL: ${SITE_PRIMARY_LANDING_URL:-https://lp1.flirto.guru/en/quiz/1}
     depends_on:
       backend:
@@ -88,7 +89,9 @@ services:
       API_BASE_URL: ${LANDING_API_BASE_URL:-https://api.flirto.guru}
       PAY_PUBLIC_BASE_URL: ${LANDING_PAY_PUBLIC_BASE_URL:-https://pay.flirto.guru}
       VITE_MOBI_SLON_URL: ${VITE_MOBI_SLON_URL:-https://mobi-slon.com/index.php}
-      VITE_MOBI_SLON_CAMPAIGN_KEY: ${VITE_MOBI_SLON_CAMPAIGN_KEY:-}
+      VITE_MOBI_SLON_CAMPAIGN_KEY_FACEBOOK: ${VITE_MOBI_SLON_CAMPAIGN_KEY_FACEBOOK:-}
+      VITE_MOBI_SLON_CAMPAIGN_KEY_GOOGLE: ${VITE_MOBI_SLON_CAMPAIGN_KEY_GOOGLE:-}
+      VITE_GOOGLE_ADS_ID: ${VITE_GOOGLE_ADS_ID:-}
       VITE_FB_PIXEL_ID: ${VITE_FB_PIXEL_ID:-}
       VITE_YANDEX_METRIKA_ID: ${VITE_YANDEX_METRIKA_ID:-}
       VITE_TRACKING_DEBUG: ${VITE_TRACKING_DEBUG:-0}
@@ -108,8 +111,6 @@ services:
       APP_SURFACE: ${PAY_APP_SURFACE:-pay}
       API_BASE_URL: ${PAY_API_BASE_URL:-https://api.flirto.guru}
       PAY_PUBLIC_BASE_URL: ${PAY_PUBLIC_BASE_URL:-https://pay.flirto.guru}
-      VITE_MOBI_SLON_URL: ${VITE_MOBI_SLON_URL:-https://mobi-slon.com/index.php}
-      VITE_MOBI_SLON_CAMPAIGN_KEY: ${VITE_MOBI_SLON_CAMPAIGN_KEY:-}
       VITE_FB_PIXEL_ID: ${VITE_FB_PIXEL_ID:-}
       VITE_YANDEX_METRIKA_ID: ${VITE_YANDEX_METRIKA_ID:-}
       VITE_TRACKING_DEBUG: ${VITE_TRACKING_DEBUG:-0}
@@ -130,6 +131,7 @@ services:
       API_BASE_URL: ${APP_API_BASE_URL:-https://api.flirto.guru}
       PAY_PUBLIC_BASE_URL: ${PAY_PUBLIC_BASE_URL:-https://pay.flirto.guru}
       APP_PUBLIC_BASE_URL: ${APP_APP_PUBLIC_BASE_URL:-https://app.flirto.guru}
+      LANDING_PUBLIC_BASE_URL: ${APP_LANDING_PUBLIC_BASE_URL:-https://lp1.flirto.guru}
     depends_on:
       backend:
         condition: service_started

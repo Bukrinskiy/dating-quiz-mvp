@@ -1,0 +1,6 @@
+ProxyPreserveHost On
+RequestHeader set X-Forwarded-Proto "http"
+RequestHeader set X-Forwarded-Port "80"
+
+ProxyPass        / http://127.0.0.1:18184/
+ProxyPassReverse / http://127.0.0.1:18184/

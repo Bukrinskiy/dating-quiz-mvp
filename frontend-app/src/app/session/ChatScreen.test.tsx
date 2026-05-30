@@ -1,11 +1,12 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 
+import { renderWithI18n } from "../../test/renderWithI18n";
 import { ChatScreen } from "./ChatScreen";
 
 test("ChatScreen renders empty collect state", () => {
-  render(
+  renderWithI18n(
     <ChatScreen
       busy={false}
       deletingMessageId={null}
@@ -22,6 +23,7 @@ test("ChatScreen renders empty collect state", () => {
       onSendImage={vi.fn(async () => undefined)}
       onSendText={vi.fn(async () => undefined)}
     />,
+    { locale: "ru" },
   );
 
   expect(screen.getByText("Добавь контекст")).toBeInTheDocument();
@@ -29,7 +31,7 @@ test("ChatScreen renders empty collect state", () => {
 });
 
 test("ChatScreen batch bar no longer renders plus more action", () => {
-  render(
+  renderWithI18n(
     <ChatScreen
       busy={false}
       deletingMessageId={null}
@@ -48,6 +50,7 @@ test("ChatScreen batch bar no longer renders plus more action", () => {
       onSendImage={vi.fn(async () => undefined)}
       onSendText={vi.fn(async () => undefined)}
     />,
+    { locale: "ru" },
   );
 
   expect(screen.queryByText("+ Ещё")).not.toBeInTheDocument();
@@ -64,7 +67,7 @@ async function swipeBubble(element: Element, fromX: number, toX: number) {
 }
 
 test("ChatScreen ignores long press and closes swipe delete on outside click", async () => {
-  const { container } = render(
+  const { container } = renderWithI18n(
     <ChatScreen
       busy={false}
       deletingMessageId={null}
@@ -83,6 +86,7 @@ test("ChatScreen ignores long press and closes swipe delete on outside click", a
       onSendImage={vi.fn(async () => undefined)}
       onSendText={vi.fn(async () => undefined)}
     />,
+    { locale: "ru" },
   );
 
   const bubble = screen.getByText("Привет").closest("article");
@@ -110,7 +114,7 @@ test("ChatScreen ignores long press and closes swipe delete on outside click", a
 test("ChatScreen renders result bubble with expandable text", async () => {
   const user = userEvent.setup();
 
-  render(
+  renderWithI18n(
     <ChatScreen
       busy={false}
       deletingMessageId={null}
@@ -145,6 +149,7 @@ test("ChatScreen renders result bubble with expandable text", async () => {
       onSendImage={vi.fn(async () => undefined)}
       onSendText={vi.fn(async () => undefined)}
     />,
+    { locale: "ru" },
   );
 
   expect(screen.getByText("Показать больше")).toBeInTheDocument();
@@ -157,7 +162,7 @@ test("ChatScreen renders result bubble with expandable text", async () => {
 test("ChatScreen deletes assistant result from right-swipe inline action", async () => {
   const onDeleteMessage = vi.fn(async () => true);
 
-  render(
+  renderWithI18n(
     <ChatScreen
       busy={false}
       deletingMessageId={null}
@@ -191,6 +196,7 @@ test("ChatScreen deletes assistant result from right-swipe inline action", async
       onSendImage={vi.fn(async () => undefined)}
       onSendText={vi.fn(async () => undefined)}
     />,
+    { locale: "ru" },
   );
 
   const bubble = screen.getByText("Готовый ответ ассистента").closest("article");

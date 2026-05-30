@@ -14,15 +14,13 @@ logger = logging.getLogger("quiz.notifications")
 
 
 class LogOnlyEmailSender:
-    def send_access_email(self, *, email: str, order_id: str, activation_link: str, locale: str) -> None:
-        # Keep payload safe: no plain token in logs, only masked link.
-        masked_link = activation_link.split("start=")[0] + "start=***" if "start=" in activation_link else "***"
+    def send_access_email(self, *, email: str, order_id: str, access_link: str, locale: str) -> None:
         logger.info(
             "email_delivery_skipped",
             extra={
                 "order_id": order_id,
                 "email": mask_email(email),
-                "activation_link": masked_link,
+                "access_link": access_link,
                 "locale": locale,
             },
         )
@@ -91,14 +89,14 @@ class SmtpEmailSender:
         self._send_message(recipient=email, subject=subject, body=body, smtp_debug=smtp_debug)
         logger.info("test_email_sent", extra={"email": mask_email(email)})
 
-    def send_access_email(self, *, email: str, order_id: str, activation_link: str, locale: str) -> None:
+    def send_access_email(self, *, email: str, order_id: str, access_link: str, locale: str) -> None:
         normalized = self._normalize_locale(locale)
         if normalized == "ru":
             subject = "Flirto Guru: активация доступа"
             body = (
                 "Оплата подтверждена.\n\n"
                 f"Заказ: {order_id}\n"
-                f"Ссылка активации: {activation_link}\n\n"
+                f"Откройте приложение Flirto Guru: {access_link}\n\n"
                 "Если это письмо отправлено не вам, просто игнорируйте его."
             )
         else:
@@ -106,7 +104,7 @@ class SmtpEmailSender:
             body = (
                 "Payment confirmed.\n\n"
                 f"Order: {order_id}\n"
-                f"Activation link: {activation_link}\n\n"
+                f"Open Flirto Guru app: {access_link}\n\n"
                 "If you did not request this email, ignore it."
             )
         self._send_message(recipient=email, subject=subject, body=body)

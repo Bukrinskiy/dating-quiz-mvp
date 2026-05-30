@@ -2,6 +2,7 @@ import type { SessionGeneratePayload, SessionMode } from "./types";
 
 export const THEME_STORAGE_KEY = "flirto.app.theme";
 export const ONBOARDING_STORAGE_KEY = "flirto.app.onboarded";
+export const INSTALL_HINT_STORAGE_KEY = "flirto.app.install-hint-dismissed";
 const RECENT_SESSIONS_STORAGE_KEY = "flirto.app.recent-sessions";
 const ADVICE_TARGET_STORAGE_KEY = "flirto.app.advice-target";
 const RECENT_SESSIONS_LIMIT = 10;
@@ -43,6 +44,31 @@ export function readOnboardingDismissed(): boolean {
 export function writeOnboardingDismissed() {
   try {
     window.localStorage.setItem(ONBOARDING_STORAGE_KEY, "1");
+  } catch {
+    // Ignore local storage failures.
+  }
+}
+
+export function readInstallHintDismissed(): boolean {
+  try {
+    return window.localStorage.getItem(INSTALL_HINT_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function writeInstallHintDismissed() {
+  try {
+    window.localStorage.setItem(INSTALL_HINT_STORAGE_KEY, "1");
+  } catch {
+    // Ignore local storage failures.
+  }
+}
+
+export function resetOnboardingState() {
+  try {
+    window.localStorage.removeItem(ONBOARDING_STORAGE_KEY);
+    window.localStorage.removeItem(INSTALL_HINT_STORAGE_KEY);
   } catch {
     // Ignore local storage failures.
   }
