@@ -42,9 +42,9 @@ export const PrototypeIcon = {
       <path d="M15 18L9 12L15 6" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
-  chevron: ({ ...props }: SvgProps = {}) => (
-    <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M9 18L15 12L9 6" stroke="var(--ink3)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  chevron: ({ color, ...props }: SvgProps = {}) => (
+    <svg {...svgProps({ color, ...props }, "currentColor")} width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
   close: ({ color, ...props }: SvgProps = {}) => (
@@ -114,10 +114,27 @@ export const PrototypeIcon = {
       <path d="M13.73 21C13.55 21.3 13.3 21.55 13 21.73C12.69 21.9 12.35 21.99 12 21.99C11.65 21.99 11.3 21.9 11 21.73C10.7 21.55 10.45 21.3 10.27 21" stroke="var(--ink2)" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   ),
-  card: ({ ...props }: SvgProps = {}) => (
-    <svg {...props} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="2" y="5" width="20" height="14" rx="2" stroke="var(--ink2)" strokeWidth="1.6" />
-      <line x1="2" y1="10" x2="22" y2="10" stroke="var(--ink2)" strokeWidth="1.6" />
+  sun: ({ color, ...props }: SvgProps = {}) => (
+    <svg {...svgProps({ color, ...props }, "currentColor")} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M12 2V5M12 19V22M4.93 4.93L7.05 7.05M16.95 16.95L19.07 19.07M2 12H5M19 12H22M4.93 19.07L7.05 16.95M16.95 7.05L19.07 4.93" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  ),
+  moon: ({ color, ...props }: SvgProps = {}) => (
+    <svg {...svgProps({ color, ...props }, "currentColor")} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M21 12.79C20.16 13.11 19.25 13.29 18.29 13.29C14.1 13.29 10.71 9.9 10.71 5.71C10.71 4.75 10.89 3.84 11.21 3C6.98 3.39 3.67 6.95 3.67 11.28C3.67 15.87 7.39 19.59 11.98 19.59C16.31 19.59 19.87 16.28 20.26 12.05C20.5 12.31 20.75 12.56 21 12.79Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  ),
+  globe: ({ color, ...props }: SvgProps = {}) => (
+    <svg {...svgProps({ color, ...props }, "currentColor")} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M3 12H21M12 3C14.2 5.45 15.25 8.43 15.25 12C15.25 15.57 14.2 18.55 12 21M12 3C9.8 5.45 8.75 8.43 8.75 12C8.75 15.57 9.8 18.55 12 21" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  ),
+  card: ({ color, ...props }: SvgProps = {}) => (
+    <svg {...svgProps({ color, ...props }, "currentColor")} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <line x1="2" y1="10" x2="22" y2="10" stroke="currentColor" strokeWidth="1.6" />
     </svg>
   ),
   refresh: ({ ...props }: SvgProps = {}) => (
@@ -126,9 +143,9 @@ export const PrototypeIcon = {
       <path d="M20.49 15C19.84 16.81 18.6 18.35 17 19.38C15.4 20.41 13.5 20.87 11.6 20.67C9.7 20.47 7.93 19.6 6.6 18.23C5.27 16.86 4.47 15.08 4.32 13.18C4.17 11.28 4.68 9.39 5.77 7.83C6.86 6.27 8.46 5.14 10.29 4.64C12.12 4.14 14.07 4.31 15.78 5.11C17.49 5.9 18.86 7.27 19.65 8.98L23 10" stroke="var(--ink2)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
-  msgIcon: ({ ...props }: SvgProps = {}) => (
-    <svg {...props} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M21 15C21 15.53 20.79 16.04 20.41 16.41C20.04 16.79 19.53 17 19 17H7L3 21V5C3 4.47 3.21 3.96 3.59 3.59C3.96 3.21 4.47 3 5 3H19C19.53 3 20.04 3.21 20.41 3.59C20.79 3.96 21 4.47 21 5V15Z" stroke="var(--ink2)" strokeWidth="1.6" strokeLinejoin="round" />
+  msgIcon: ({ color, ...props }: SvgProps = {}) => (
+    <svg {...svgProps({ color, ...props }, "currentColor")} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M21 15C21 15.53 20.79 16.04 20.41 16.41C20.04 16.79 19.53 17 19 17H7L3 21V5C3 4.47 3.21 3.96 3.59 3.59C3.96 3.21 4.47 3 5 3H19C19.53 3 20.04 3.21 20.41 3.59C20.79 3.96 21 4.47 21 5V15Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
     </svg>
   ),
   support: ({ color, ...props }: SvgProps = {}) => (
@@ -138,18 +155,18 @@ export const PrototypeIcon = {
       <path d="M12 12V12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   ),
-  info: ({ ...props }: SvgProps = {}) => (
-    <svg {...props} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="10" stroke="var(--ink2)" strokeWidth="1.6" />
-      <line x1="12" y1="8" x2="12" y2="8" stroke="var(--ink2)" strokeWidth="2" strokeLinecap="round" />
-      <path d="M12 12V16" stroke="var(--ink2)" strokeWidth="1.6" strokeLinecap="round" />
+  info: ({ color, ...props }: SvgProps = {}) => (
+    <svg {...svgProps({ color, ...props }, "currentColor")} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.6" />
+      <line x1="12" y1="8" x2="12" y2="8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M12 12V16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   ),
-  logout: ({ ...props }: SvgProps = {}) => (
-    <svg {...props} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M9 21H5C4.47 21 3.96 20.79 3.59 20.41C3.21 20.04 3 19.53 3 19V5C3 4.47 3.21 3.96 3.59 3.59C3.96 3.21 4.47 3 5 3H9" stroke="var(--red)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      <polyline points="16 17 21 12 16 7" stroke="var(--red)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      <line x1="21" y1="12" x2="9" y2="12" stroke="var(--red)" strokeWidth="1.6" strokeLinecap="round" />
+  logout: ({ color, ...props }: SvgProps = {}) => (
+    <svg {...svgProps({ color, ...props }, "currentColor")} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M9 21H5C4.47 21 3.96 20.79 3.59 20.41C3.21 20.04 3 19.53 3 19V5C3 4.47 3.21 3.96 3.59 3.59C3.96 3.21 4.47 3 5 3H9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <polyline points="16 17 21 12 16 7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   ),
   link: ({ color, ...props }: SvgProps = {}) => (

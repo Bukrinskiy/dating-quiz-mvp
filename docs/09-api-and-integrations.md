@@ -112,12 +112,14 @@ INSERT INTO flirto_guru.promo_offers (
 - `payment_status`
 - `fulfillment_status`
 - `access_status`
+- `access_link` (`APP_PUBLIC_BASE_URL`, если заказ оплачен)
 - `activation_link` (если выдан token)
 
 ### `GET /api/payment/order-status?order_id=...`
 - `payment_status`
 - `fulfillment_status`
 - `access_status`
+- `access_link` (`APP_PUBLIC_BASE_URL`, если заказ оплачен)
 - `activation_link` (если выдан token)
 
 ### `POST /api/payment/customer-portal`
@@ -186,6 +188,11 @@ INSERT INTO flirto_guru.promo_offers (
 - Request body отсутствует; refresh берется из httpOnly cookie.
 - Ротирует refresh session, возвращает новый `access_token` и обновляет cookie.
 
+### `POST /api/app/auth/locale`
+- Bearer auth.
+- Request: `locale` (`en`/`ru`).
+- Сохраняет язык app user и возвращает свежий auth payload. Только `ru*` нормализуется в `ru`; любое другое значение становится `en`. Browser locale, `Accept-Language`, timezone и URL не влияют на default.
+
 ### `POST /api/app/auth/logout`
 - Инвалидирует текущий refresh session и очищает refresh cookie.
 
@@ -195,7 +202,14 @@ INSERT INTO flirto_guru.promo_offers (
 
 ### `GET /api/app/access-status`
 - Bearer auth.
-- Возвращает shared entitlement по email из existing `orders` + active `manual_access_grants`.
+- Возвращает shared entitlement по email из existing `orders` + active `access_code_redemptions`.
+- App-facing status нормализуется до `Inactive | Active | Promo`.
+
+### `POST /api/app/access-code/redeem`
+- Bearer auth.
+- Request: `code`
+- Валидирует код, проверяет срок/активность/лимит и создает `access_code_redemption` для email текущего app user.
+- Response: свежий auth payload с обновленным `access`.
 
 ### `GET /api/tracking/meta-event`
 - Public endpoint without authorization.
@@ -208,6 +222,7 @@ INSERT INTO flirto_guru.promo_offers (
   - `action_source=website`
   - `user_data.fbc/client_ip_address/client_user_agent`
 - Config: `META_PIXEL_ID`, `META_ACCESS_TOKEN`, optional `META_GRAPH_API_VERSION` (default `v18.0`).
+- `frontend-landing` browser-side Meta Pixel configured via `VITE_FB_PIXEL_ID` should use the same Pixel/Dataset ID as `META_PIXEL_ID`.
 
 ### `POST /api/tracking/mobi-slon-event`
 - Public relay endpoint for frontend.
@@ -258,16 +273,11 @@ Note:
 - Request: `email`, `otp`, `telegram_user_id`
 - Response: `status`, `activation_link`, `access_granted`
 
-### `POST /api/bot/admin/access/grant`
+### `POST /api/bot/admin/access-code/create`
 - Internal endpoint под `X-Internal-Token`.
-- Request: `email`, `expires_at`, `admin_telegram_user_id`, optional `admin_telegram_username`
-- Создает новый `manual_access_grant` по email.
-- Если для email уже был active manual grant, старый grant ревокается с `replaced_by_new_grant`.
-
-### `POST /api/bot/admin/access/revoke`
-- Internal endpoint под `X-Internal-Token`.
-- Request: `email`, `admin_telegram_user_id`, optional `admin_telegram_username`
-- Ревокает только manual grant и не отключает existing paid/subscription entitlement.
+- Request: `admin_telegram_user_id`, optional `admin_telegram_username`, optional `expires_at`
+- Если `expires_at` не передан, backend создает промокод с TTL `7 дней`.
+- Response: `status`, `code`, `expires_at`
 
 ### `POST /api/bot/session/start`
 - Request: `telegram_user_id`, `mode(write_now|analyze_case)`
@@ -313,6 +323,7 @@ Note:
 - `POST /api/app/session/{session_id}/batch/close` всегда переводит app session в `awaiting_context_confirmation`, чтобы пользователь проходил этап проверки контекста перед генерацией.
 - `GET /api/app/session/{session_id}` может вернуть `403 Session ownership mismatch`, если `session_id` принадлежит другому app user или устаревшему login target.
 - Response: generation payload + legacy fields (`primary_message`, `why`, `fallback_simple_version`, `next_step`, `alternatives`)
+- App generation/refine использует `user.locale`: JSON keys остаются стабильными, а текстовые значения `ui_payload` генерируются на английском или русском. Default locale для новых и мигрированных app users — `en`.
 - Frontend PWA также резервирует интеграцию под `POST /api/app/push/subscribe` для Web Push subscriptions.
 - Endpoint push subscription пока является backend follow-up dependency: UI prompt и client-side registration уже заложены в `frontend-app`, но доставка уведомлений не считается завершенной без server persistence и sender job.
 
@@ -333,6 +344,8 @@ Note:
 - Telegram Bot API (aiogram bot service)
 - Gmail SMTP (`smtp.gmail.com:587`, STARTTLS)
 - MobiSлон postback (all funnel events are relayed through backend `/api/tracking/mobi-slon-event`; `pay_success` is additionally sent from Stripe webhook using `order.clickid`)
+- Google Ads global tag is injected in `frontend-landing` HTML shell from `VITE_GOOGLE_ADS_ID` once per page load; Binom landing pixel uses `VITE_MOBI_SLON_CAMPAIGN_KEY_FACEBOOK` unless landing URL query contains `source=ga` (case-insensitive), in which case it switches to `VITE_MOBI_SLON_CAMPAIGN_KEY_GOOGLE`
+- Meta Pixel browser script and `noscript` image are injected by `frontend-landing`; backend relay to Meta Conversions API is handled by `GET /api/tracking/meta-event`.
 
 ## Cross-domain handoff
 - Browser surfaces (`frontend-site`, `frontend-landing`, `frontend-pay`) отправляют browser-facing API calls только в `API_PUBLIC_BASE_URL`.
@@ -350,9 +363,9 @@ Note:
 
 ## Telegram Bot modes
 - Admin commands:
-  - `/grant_access` -> FSM `email -> YYYY-MM-DD`, доступно только `BOT_ADMIN_IDS`
-  - `/revoke_access` -> FSM `email`, доступно только `BOT_ADMIN_IDS`
-- Дата в `/grant_access` трактуется как конец дня `Europe/Moscow`.
+  - `/create_promo_code` -> создает промокод на `7 дней`, доступно только `BOT_ADMIN_IDS`
+  - `/create_promo_code_until` -> FSM `YYYY-MM-DD`, доступно только `BOT_ADMIN_IDS`
+- Дата в `/create_promo_code_until` трактуется как конец дня `Europe/Moscow`.
 - Local: `BOT_MODE=polling`
 - Prod: `BOT_MODE=webhook`, webhook URL `https://<domain>/tg/webhook/<secret>`
 

@@ -1,7 +1,9 @@
 export type Role = "USER_SELF" | "USER_PEER";
 export type SessionMode = "write_now" | "analyze_case";
+export type AppAccessStatusLabel = "Inactive" | "Active" | "Promo";
 export type AccessStatusCode =
   | "active"
+  | "promo_active"
   | "grace_period"
   | "expired"
   | "revoked"
@@ -13,6 +15,7 @@ export type AccessStatus = {
   order_id?: string | null;
   plan?: string | null;
   access_status?: AccessStatusCode | null;
+  status_label?: AppAccessStatusLabel | null;
   expires_at?: string | null;
 };
 

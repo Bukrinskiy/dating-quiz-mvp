@@ -64,6 +64,7 @@ function isSameAccessStatus(left: AccessStatus | null | undefined, right: Access
     (left?.order_id ?? null) === (right?.order_id ?? null) &&
     (left?.plan ?? null) === (right?.plan ?? null) &&
     (left?.access_status ?? null) === (right?.access_status ?? null) &&
+    (left?.status_label ?? null) === (right?.status_label ?? null) &&
     (left?.expires_at ?? null) === (right?.expires_at ?? null)
   );
 }

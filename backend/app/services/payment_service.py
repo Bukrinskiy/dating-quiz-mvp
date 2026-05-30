@@ -3,7 +3,10 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 import logging
 import re
-from typing import Any, Literal, Mapping, TypedDict, cast
+from typing import Any, Literal, TypedDict, cast
+from collections.abc import Mapping
+
+from urllib.parse import urlparse, urlunparse
 
 import httpx
 import stripe
@@ -486,6 +489,11 @@ class PaymentService:
         token_value = make_access_token(token.id, self.settings.access_token_secret)
         return self.telegram_sender.build_deep_link(token_value)
 
+    def _extract_app_access_link(self, order: Order) -> str | None:
+        if order.status != "paid":
+            return None
+        return self.settings.build_app_url("/")
+
     @staticmethod
     def _stripe_get(obj: Any, key: str) -> Any:
         if obj is None:
@@ -730,6 +738,7 @@ class PaymentService:
             "fulfillment_status": order.fulfillment_status,
             "access_status": order.access_status,
             "activation_link": self._extract_token_activation_link(order),
+            "access_link": self._extract_app_access_link(order),
         }
 
     def get_order_status(self, order_id: str) -> dict[str, str | None]:
@@ -742,6 +751,7 @@ class PaymentService:
             "fulfillment_status": order.fulfillment_status,
             "access_status": order.access_status,
             "activation_link": self._extract_token_activation_link(order),
+            "access_link": self._extract_app_access_link(order),
         }
 
     def create_customer_portal(self, email: str) -> str:
@@ -907,6 +917,99 @@ class PaymentService:
             extra_params=safe_params,
             source="frontend_relay",
         )
+
+    def relay_binom_ga_link(
+        self,
+        *,
+        clickid: str,
+        ga_client_id: str,
+        session_id: str | None,
+        page_path: str | None,
+    ) -> MobiSlonPostbackResult:
+        sanitized_clickid = self.sanitize_clickid(clickid.strip())
+        if not sanitized_clickid:
+            raise HTTPException(status_code=400, detail="Invalid clickid")
+        sanitized_ga_client_id = ga_client_id.strip()
+        if not sanitized_ga_client_id:
+            raise HTTPException(status_code=400, detail="Invalid ga_client_id")
+
+        base_url = self.settings.mobi_slon_postback_url.strip()
+        if not base_url:
+            logger.warning("binom_ga_link_skipped_missing_url clickid=%s", sanitized_clickid)
+            return {
+                "sent": False,
+                "upstream_url": None,
+                "upstream_params": {},
+                "upstream_status_code": None,
+                "upstream_response_body": None,
+                "error_class": "MissingPostbackUrl",
+                "error_message": "mobi_slon_postback_url is not configured",
+                "attempt_count": 0,
+            }
+
+        parsed = urlparse(base_url)
+        upstream_url = urlunparse(parsed._replace(path="/click", query="", fragment=""))
+        params = {"upd_clickid": sanitized_clickid, "client_id": sanitized_ga_client_id}
+
+        logger.info(
+            "binom_ga_link_request clickid=%s ga_client_id_len=%d session_id=%s page_path=%s",
+            sanitized_clickid,
+            len(sanitized_ga_client_id),
+            (session_id or "").strip()[:128],
+            (page_path or "").strip()[:180],
+        )
+
+        last_status_code: int | None = None
+        last_response_body: str | None = None
+        try:
+            response = httpx.get(upstream_url, params=params, timeout=10.0)
+            last_status_code = response.status_code
+            last_response_body = response.text[:1000]
+            if response.status_code < 400:
+                logger.info(
+                    "binom_ga_link_sent clickid=%s code=%d body=%s",
+                    sanitized_clickid,
+                    response.status_code,
+                    response.text[:180].replace("\n", " "),
+                )
+                return {
+                    "sent": True,
+                    "upstream_url": upstream_url,
+                    "upstream_params": params,
+                    "upstream_status_code": response.status_code,
+                    "upstream_response_body": last_response_body,
+                    "error_class": None,
+                    "error_message": None,
+                    "attempt_count": 1,
+                }
+            logger.warning(
+                "binom_ga_link_bad_response clickid=%s code=%d body=%s",
+                sanitized_clickid,
+                response.status_code,
+                response.text[:180].replace("\n", " "),
+            )
+            return {
+                "sent": False,
+                "upstream_url": upstream_url,
+                "upstream_params": params,
+                "upstream_status_code": response.status_code,
+                "upstream_response_body": last_response_body,
+                "error_class": "BadUpstreamStatus",
+                "error_message": f"HTTP {response.status_code}",
+                "attempt_count": 1,
+            }
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("binom_ga_link_exception clickid=%s error=%s", sanitized_clickid, str(exc))
+            return {
+                "sent": False,
+                "upstream_url": upstream_url,
+                "upstream_params": params,
+                "upstream_status_code": last_status_code,
+                "upstream_response_body": last_response_body,
+                "error_class": exc.__class__.__name__,
+                "error_message": str(exc),
+                "attempt_count": 1,
+            }
 
     def activate_access(self, *, activation_token: str, telegram_user_id: str) -> dict[str, str | bool]:
         token_id = parse_access_token(activation_token, self.settings.access_token_secret)
@@ -1177,7 +1280,7 @@ class PaymentService:
             self.db.flush()
 
         token_value = make_access_token(token.id, self.settings.access_token_secret)
-        activation_link = self.telegram_sender.build_deep_link(token_value)
+        access_link = self.settings.build_app_url("/")
 
         should_send = order.fulfillment_status in {"none", "pending"}
         email_ok = True
@@ -1187,7 +1290,7 @@ class PaymentService:
                 self.email_sender.send_access_email(
                     email=order.email,
                     order_id=order.id,
-                    activation_link=activation_link,
+                    access_link=access_link,
                     locale=order.locale,
                 )
             except Exception as exc:  # noqa: BLE001

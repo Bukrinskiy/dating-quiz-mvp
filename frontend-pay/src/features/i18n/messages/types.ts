@@ -1,19 +1,7 @@
 export type Locale = "ru" | "en";
 
-export type LegalSection = {
-  title: string;
-  paragraphs?: string[];
-  list?: string[];
-  email?: string;
-  children?: LegalSection[];
-};
-
-export type LegalDocument = {
-  title: string;
-  updated: string;
-  intro?: string;
-  sections: LegalSection[];
-};
+export type { LegalDocument, LegalSection } from "../../../../../shared/legal/documents";
+import type { LegalDocument, LegalSection } from "../../../../../shared/legal/documents";
 
 export type QuizQuestionContent = {
   title: string;
@@ -85,6 +73,7 @@ export type AppMessages = {
     payConfirmButton: string;
     payConfirmingButton: string;
     paySuccessTitle: string;
+    payPendingTitle: string;
     paySuccessPending: string;
     paySuccessDone: string;
     payCancelTitle: string;
@@ -92,7 +81,7 @@ export type AppMessages = {
     payManageTitle: string;
     payManageButton: string;
     payRestoreHint: string;
-    payOpenBot: string;
+    payOpenApp: string;
   };
   hero: {
     title: string;

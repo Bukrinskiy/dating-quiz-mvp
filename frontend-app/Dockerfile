@@ -6,11 +6,13 @@ ARG APP_SURFACE=app
 ARG API_BASE_URL=https://api.flirto.guru
 ARG PAY_PUBLIC_BASE_URL=https://pay.flirto.guru
 ARG APP_PUBLIC_BASE_URL=https://app.flirto.guru
+ARG LANDING_PUBLIC_BASE_URL=https://lp1.flirto.guru
 
 ENV APP_SURFACE=${APP_SURFACE}
 ENV API_BASE_URL=${API_BASE_URL}
 ENV PAY_PUBLIC_BASE_URL=${PAY_PUBLIC_BASE_URL}
 ENV APP_PUBLIC_BASE_URL=${APP_PUBLIC_BASE_URL}
+ENV LANDING_PUBLIC_BASE_URL=${LANDING_PUBLIC_BASE_URL}
 
 COPY frontend-app/package.json ./package.json
 COPY frontend-app/tsconfig.json ./tsconfig.json
@@ -21,6 +23,7 @@ COPY frontend-app/vite.config.ts ./vite.config.ts
 COPY frontend-app/index.html ./index.html
 COPY frontend-app/src ./src
 COPY frontend-app/public ./public
+COPY shared /shared
 
 RUN corepack enable && pnpm install --no-frozen-lockfile && pnpm build
 

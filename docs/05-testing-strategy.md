@@ -28,8 +28,8 @@
 10. preflight/browser calls из `site`, `landing` и `pay` в `API_PUBLIC_BASE_URL`
 11. Telegram: `/start <token>` -> `/premium` доступен
 12. Telegram: `/restore` (FSM email -> OTP)
-13. Telegram admin: `/grant_access` -> email -> `YYYY-MM-DD`
-14. Telegram admin: `/revoke_access` -> email
+13. Telegram admin: `/create_promo_code`
+14. Telegram admin: `/create_promo_code_until` -> `YYYY-MM-DD`
 
 ## Security checks
 - invalid webhook signature -> `400`
@@ -52,8 +52,8 @@ Manual smoke для бота (paid user):
 5. Получить `generate` результат, выполнить минимум 1 `refine`.
 6. `/reset` или `Завершить` -> сессия закрыта.
 
-Manual smoke для manual grants:
-1. Админ в Telegram вызывает `/grant_access`, вводит email и дату окончания.
-2. Пользователь логинится в `app.flirto.guru` тем же email и получает active entitlement.
-3. Админ вызывает `/revoke_access` для того же email.
-4. `GET /api/app/access-status` и UI paywall показывают, что manual entitlement снят.
+Manual smoke для promo access:
+1. Админ в Telegram вызывает `/create_promo_code` или `/create_promo_code_until`.
+2. Пользователь логинится в `app.flirto.guru`, вводит код в `/app/profile`.
+3. `GET /api/app/access-status` и UI profile/paywall показывают `Promo`.
+4. После истечения срока `GET /api/app/access-status` возвращает `Inactive`.

@@ -1,10 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { vi } from "vitest";
 
+import { renderWithI18n } from "../../test/renderWithI18n";
 import { AttachmentSheet } from "./AttachmentSheet";
 
 test("AttachmentSheet renders gallery camera and voice options", () => {
-  render(
+  renderWithI18n(
     <AttachmentSheet
       open
       onAudio={vi.fn()}
@@ -13,6 +14,7 @@ test("AttachmentSheet renders gallery camera and voice options", () => {
       onEditMeta={vi.fn()}
       onImage={vi.fn()}
     />,
+    { locale: "ru" },
   );
 
   expect(screen.getByText("Галерея")).toBeInTheDocument();

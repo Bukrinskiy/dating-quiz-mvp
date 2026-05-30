@@ -1,13 +1,15 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 
+import { renderWithI18n } from "../../test/renderWithI18n";
 import { MessageBubble } from "./MessageBubble";
 
 test("MessageBubble hides destructive actions until swipe is opened", () => {
-  render(
+  renderWithI18n(
     <MessageBubble
       canDelete
       message={{ id: "1", kind: "text", role: "USER_SELF", text: "Привет", authorLabel: "Я", sentAt: null }}
     />,
+    { locale: "ru" },
   );
 
   expect(screen.queryByRole("button", { name: "Удалить" })).not.toBeInTheDocument();
@@ -15,12 +17,13 @@ test("MessageBubble hides destructive actions until swipe is opened", () => {
 });
 
 test("MessageBubble exposes only delete action in swipe-open state", () => {
-  render(
+  renderWithI18n(
     <MessageBubble
       canDelete
       message={{ id: "1", kind: "text", role: "USER_SELF", text: "Привет", authorLabel: "Я", sentAt: null }}
       swipeOpen
     />,
+    { locale: "ru" },
   );
 
   expect(screen.getByRole("button", { name: "Удалить" })).toBeInTheDocument();
@@ -31,11 +34,12 @@ test("MessageBubble exposes only delete action in swipe-open state", () => {
 });
 
 test("MessageBubble does not expose delete action on long press", () => {
-  render(
+  renderWithI18n(
     <MessageBubble
       canDelete
       message={{ id: "1", kind: "text", role: "USER_SELF", text: "Привет", authorLabel: "Я", sentAt: null }}
     />,
+    { locale: "ru" },
   );
 
   const bubble = screen.getByText("Привет").closest("article");
@@ -46,10 +50,11 @@ test("MessageBubble does not expose delete action on long press", () => {
 });
 
 test("MessageBubble hides default self author label", () => {
-  render(
+  renderWithI18n(
     <MessageBubble
       message={{ id: "1", kind: "text", role: "USER_SELF", text: "Привет", authorLabel: "Я писал(а)", sentAt: null }}
     />,
+    { locale: "ru" },
   );
 
   expect(screen.queryByText("Я писал(а)")).not.toBeInTheDocument();

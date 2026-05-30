@@ -28,8 +28,7 @@ class DummyBackend:
     restore_requests: list[str] = field(default_factory=list)
     restore_confirms: list[dict[str, str]] = field(default_factory=list)
     session_reset_calls: list[dict[str, str]] = field(default_factory=list)
-    admin_grants: list[dict[str, str | None]] = field(default_factory=list)
-    admin_revokes: list[dict[str, str | None]] = field(default_factory=list)
+    created_codes: list[dict[str, str | None]] = field(default_factory=list)
 
     async def access_status(self, telegram_user_id: str) -> AccessStatus:
         return AccessStatus(is_paid=True, order_id="ord-1", plan="pro", access_status="active")
@@ -56,41 +55,21 @@ class DummyBackend:
         self.session_reset_calls.append({"session_id": "active", "telegram_user_id": telegram_user_id})
         return {"closed_sessions": 1}
 
-    async def admin_grant_access(
+    async def create_access_code(
         self,
         *,
-        email: str,
-        expires_at: str,
         admin_telegram_user_id: str,
         admin_telegram_username: str | None,
+        expires_at: str | None = None,
     ) -> dict[str, Any]:
-        self.admin_grants.append(
+        self.created_codes.append(
             {
-                "email": email,
+                "admin_telegram_user_id": admin_telegram_user_id,
+                "admin_telegram_username": admin_telegram_username,
                 "expires_at": expires_at,
-                "admin_telegram_user_id": admin_telegram_user_id,
-                "admin_telegram_username": admin_telegram_username,
             }
         )
-        return {"status": "granted", "access_status": "manual_active"}
-
-    async def admin_revoke_access(
-        self,
-        *,
-        email: str,
-        admin_telegram_user_id: str,
-        admin_telegram_username: str | None,
-    ) -> dict[str, Any]:
-        self.admin_revokes.append(
-            {
-                "email": email,
-                "admin_telegram_user_id": admin_telegram_user_id,
-                "admin_telegram_username": admin_telegram_username,
-            }
-        )
-        if email == "missing@example.com":
-            return {"status": "not_found", "access_status": None}
-        return {"status": "revoked", "access_status": None}
+        return {"status": "created", "code": "FG-TESTCODE", "expires_at": expires_at or "2026-05-08T10:00:00+00:00"}
 
 
 @pytest.fixture
@@ -252,73 +231,53 @@ async def test_support_interrupts_to_advice(bot_env: tuple[Any, Bot, DummyBacken
 
 
 @pytest.mark.asyncio
-async def test_non_admin_cannot_use_grant_access(bot_env: tuple[Any, Bot, DummyBackend, list[dict[str, Any]]]) -> None:
+async def test_non_admin_cannot_use_create_promo_code(bot_env: tuple[Any, Bot, DummyBackend, list[dict[str, Any]]]) -> None:
     dispatcher, bot, backend, sent_messages = bot_env
 
-    await _feed_text(dispatcher, bot, "/grant_access", update_id=1, message_id=1)
+    await _feed_text(dispatcher, bot, "/create_promo_code", update_id=1, message_id=1)
 
-    assert backend.admin_grants == []
+    assert backend.created_codes == []
     assert sent_messages[-1]["text"] == "Команда доступна только администраторам."
 
 
 @pytest.mark.asyncio
-async def test_admin_grant_access_flow(bot_env: tuple[Any, Bot, DummyBackend, list[dict[str, Any]]]) -> None:
+async def test_admin_create_promo_code_flow(bot_env: tuple[Any, Bot, DummyBackend, list[dict[str, Any]]]) -> None:
     dispatcher, bot, backend, sent_messages = bot_env
 
-    await _feed_text(dispatcher, bot, "/grant_access", update_id=1, message_id=1, user_id=111, username="chief_admin")
-    await _feed_text(dispatcher, bot, "manual@example.com", update_id=2, message_id=2, user_id=111, username="chief_admin")
-    await _feed_text(dispatcher, bot, "2026-05-01", update_id=3, message_id=3, user_id=111, username="chief_admin")
+    await _feed_text(dispatcher, bot, "/create_promo_code", update_id=1, message_id=1, user_id=111, username="chief_admin")
 
-    assert backend.admin_grants
-    assert backend.admin_grants[-1]["email"] == "manual@example.com"
-    assert backend.admin_grants[-1]["admin_telegram_user_id"] == "111"
-    assert sent_messages[-1]["text"].startswith("Ручной доступ выдан для manual@example.com до 2026-05-01 23:59:59 MSK.")
+    assert backend.created_codes
+    assert backend.created_codes[-1]["admin_telegram_user_id"] == "111"
+    assert sent_messages[-1]["text"].startswith("Промокод создан: FG-TESTCODE")
 
 
 @pytest.mark.asyncio
-async def test_admin_grant_access_rejects_invalid_inputs(bot_env: tuple[Any, Bot, DummyBackend, list[dict[str, Any]]]) -> None:
+async def test_admin_create_promo_code_until_rejects_invalid_date(bot_env: tuple[Any, Bot, DummyBackend, list[dict[str, Any]]]) -> None:
     dispatcher, bot, backend, sent_messages = bot_env
 
-    await _feed_text(dispatcher, bot, "/grant_access", update_id=1, message_id=1, user_id=111)
-    await _feed_text(dispatcher, bot, "bad-email", update_id=2, message_id=2, user_id=111)
-    assert backend.admin_grants == []
-    assert sent_messages[-1]["text"] == "Некорректный email. Введите адрес в формате user@example.com."
-
-    await _feed_text(dispatcher, bot, "good@example.com", update_id=3, message_id=3, user_id=111)
-    await _feed_text(dispatcher, bot, "2020-01-01", update_id=4, message_id=4, user_id=111)
-    assert backend.admin_grants == []
+    await _feed_text(dispatcher, bot, "/create_promo_code_until", update_id=1, message_id=1, user_id=111)
+    await _feed_text(dispatcher, bot, "2020-01-01", update_id=2, message_id=2, user_id=111)
+    assert backend.created_codes == []
     assert sent_messages[-1]["text"] == "Некорректная дата. Используйте YYYY-MM-DD и не указывайте дату в прошлом."
 
 
 @pytest.mark.asyncio
-async def test_admin_revoke_access_flow(bot_env: tuple[Any, Bot, DummyBackend, list[dict[str, Any]]]) -> None:
+async def test_admin_create_promo_code_until_flow(bot_env: tuple[Any, Bot, DummyBackend, list[dict[str, Any]]]) -> None:
     dispatcher, bot, backend, sent_messages = bot_env
 
-    await _feed_text(dispatcher, bot, "/revoke_access", update_id=1, message_id=1, user_id=111, username="chief_admin")
-    await _feed_text(dispatcher, bot, "manual@example.com", update_id=2, message_id=2, user_id=111, username="chief_admin")
+    await _feed_text(dispatcher, bot, "/create_promo_code_until", update_id=1, message_id=1, user_id=111, username="chief_admin")
+    await _feed_text(dispatcher, bot, "2026-05-10", update_id=2, message_id=2, user_id=111, username="chief_admin")
 
-    assert backend.admin_revokes
-    assert backend.admin_revokes[-1]["email"] == "manual@example.com"
-    assert sent_messages[-1]["text"] == "Ручной доступ для manual@example.com отозван. Текущий статус после отзыва: no_access."
-
-
-@pytest.mark.asyncio
-async def test_admin_revoke_access_not_found(bot_env: tuple[Any, Bot, DummyBackend, list[dict[str, Any]]]) -> None:
-    dispatcher, bot, backend, sent_messages = bot_env
-
-    await _feed_text(dispatcher, bot, "/revoke_access", update_id=1, message_id=1, user_id=111)
-    await _feed_text(dispatcher, bot, "missing@example.com", update_id=2, message_id=2, user_id=111)
-
-    assert backend.admin_revokes[-1]["email"] == "missing@example.com"
-    assert sent_messages[-1]["text"] == "Активный ручной доступ для missing@example.com не найден."
+    assert backend.created_codes
+    assert backend.created_codes[-1]["expires_at"] == "2026-05-10T20:59:59+00:00"
+    assert sent_messages[-1]["text"].startswith("Промокод создан: FG-TESTCODE")
 
 
 @pytest.mark.asyncio
 async def test_admin_flow_interrupts_to_start(bot_env: tuple[Any, Bot, DummyBackend, list[dict[str, Any]]]) -> None:
     dispatcher, bot, _backend, sent_messages = bot_env
 
-    await _feed_text(dispatcher, bot, "/grant_access", update_id=1, message_id=1, user_id=111)
-    await _feed_text(dispatcher, bot, "manual@example.com", update_id=2, message_id=2, user_id=111)
+    await _feed_text(dispatcher, bot, "/create_promo_code_until", update_id=1, message_id=1, user_id=111)
     await _feed_text(dispatcher, bot, "/start", update_id=3, message_id=3, user_id=111)
 
     assert sent_messages[-1]["text"] == "У вас уже активный доступ. Команды /advice и /reset доступны."

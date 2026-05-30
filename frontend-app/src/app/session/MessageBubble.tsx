@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 
-import { appCopy, roleLabels } from "../copy";
+import { useI18n } from "../i18n";
 import type { SessionMessage } from "../types";
 import { PrototypeIcon } from "../ui/icons";
 import { getVisibleAuthorLabel } from "./messageAuthor";
@@ -28,7 +28,8 @@ export function MessageBubble({
   onSwipeClose,
   onSwipeOpen,
 }: MessageBubbleProps) {
-  const visibleAuthorLabel = getVisibleAuthorLabel(message);
+  const { messages, roleLabels } = useI18n();
+  const visibleAuthorLabel = getVisibleAuthorLabel(message, roleLabels);
   const startXRef = useRef<number | null>(null);
   const startYRef = useRef<number | null>(null);
   const draggingRef = useRef(false);
@@ -71,7 +72,7 @@ export function MessageBubble({
                 event.stopPropagation();
                 onDeleteRequest?.(message);
               }}
-              aria-label={appCopy.session.deleteFragment}
+              aria-label={messages.session.deleteFragment}
               type="button"
             >
               <PrototypeIcon.trash />
@@ -138,7 +139,7 @@ export function MessageBubble({
         >
           {visibleAuthorLabel || message.sentAt ? (
             <header className="bubble__meta">
-              <strong>{visibleAuthorLabel || (message.role ? roleLabels[message.role] : "Контекст")}</strong>
+              <strong>{visibleAuthorLabel || (message.role ? roleLabels[message.role] : messages.session.contextFallback)}</strong>
               {message.sentAt ? <span>{message.sentAt}</span> : null}
             </header>
           ) : null}

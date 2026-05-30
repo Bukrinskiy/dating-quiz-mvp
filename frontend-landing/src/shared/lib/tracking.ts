@@ -19,7 +19,10 @@ const pendingImageBeacons = new Set<HTMLImageElement>();
 const pendingPostbackKeys = new Set<string>();
 
 const RELAY_ENDPOINT = buildApiUrl("/api/events/mobi-slon");
+const BINOM_GA_LINK_ENDPOINT = buildApiUrl("/api/events/binom-ga-link");
 const FALLBACK_CLICKID = "conversion_pixel";
+
+const pendingGaLinkKeys = new Set<string>();
 
 const isMobiDebugEnabled = (): boolean => {
   try {
@@ -225,5 +228,80 @@ export const sendPostbackOnce = (status: MobiStatus, search: string, options?: P
     })
     .finally(() => {
       pendingPostbackKeys.delete(key);
+    });
+};
+
+export const linkGaClientIdOnce = (
+  clickid: string,
+  gaClientId: string,
+  sessionId?: string | null,
+): void => {
+  const trimmedClickid = clickid.trim();
+  const trimmedClientId = gaClientId.trim();
+  if (!trimmedClickid || !trimmedClientId) {
+    return;
+  }
+
+  const normalizedSessionId = sessionId?.trim() || "global";
+  const key = `ga_link_sent_${trimmedClickid}_${trimmedClientId}_${normalizedSessionId}`;
+
+  if (pendingGaLinkKeys.has(key)) {
+    return;
+  }
+  try {
+    if (sessionStorage.getItem(key) === "1") {
+      return;
+    }
+  } catch {
+    // ignore storage errors
+  }
+
+  pendingGaLinkKeys.add(key);
+
+  const payload = {
+    clickid: trimmedClickid,
+    ga_client_id: trimmedClientId,
+    session_id: sessionId?.trim() || null,
+    page_path: `${window.location.pathname}${window.location.search}`,
+  };
+  const body = JSON.stringify(payload);
+  logTracking("binom-ga-link", "sending ga client_id link", {
+    clickid: trimmedClickid,
+    sessionId: normalizedSessionId,
+  });
+
+  void fetch(BINOM_GA_LINK_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    keepalive: true,
+    body,
+  })
+    .then((response) => {
+      if (!response.ok) {
+        logTracking(
+          "binom-ga-link",
+          "relay bad status",
+          { code: response.status, clickid: trimmedClickid },
+          "warn",
+        );
+        return;
+      }
+      try {
+        sessionStorage.setItem(key, "1");
+      } catch {
+        // ignore storage errors
+      }
+      logTracking("binom-ga-link", "relay accepted", { clickid: trimmedClickid });
+    })
+    .catch((error: unknown) => {
+      logTracking(
+        "binom-ga-link",
+        "relay failed",
+        { error: String(error), clickid: trimmedClickid },
+        "warn",
+      );
+    })
+    .finally(() => {
+      pendingGaLinkKeys.delete(key);
     });
 };

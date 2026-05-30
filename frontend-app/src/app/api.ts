@@ -1,4 +1,5 @@
 import { buildApiUrl } from "../shared/runtime";
+import type { AppMessages } from "./i18n";
 import type {
   AccessStatus,
   AuthPayload,
@@ -31,6 +32,22 @@ type SessionMeta = {
   role?: Role;
   display_name?: string;
   sent_at?: string;
+};
+
+export type QuizSessionCreatePayload = {
+  locale?: string;
+  currency?: string;
+  answers?: Record<string, unknown>;
+  clickid?: string;
+  brand?: string;
+  landing_id?: string;
+  entry_host?: string;
+  entry_path?: string;
+  tracking_params?: Record<string, string>;
+};
+
+export type QuizSessionCreateResponse = {
+  uuid: string;
 };
 
 export class ApiError extends Error {
@@ -220,7 +237,9 @@ async function requestForm<T>(
 export const createAppApi = (deps: AppApiDeps) => ({
   requestCode: (email: string) => requestJson<{ status: string }>("/api/app/auth/email-code/request", "POST", { email }, deps),
   confirmCode: (email: string, code: string) => requestJson<AuthPayload>("/api/app/auth/email-code/confirm", "POST", { email, code }, deps),
+  updateLocale: (locale: string) => requestJson<AuthPayload>("/api/app/auth/locale", "POST", { locale }, deps),
   accessStatus: () => requestJson<AccessStatus>("/api/app/access-status", "GET", null, deps),
+  redeemAccessCode: (code: string) => requestJson<AuthPayload>("/api/app/access-code/redeem", "POST", { code }, deps),
   startSession: (mode: SessionMode) => requestJson<{ session_id: string }>("/api/app/session/start", "POST", { mode }, deps),
   listSessions: () => requestJson<SessionListItem[]>("/api/app/sessions", "GET", null, deps),
   getSessionDetail: (sessionId: string) => requestJson<SessionDetail>(`/api/app/session/${sessionId}`, "GET", null, deps),
@@ -268,6 +287,14 @@ export const createAppApi = (deps: AppApiDeps) => ({
   submitSupport: (text: string) => requestJson<SupportResponse>("/api/app/support", "POST", { text }, deps),
 });
 
+export const createQuizSession = async (payload: QuizSessionCreatePayload): Promise<QuizSessionCreateResponse> => {
+  const response = await apiFetch("/api/session/create", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  return parseOrThrow<QuizSessionCreateResponse>(response);
+};
+
 const asLines = (value: unknown): string[] =>
   Array.isArray(value)
     ? value
@@ -277,26 +304,27 @@ const asLines = (value: unknown): string[] =>
 
 export const asTextList = (value: unknown): string[] => asLines(value);
 
-export const formatUiPayloadText = (payload: Record<string, unknown>): string => {
+export const formatUiPayloadText = (payload: Record<string, unknown>, messages: AppMessages): string => {
+  const empty = `- ${messages.session.cards.emptyList}`;
   if ("primary_message" in payload) {
     return [
-      `Сообщение:\n${String(payload.primary_message || "")}`,
-      `Почему:\n${String(payload.why || "")}`,
-      `Риски:\n${asLines(payload.risks).map((item) => `- ${item}`).join("\n") || "- нет"}`,
-      `Избегать:\n${asLines(payload.avoid_list).map((item) => `- ${item}`).join("\n") || "- нет"}`,
-      `Следующий шаг:\n${String(payload.next_step || "")}`,
-      `Простой вариант:\n${String(payload.fallback_simple_version || "")}`,
-      `Альтернативы:\n${asLines(payload.alternatives).map((item) => `- ${item}`).join("\n") || "- нет"}`,
+      `${messages.session.cards.primaryMessage}:\n${String(payload.primary_message || "")}`,
+      `${messages.session.cards.why}:\n${String(payload.why || "")}`,
+      `${messages.session.cards.risks}:\n${asLines(payload.risks).map((item) => `- ${item}`).join("\n") || empty}`,
+      `${messages.session.cards.avoid}:\n${asLines(payload.avoid_list).map((item) => `- ${item}`).join("\n") || empty}`,
+      `${messages.session.cards.nextStep}:\n${String(payload.next_step || "")}`,
+      `${messages.session.cards.simpleVersion}:\n${String(payload.fallback_simple_version || "")}`,
+      `${messages.session.cards.alternatives}:\n${asLines(payload.alternatives).map((item) => `- ${item}`).join("\n") || empty}`,
     ].join("\n\n");
   }
 
   return [
-    `Диагноз:\n${String(payload.diagnosis || "")}`,
-    `Точка рычага:\n${String(payload.core_leverage || "")}`,
-    `План 24ч:\n${asLines(payload.plan_24h).map((item) => `- ${item}`).join("\n") || "- нет"}`,
-    `Если ответит:\n${asLines(payload.plan_if_reply).map((item) => `- ${item}`).join("\n") || "- нет"}`,
-    `Если не ответит:\n${asLines(payload.plan_if_no_reply).map((item) => `- ${item}`).join("\n") || "- нет"}`,
-    `Шаблон:\n${String(payload.message_template || "")}`,
-    `Избегать:\n${asLines(payload.avoid_list).map((item) => `- ${item}`).join("\n") || "- нет"}`,
+    `${messages.session.cards.diagnosis}:\n${String(payload.diagnosis || "")}`,
+    `${messages.session.cards.leverage}:\n${String(payload.core_leverage || "")}`,
+    `${messages.session.cards.plan24}:\n${asLines(payload.plan_24h).map((item) => `- ${item}`).join("\n") || empty}`,
+    `${messages.session.cards.ifReply}:\n${asLines(payload.plan_if_reply).map((item) => `- ${item}`).join("\n") || empty}`,
+    `${messages.session.cards.ifNoReply}:\n${asLines(payload.plan_if_no_reply).map((item) => `- ${item}`).join("\n") || empty}`,
+    `${messages.session.cards.template}:\n${String(payload.message_template || "")}`,
+    `${messages.session.cards.avoid}:\n${asLines(payload.avoid_list).map((item) => `- ${item}`).join("\n") || empty}`,
   ].join("\n\n");
 };

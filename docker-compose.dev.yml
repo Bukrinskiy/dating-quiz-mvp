@@ -68,6 +68,7 @@ services:
     working_dir: /app
     environment:
       API_BASE_URL: ${SITE_API_BASE_URL:-http://localhost:8000}
+      APP_PUBLIC_BASE_URL: ${SITE_APP_PUBLIC_BASE_URL:-http://localhost:5177}
       PRIMARY_LANDING_URL: ${SITE_PRIMARY_LANDING_URL:-http://localhost:5174/en/quiz/1}
     command: >
       sh -lc "corepack enable &&
@@ -75,6 +76,7 @@ services:
       pnpm dev --host 0.0.0.0 --port 5175"
     volumes:
       - ./frontend-site:/app
+      - ./shared:/shared
       - frontend_site_node_modules:/app/node_modules
     ports:
       - "5175:5175"
@@ -89,7 +91,9 @@ services:
       API_BASE_URL: ${LANDING_API_BASE_URL:-http://localhost:8000}
       PAY_PUBLIC_BASE_URL: ${LANDING_PAY_PUBLIC_BASE_URL:-http://localhost:5176}
       VITE_MOBI_SLON_URL: ${VITE_MOBI_SLON_URL:-https://mobi-slon.com/index.php}
-      VITE_MOBI_SLON_CAMPAIGN_KEY: ${VITE_MOBI_SLON_CAMPAIGN_KEY:-}
+      VITE_MOBI_SLON_CAMPAIGN_KEY_FACEBOOK: ${VITE_MOBI_SLON_CAMPAIGN_KEY_FACEBOOK:-}
+      VITE_MOBI_SLON_CAMPAIGN_KEY_GOOGLE: ${VITE_MOBI_SLON_CAMPAIGN_KEY_GOOGLE:-}
+      VITE_GOOGLE_ADS_ID: ${VITE_GOOGLE_ADS_ID:-}
       VITE_FB_PIXEL_ID: ${VITE_FB_PIXEL_ID:-}
       VITE_YANDEX_METRIKA_ID: ${VITE_YANDEX_METRIKA_ID:-}
       VITE_TRACKING_DEBUG: ${VITE_TRACKING_DEBUG:-0}
@@ -99,6 +103,7 @@ services:
       pnpm dev --host 0.0.0.0 --port 5174"
     volumes:
       - ./frontend-landing:/app
+      - ./shared:/shared
       - frontend_landing_node_modules:/app/node_modules
     ports:
       - "5174:5174"
@@ -112,8 +117,6 @@ services:
       APP_SURFACE: pay
       API_BASE_URL: ${PAY_API_BASE_URL:-http://localhost:8000}
       PAY_PUBLIC_BASE_URL: ${PAY_PUBLIC_BASE_URL:-http://localhost:5176}
-      VITE_MOBI_SLON_URL: ${VITE_MOBI_SLON_URL:-https://mobi-slon.com/index.php}
-      VITE_MOBI_SLON_CAMPAIGN_KEY: ${VITE_MOBI_SLON_CAMPAIGN_KEY:-}
       VITE_FB_PIXEL_ID: ${VITE_FB_PIXEL_ID:-}
       VITE_YANDEX_METRIKA_ID: ${VITE_YANDEX_METRIKA_ID:-}
       VITE_TRACKING_DEBUG: ${VITE_TRACKING_DEBUG:-0}
@@ -123,6 +126,7 @@ services:
       pnpm dev --host 0.0.0.0 --port 5176"
     volumes:
       - ./frontend-pay:/app
+      - ./shared:/shared
       - ./frontend-landing/public:/frontend-landing/public:ro
       - frontend_pay_node_modules:/app/node_modules
     ports:
@@ -138,12 +142,14 @@ services:
       API_BASE_URL: ${APP_API_BASE_URL:-http://localhost:8000}
       PAY_PUBLIC_BASE_URL: ${PAY_PUBLIC_BASE_URL:-http://localhost:5176}
       APP_PUBLIC_BASE_URL: ${APP_APP_PUBLIC_BASE_URL:-http://localhost:5177}
+      LANDING_PUBLIC_BASE_URL: ${APP_LANDING_PUBLIC_BASE_URL:-http://localhost:5174}
     command: >
       sh -lc "corepack enable &&
       pnpm install --no-frozen-lockfile &&
       pnpm dev --host 0.0.0.0 --port 5177"
     volumes:
       - ./frontend-app:/app
+      - ./shared:/shared
       - frontend_app_node_modules:/app/node_modules
     ports:
       - "5177:5177"

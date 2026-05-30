@@ -1,5 +1,8 @@
+import { useI18n } from "../i18n";
+
 export function StepBar({ step, inverted = false }: { step: 0 | 1 | 2 | 3; inverted?: boolean }) {
-  const steps = ["Контекст", "Проверка", "Генерация", "Результат"] as const;
+  const { messages } = useI18n();
+  const steps = messages.session.stepLabels;
 
   return (
     <div className={`step-bar${inverted ? " step-bar--inverted" : ""}`} aria-hidden="true">

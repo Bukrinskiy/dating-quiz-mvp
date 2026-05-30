@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import sys
 from datetime import timedelta
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
@@ -36,7 +37,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.main import app
 from app.core.db.session import SessionLocal, init_db
-from app.core.models.payment import AppEmailCode, ManualAccessGrant, Order, utcnow
+from app.core.models.payment import AccessCode, AppEmailCode, Order, utcnow
 
 
 def _login_via_email_code(client: TestClient, monkeypatch, email: str) -> dict:
@@ -44,6 +45,7 @@ def _login_via_email_code(client: TestClient, monkeypatch, email: str) -> dict:
 
     def fake_send_app_login_code(self, *, email: str, code: str, allow_plain_code: bool, locale: str) -> None:
         captured["code"] = code
+        captured["locale"] = locale
 
     monkeypatch.setattr("app.core.notifications.LogOnlyEmailSender.send_app_login_code", fake_send_app_login_code)
 
@@ -51,6 +53,7 @@ def _login_via_email_code(client: TestClient, monkeypatch, email: str) -> dict:
     assert response.status_code == 200
     assert response.json() == {"status": "code_sent"}
     assert len(captured["code"]) == 6
+    assert captured["locale"] == "en"
 
     with SessionLocal() as db:
         assert db.query(AppEmailCode).filter(AppEmailCode.email == email).count() >= 1
@@ -63,19 +66,63 @@ def _login_via_email_code(client: TestClient, monkeypatch, email: str) -> dict:
 def test_app_auth_login_me_logout(monkeypatch) -> None:
     init_db()
     with TestClient(app) as client:
-        payload = _login_via_email_code(client, monkeypatch, "app-user@example.com")
-        assert payload["user"]["email"] == "app-user@example.com"
+        email = f"app-user-{uuid4()}@example.com"
+        payload = _login_via_email_code(client, monkeypatch, email)
+        assert payload["user"]["email"] == email
+        assert payload["user"]["locale"] == "en"
         assert payload["access"]["has_access"] is False
         access_token = payload["tokens"]["access_token"]
         assert client.cookies.get("flirto_app_refresh")
 
         me = client.get("/api/app/auth/me", headers={"Authorization": f"Bearer {access_token}"})
         assert me.status_code == 200
-        assert me.json()["user"]["email"] == "app-user@example.com"
+        assert me.json()["user"]["email"] == email
 
         logout = client.post("/api/app/auth/logout")
         assert logout.status_code == 200
         assert logout.json() == {"ok": True}
+
+
+def test_app_auth_updates_locale(monkeypatch) -> None:
+    init_db()
+    with TestClient(app) as client:
+        payload = _login_via_email_code(client, monkeypatch, "locale-user@example.com")
+        access_token = payload["tokens"]["access_token"]
+
+        update = client.post(
+            "/api/app/auth/locale",
+            json={"locale": "ru"},
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        assert update.status_code == 200
+        assert update.json()["user"]["locale"] == "ru"
+
+        next_token = update.json()["tokens"]["access_token"]
+        french = client.post(
+            "/api/app/auth/locale",
+            json={"locale": "fr"},
+            headers={"Authorization": f"Bearer {next_token}"},
+        )
+        assert french.status_code == 200
+        assert french.json()["user"]["locale"] == "fr"
+
+        next_token = french.json()["tokens"]["access_token"]
+        spanish = client.post(
+            "/api/app/auth/locale",
+            json={"locale": "es-ES"},
+            headers={"Authorization": f"Bearer {next_token}"},
+        )
+        assert spanish.status_code == 200
+        assert spanish.json()["user"]["locale"] == "es"
+
+        next_token = spanish.json()["tokens"]["access_token"]
+        fallback = client.post(
+            "/api/app/auth/locale",
+            json={"locale": "de"},
+            headers={"Authorization": f"Bearer {next_token}"},
+        )
+        assert fallback.status_code == 200
+        assert fallback.json()["user"]["locale"] == "en"
 
 
 def test_app_auth_inherits_paid_access_from_order(monkeypatch) -> None:
@@ -101,50 +148,71 @@ def test_app_auth_inherits_paid_access_from_order(monkeypatch) -> None:
         payload = _login_via_email_code(client, monkeypatch, "paid-user@example.com")
         assert payload["access"]["has_access"] is True
         assert payload["access"]["plan"] == "sub_monthly"
+        assert payload["access"]["status_label"] == "Active"
 
-
-def test_app_auth_inherits_manual_access_grant(monkeypatch) -> None:
+def test_app_access_code_redeem_grants_promo_access(monkeypatch) -> None:
     init_db()
     with SessionLocal() as db:
         db.add(
-            ManualAccessGrant(
-                email="manual-user@example.com",
-                status="active",
-                granted_by_telegram_user_id="111",
-                granted_by_telegram_username="admin",
+            AccessCode(
+                code="FG-REDEEM01",
+                is_active=True,
                 expires_at=utcnow() + timedelta(days=7),
+                max_redemptions=1,
+                redeemed_count=0,
+                created_by_telegram_user_id="111",
+                created_by_telegram_username="admin",
             )
         )
         db.commit()
 
     with TestClient(app) as client:
-        payload = _login_via_email_code(client, monkeypatch, "manual-user@example.com")
-        assert payload["access"]["has_access"] is True
-        assert payload["access"]["plan"] == "manual"
-        assert payload["access"]["access_status"] == "manual_active"
+        payload = _login_via_email_code(client, monkeypatch, "promo-user@example.com")
+        access_token = payload["tokens"]["access_token"]
+        assert payload["access"]["has_access"] is False
+
+        redeem = client.post(
+            "/api/app/access-code/redeem",
+            json={"code": "FG-REDEEM01"},
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        assert redeem.status_code == 200
+        redeemed_payload = redeem.json()
+        assert redeemed_payload["access"]["has_access"] is True
+        assert redeemed_payload["access"]["status_label"] == "Promo"
+        assert redeemed_payload["access"]["access_status"] == "promo_active"
 
 
-def test_expired_manual_access_grant_does_not_give_access(monkeypatch) -> None:
+def test_expired_access_code_does_not_give_access(monkeypatch) -> None:
     init_db()
     with SessionLocal() as db:
         db.add(
-            ManualAccessGrant(
-                email="expired-manual@example.com",
-                status="active",
-                granted_by_telegram_user_id="111",
-                granted_by_telegram_username="admin",
+            AccessCode(
+                code="FG-EXPIRED1",
+                is_active=True,
                 expires_at=utcnow() - timedelta(days=1),
+                max_redemptions=1,
+                redeemed_count=0,
+                created_by_telegram_user_id="111",
+                created_by_telegram_username="admin",
             )
         )
         db.commit()
 
     with TestClient(app) as client:
-        payload = _login_via_email_code(client, monkeypatch, "expired-manual@example.com")
+        payload = _login_via_email_code(client, monkeypatch, "expired-promo@example.com")
+        access_token = payload["tokens"]["access_token"]
+        redeem = client.post(
+            "/api/app/access-code/redeem",
+            json={"code": "FG-EXPIRED1"},
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        assert redeem.status_code == 400
         assert payload["access"]["has_access"] is False
-        assert payload["access"]["access_status"] is None
+        assert payload["access"]["status_label"] == "Inactive"
 
 
-def test_revoked_manual_access_does_not_remove_paid_access(monkeypatch) -> None:
+def test_promo_access_does_not_override_paid_access(monkeypatch) -> None:
     init_db()
     with SessionLocal() as db:
         db.add(
@@ -162,24 +230,31 @@ def test_revoked_manual_access_does_not_remove_paid_access(monkeypatch) -> None:
             )
         )
         db.add(
-            ManualAccessGrant(
-                email="paid-plus-manual@example.com",
-                status="revoked",
-                granted_by_telegram_user_id="111",
-                granted_by_telegram_username="admin",
+            AccessCode(
+                code="FG-PAIDPROMO",
+                is_active=True,
                 expires_at=utcnow() + timedelta(days=7),
-                revoked_at=utcnow(),
-                revoked_by_telegram_user_id="111",
-                revoke_reason="admin_revoke",
+                max_redemptions=1,
+                redeemed_count=0,
+                created_by_telegram_user_id="111",
+                created_by_telegram_username="admin",
             )
         )
         db.commit()
 
     with TestClient(app) as client:
         payload = _login_via_email_code(client, monkeypatch, "paid-plus-manual@example.com")
+        access_token = payload["tokens"]["access_token"]
+        redeem = client.post(
+            "/api/app/access-code/redeem",
+            json={"code": "FG-PAIDPROMO"},
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        assert redeem.status_code == 200
         assert payload["access"]["has_access"] is True
         assert payload["access"]["plan"] == "sub_monthly"
         assert payload["access"]["access_status"] == "active"
+        assert redeem.json()["access"]["status_label"] == "Active"
 
 
 def test_app_paid_session_flow(monkeypatch) -> None:
@@ -201,9 +276,11 @@ def test_app_paid_session_flow(monkeypatch) -> None:
         )
         db.commit()
 
-    monkeypatch.setattr(
-        "app.services.openai_bot.OpenAIBotClient.generate_analyze_case",
-        lambda self, prompt: {
+    captured_prompts: dict[str, str] = {}
+
+    def fake_generate_analyze_case(self, prompt):
+        captured_prompts["generate"] = prompt
+        return {
             "diagnosis": "Диалог завис после свидания.",
             "core_leverage": "Вернуть легкий и спокойный тон.",
             "plan_24h": ["Отправь короткое сообщение без претензий сегодня вечером."],
@@ -211,11 +288,11 @@ def test_app_paid_session_flow(monkeypatch) -> None:
             "plan_if_no_reply": ["Не дожимай и вернись через несколько дней с новым поводом."],
             "message_template": "Привет. Было приятно увидеться, давай без спешки продолжим общение :)",
             "avoid_list": ["Не дави", "Не оправдывайся", "Не пиши простыни"],
-        },
-    )
-    monkeypatch.setattr(
-        "app.services.openai_bot.OpenAIBotClient.refine_analyze_case",
-        lambda self, prompt: {
+        }
+
+    def fake_refine_analyze_case(self, prompt):
+        captured_prompts["refine"] = prompt
+        return {
             "diagnosis": "Диалогу нужен мягкий вход без давления.",
             "core_leverage": "Показать интерес и оставить ей пространство.",
             "plan_24h": ["Отправь одно теплое сообщение без ожидания немедленного ответа."],
@@ -223,12 +300,17 @@ def test_app_paid_session_flow(monkeypatch) -> None:
             "plan_if_no_reply": ["Не пиши повторно минимум несколько дней."],
             "message_template": "Привет. Мне было приятно с тобой, если будет настроение — продолжим без спешки :)",
             "avoid_list": ["Не дави", "Не требуй ответа", "Не отправляй серию сообщений"],
-        },
-    )
+        }
+
+    monkeypatch.setattr("app.services.openai_bot.OpenAIBotClient.generate_analyze_case", fake_generate_analyze_case)
+    monkeypatch.setattr("app.services.openai_bot.OpenAIBotClient.refine_analyze_case", fake_refine_analyze_case)
 
     with TestClient(app) as client:
         payload = _login_via_email_code(client, monkeypatch, "advisor@example.com")
         access_token = payload["tokens"]["access_token"]
+        locale_update = client.post("/api/app/auth/locale", json={"locale": "en"}, headers={"Authorization": f"Bearer {access_token}"})
+        assert locale_update.status_code == 200
+        access_token = locale_update.json()["tokens"]["access_token"]
         headers = {"Authorization": f"Bearer {access_token}"}
 
         start = client.post("/api/app/session/start", json={"mode": "analyze_case"}, headers=headers)
@@ -257,6 +339,7 @@ def test_app_paid_session_flow(monkeypatch) -> None:
         generate = client.post(f"/api/app/session/{session_id}/generate", json={}, headers=headers)
         assert generate.status_code == 200
         assert generate.json()["ui_payload"]["diagnosis"] == "Диалог завис после свидания."
+        assert "Write all user-visible values in natural English." in captured_prompts["generate"]
 
         refine = client.post(
             f"/api/app/session/{session_id}/refine",
@@ -265,6 +348,7 @@ def test_app_paid_session_flow(monkeypatch) -> None:
         )
         assert refine.status_code == 200
         assert refine.json()["ui_payload"]["message_template"].startswith("Привет.")
+        assert "Write all user-visible values in natural English." in captured_prompts["refine"]
 
         reset_active = client.post("/api/app/session/reset-active", headers=headers)
         assert reset_active.status_code == 200
@@ -468,7 +552,7 @@ def test_app_sessions_list_and_detail_restore(monkeypatch) -> None:
         assert "[assistant][analysis][generate]" in generate_prompts[1]
         assert generate_prompts[1].index("[user][text]") < generate_prompts[1].index("[assistant][analysis][generate]")
         assert generate_prompts[1].index("[assistant][analysis][generate]") < generate_prompts[1].rindex("[user][text]")
-        assert "Блоки [assistant] — прошлые советы системы, а не факты переписки" in generate_prompts[1]
+        assert "[assistant] blocks are previous system advice" in generate_prompts[1]
         assert "Готовый текст для возврата." in generate_prompts[1]
         assert "Потому что так лучше." in generate_prompts[1]
         assert "Она ответила и спросила" in generate_prompts[1]

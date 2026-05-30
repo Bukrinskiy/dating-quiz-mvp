@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 
 import { asTextList } from "../api";
-import { appCopy } from "../copy";
+import { useI18n, type AppMessages } from "../i18n";
 import { BottomSheet } from "../ui/BottomSheet";
 import type { RoleMeta, SessionGeneratePayload, SessionMessage } from "../types";
 import { BatchCloseBar } from "./BatchCloseBar";
@@ -42,6 +42,7 @@ export function ChatScreen({
   onSendText,
   onCloseBatch,
 }: ChatScreenProps) {
+  const { messages: i18nMessages } = useI18n();
   const [activeSwipeId, setActiveSwipeId] = useState<string | null>(null);
   const [detailKey, setDetailKey] = useState<string | null>(null);
   const [detailPayload, setDetailPayload] = useState<SessionGeneratePayload | null>(null);
@@ -49,7 +50,7 @@ export function ChatScreen({
   const contentCount = visibleMessages.filter((message) => message.kind !== "assistant").length;
   const hasMessages = visibleMessages.length > 0;
   void generated;
-  const resultSections = useMemo(() => buildResultSections(detailPayload), [detailPayload]);
+  const resultSections = useMemo(() => buildResultSections(detailPayload, i18nMessages), [detailPayload, i18nMessages]);
   const activeSection = resultSections.find((section) => section.key === detailKey) ?? null;
 
   return (
@@ -69,7 +70,7 @@ export function ChatScreen({
                 id={message.id}
                 key={message.id}
                 previewText={message.text || getPrimaryResultText(message.uiPayload)}
-                sections={buildResultSections(message.uiPayload)}
+                sections={buildResultSections(message.uiPayload, i18nMessages)}
                 swipeOpen={activeSwipeId === message.id}
                 onDeleteRequest={async () => {
                   const deleted = await onDeleteMessage(message.id);
@@ -117,21 +118,21 @@ export function ChatScreen({
                 <PrototypeIcon.emptyChat />
               </div>
             </div>
-            <strong>Добавь контекст</strong>
-            <p>Текст, скриншот переписки или голосовое</p>
+            <strong>{i18nMessages.session.emptyChatTitle}</strong>
+            <p>{i18nMessages.session.emptyChatBody}</p>
           </div>
         )}
         {generating ? (
           <div className="bubble-row bubble-row--assistant">
             <article className="bubble bubble--assistant bubble--assistant-loading">
               <header className="bubble__meta">
-                <strong>{appCopy.brand.name}</strong>
+                <strong>{i18nMessages.brand.name}</strong>
               </header>
               <div className="result-inline__loading">
                 <span aria-hidden="true" className="bubble__spinner" />
                 <div>
-                  <strong>{appCopy.session.loadingTitle}</strong>
-                  <p>{appCopy.session.loadingBody}</p>
+                  <strong>{i18nMessages.session.loadingTitle}</strong>
+                  <p>{i18nMessages.session.loadingBody}</p>
                 </div>
               </div>
             </article>
@@ -152,7 +153,7 @@ export function ChatScreen({
       </div>
       <BottomSheet
         open={Boolean(activeSection)}
-        title={activeSection?.label || appCopy.session.resultDetails}
+        title={activeSection?.label || i18nMessages.session.resultDetails}
         onClose={() => {
           setDetailKey(null);
           setDetailPayload(null);
@@ -167,10 +168,10 @@ export function ChatScreen({
                 ))}
               </ul>
             ) : (
-              <p className="sheet-copy">{appCopy.session.cards.emptyList}</p>
+              <p className="sheet-copy">{i18nMessages.session.cards.emptyList}</p>
             )
           ) : (
-            <p className="sheet-copy">{activeSection.value || appCopy.session.cards.emptyList}</p>
+            <p className="sheet-copy">{activeSection.value || i18nMessages.session.cards.emptyList}</p>
           )
         ) : null}
       </BottomSheet>
@@ -207,6 +208,7 @@ function ResultBubble({
   onSwipeClose: () => void;
   onSwipeOpen: () => void;
 }) {
+  const { messages } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const startXRef = useRef<number | null>(null);
   const startYRef = useRef<number | null>(null);
@@ -229,7 +231,7 @@ function ResultBubble({
       className={`bubble-row bubble-row--assistant${swipeOpen ? " is-open" : ""}${deleting ? " is-deleting" : ""}`}
     >
       <header className="bubble__meta bubble__meta--result">
-        <strong>{appCopy.session.resultTitle}</strong>
+        <strong>{messages.session.resultTitle}</strong>
       </header>
       <div className="bubble-swipe bubble-swipe--assistant">
         {canDelete && (swipeOpen || dragOffset !== null) ? (
@@ -241,7 +243,7 @@ function ResultBubble({
                 event.stopPropagation();
                 void onDeleteRequest();
               }}
-              aria-label={appCopy.session.deleteFragment}
+              aria-label={messages.session.deleteFragment}
               type="button"
             >
               <PrototypeIcon.trash />
@@ -300,7 +302,7 @@ function ResultBubble({
             <p className={`result-inline__text${expanded ? " is-expanded" : ""}`}>{previewText || "—"}</p>
             {previewText ? (
               <button className="result-inline__toggle" onClick={() => setExpanded((value) => !value)} type="button">
-                {expanded ? appCopy.session.showLess : appCopy.session.showMore}
+                {expanded ? messages.session.showLess : messages.session.showMore}
               </button>
             ) : null}
             {sections.length ? (
@@ -326,17 +328,17 @@ function getPrimaryResultText(payload: SessionGeneratePayload | null): string {
   return String(payload.message_template || payload.diagnosis || payload.primary_message || "").trim();
 }
 
-function buildResultSections(payload: SessionGeneratePayload | null): ResultSection[] {
+function buildResultSections(payload: SessionGeneratePayload | null, messages: AppMessages): ResultSection[] {
   if (!payload) {
     return [];
   }
 
   return [
-    { key: "diagnosis", label: appCopy.session.cards.diagnosis, value: String(payload.diagnosis || "").trim() },
-    { key: "core_leverage", label: appCopy.session.cards.leverage, value: String(payload.core_leverage || "").trim() },
-    { key: "plan_24h", label: appCopy.session.cards.plan24, value: asTextList(payload.plan_24h) },
-    { key: "plan_if_reply", label: appCopy.session.cards.ifReply, value: asTextList(payload.plan_if_reply) },
-    { key: "plan_if_no_reply", label: appCopy.session.cards.ifNoReply, value: asTextList(payload.plan_if_no_reply) },
-    { key: "avoid_list", label: appCopy.session.cards.avoid, value: asTextList(payload.avoid_list) },
+    { key: "diagnosis", label: messages.session.cards.diagnosis, value: String(payload.diagnosis || "").trim() },
+    { key: "core_leverage", label: messages.session.cards.leverage, value: String(payload.core_leverage || "").trim() },
+    { key: "plan_24h", label: messages.session.cards.plan24, value: asTextList(payload.plan_24h) },
+    { key: "plan_if_reply", label: messages.session.cards.ifReply, value: asTextList(payload.plan_if_reply) },
+    { key: "plan_if_no_reply", label: messages.session.cards.ifNoReply, value: asTextList(payload.plan_if_no_reply) },
+    { key: "avoid_list", label: messages.session.cards.avoid, value: asTextList(payload.avoid_list) },
   ].filter((section) => (Array.isArray(section.value) ? section.value.length > 0 : Boolean(section.value)));
 }

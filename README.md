@@ -66,10 +66,12 @@ make up
 - `POST /api/access/activate`
 - `POST /api/auth/restore/request`
 - `POST /api/auth/restore/confirm`
+- `POST /api/app/access-code/redeem`
 - `POST /api/bot/access/status` (internal)
 - `POST /api/bot/access/activate` (internal)
 - `POST /api/bot/restore/request` (internal)
 - `POST /api/bot/restore/confirm` (internal)
+- `POST /api/bot/admin/access-code/create` (internal)
 - `GET /api/payment/redirect` -> `410` (legacy)
 
 ## Payment pricing config

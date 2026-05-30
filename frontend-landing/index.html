@@ -9,6 +9,32 @@
     <title>Flirto Guru Landing</title>
     <script src="/runtime-config.js"></script>
     <script>
+      (function () {
+        var ga4Id = ((window.__APP_CONFIG__ && window.__APP_CONFIG__.VITE_GOOGLE_ADS_ID) || "").trim();
+        if (!ga4Id) {
+          return;
+        }
+
+        var sourceParam = new URLSearchParams(window.location.search).get("source");
+        var normalizedSource = typeof sourceParam === "string" ? sourceParam.trim().toLowerCase() : "";
+        if (normalizedSource !== "ga") {
+          return;
+        }
+
+        var script = document.createElement("script");
+        script.async = true;
+        script.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(ga4Id);
+        document.head.appendChild(script);
+
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = window.gtag || function () {
+          window.dataLayer.push(arguments);
+        };
+        window.gtag("js", new Date());
+        window.gtag("config", ga4Id);
+      })();
+    </script>
+    <script>
       var BPixelJS;
       (function () {
         "use strict";
@@ -306,9 +332,17 @@
       })();
     </script>
     <script>
+      var appConfig = window.__APP_CONFIG__ || {};
+      var sourceParam = new URLSearchParams(window.location.search).get("source");
+      var normalizedSource = typeof sourceParam === "string" ? sourceParam.trim().toLowerCase() : "";
+      var facebookBinomCampaignKey = (appConfig.VITE_MOBI_SLON_CAMPAIGN_KEY_FACEBOOK || "").trim();
+      var googleBinomCampaignKey = (appConfig.VITE_MOBI_SLON_CAMPAIGN_KEY_GOOGLE || "").trim();
+      var binomCampaignKey =
+        normalizedSource === "ga" && googleBinomCampaignKey ? googleBinomCampaignKey : facebookBinomCampaignKey;
+
       BPixelJS.config({
-        url: ((window.__APP_CONFIG__ && window.__APP_CONFIG__.VITE_MOBI_SLON_URL) || "bla-bla-bla"),
-        campaignKey: ((window.__APP_CONFIG__ && window.__APP_CONFIG__.VITE_MOBI_SLON_CAMPAIGN_KEY) || ""),
+        url: (appConfig.VITE_MOBI_SLON_URL || "bla-bla-bla"),
+        campaignKey: binomCampaignKey,
       });
       BPixelJS.run();
     </script>
@@ -363,7 +397,7 @@
         height="1"
         width="1"
         style="display: none"
-        src="https://www.facebook.com/tr?id=&ev=PageView&noscript=1"
+        src="https://www.facebook.com/tr?id=${VITE_FB_PIXEL_ID}&ev=PageView&noscript=1"
       />
     </noscript>
     <div id="root"></div>

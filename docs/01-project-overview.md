@@ -5,6 +5,7 @@
 
 Текущее состояние:
 - Frontend открывает первый экран квиза на `/`, канонический язык публичных URL — `en`; маршруты `/:lang` сохранены только как compatibility redirect на `/en/...`, а остальные шаги ведет по `/en/quiz/*`; legal страницы доступны на `/en/*.html`.
+- Legal-контент централизован в одном shared-модуле и используется в `frontend-landing`, `frontend-pay`, `frontend-app` и `frontend-site`; для app доступны internal routes `/legal/terms`, `/legal/privacy`, `/legal/refund`.
 - Backend предоставляет API тарифов, checkout-сессий Stripe, webhook-процессинг и восстановление доступа.
 - На `/:lang/quiz/checkout/:uuid` поддерживаются промокоды через query `?promo=...`; цены валидируются и применяются server-side.
 
@@ -19,6 +20,7 @@
 - Пользователь проходит шаги квиза (`/en/quiz/1..26`).
 - Переходит в `/en/quiz/email/:uuid` и затем `/en/quiz/checkout/:uuid`, выбирает тариф и при необходимости применяет промокод.
 - Может открыть юридические страницы `/en/terms.html`, `/en/privacy-policy.html`, `/en/refund-policy.html`.
+- Может открыть те же документы внутри PWA на `/legal/terms`, `/legal/privacy`, `/legal/refund`.
 
 ## Key Commands
 | Команда | Назначение |

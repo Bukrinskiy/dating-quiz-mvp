@@ -8,6 +8,7 @@ export const runtimeConfig = {
   apiBaseUrl: readConfig("API_BASE_URL", "http://localhost:8000"),
   payPublicBaseUrl: readConfig("PAY_PUBLIC_BASE_URL", "http://localhost:5176"),
   appPublicBaseUrl: readConfig("APP_PUBLIC_BASE_URL", "http://localhost:5177"),
+  landingPublicBaseUrl: readConfig("LANDING_PUBLIC_BASE_URL", "http://localhost:5174"),
   vapidPublicKey: readConfig("VAPID_PUBLIC_KEY", ""),
 };
 
@@ -19,4 +20,9 @@ export const buildApiUrl = (path: string): string => {
 export const buildPayUrl = (path: string): string => {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return new URL(normalizedPath, runtimeConfig.payPublicBaseUrl).toString();
+};
+
+export const buildLandingUrl = (path: string): string => {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return new URL(normalizedPath, runtimeConfig.landingPublicBaseUrl).toString();
 };

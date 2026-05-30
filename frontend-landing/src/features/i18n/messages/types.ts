@@ -1,19 +1,7 @@
 export type Locale = "ru" | "en";
 
-export type LegalSection = {
-  title: string;
-  paragraphs?: string[];
-  list?: string[];
-  email?: string;
-  children?: LegalSection[];
-};
-
-export type LegalDocument = {
-  title: string;
-  updated: string;
-  intro?: string;
-  sections: LegalSection[];
-};
+export type { LegalDocument, LegalSection } from "../../../../../shared/legal/documents";
+import type { LegalDocument } from "../../../../../shared/legal/documents";
 
 export type QuizQuestionContent = {
   title: string;

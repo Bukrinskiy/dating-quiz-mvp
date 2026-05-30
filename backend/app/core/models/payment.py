@@ -176,7 +176,7 @@ class AppUser(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
-    locale: Mapped[str] = mapped_column(String(8), default="ru")
+    locale: Mapped[str] = mapped_column(String(8), default="en")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -209,6 +209,40 @@ class AppRefreshSession(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     replaced_by_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class AccessCode(Base):
+    __tablename__ = "access_codes"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    code: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    is_active: Mapped[bool] = mapped_column(nullable=False, default=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    max_redemptions: Mapped[int] = mapped_column(Integer, default=1)
+    redeemed_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_by_telegram_user_id: Mapped[str] = mapped_column(String(64))
+    created_by_telegram_username: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class AccessCodeRedemption(Base):
+    __tablename__ = "access_code_redemptions"
+    __table_args__ = (
+        UniqueConstraint("access_code_id", "email", name="uq_access_code_redemption_email"),
+        Index("ix_access_code_redemptions_email_status", "email", "status"),
+        Index("ix_access_code_redemptions_expires_at", "expires_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    access_code_id: Mapped[str] = mapped_column(String(36), index=True)
+    email: Mapped[str] = mapped_column(String(320), index=True)
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    redeemed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
 class ManualAccessGrant(Base):

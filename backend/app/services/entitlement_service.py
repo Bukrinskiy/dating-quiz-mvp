@@ -6,9 +6,12 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
-from app.core.models.payment import AccessBinding, ManualAccessGrant, Order
+from app.core.models.payment import AccessBinding, AccessCodeRedemption, Order, utcnow
 from app.core.config import get_plan_map, get_settings
-from app.services.manual_access_service import ManualAccessService, normalize_email
+
+
+def normalize_email(email: str) -> str:
+    return email.strip().lower()
 
 
 @dataclass(frozen=True)
@@ -19,14 +22,13 @@ class EmailEntitlement:
     access_status: str | None
     expires_at: datetime | None
     source: str
-    manual_grant: ManualAccessGrant | None = None
+    redemption: AccessCodeRedemption | None = None
     order: Order | None = None
 
 
 class EntitlementService:
     def __init__(self, db: Session) -> None:
         self.db = db
-        self.manual_access = ManualAccessService(db)
 
     def _ensure_utc(self, value: datetime | None) -> datetime | None:
         if value is None:
@@ -34,6 +36,19 @@ class EntitlementService:
         if value.tzinfo is None:
             return value.replace(tzinfo=timezone.utc)
         return value
+
+    def _mark_expired_redemptions(self, *, email: str | None = None) -> None:
+        query = select(AccessCodeRedemption).where(AccessCodeRedemption.status == "active")
+        if email is not None:
+            query = query.where(AccessCodeRedemption.email == email)
+        changed = False
+        now = utcnow()
+        for redemption in self.db.scalars(query).all():
+            if self._ensure_utc(redemption.expires_at) < now:
+                redemption.status = "expired"
+                changed = True
+        if changed:
+            self.db.flush()
 
     def _fallback_order_expires_at(self, order: Order | None) -> datetime | None:
         if order is None:
@@ -62,7 +77,15 @@ class EntitlementService:
 
     def resolve_by_email(self, email: str) -> EmailEntitlement:
         normalized_email = normalize_email(email)
-        manual_grant = self.manual_access.get_active_manual_grant(normalized_email)
+        self._mark_expired_redemptions(email=normalized_email)
+        redemption = self.db.scalar(
+            select(AccessCodeRedemption)
+            .where(
+                AccessCodeRedemption.email == normalized_email,
+                AccessCodeRedemption.status == "active",
+            )
+            .order_by(desc(AccessCodeRedemption.redeemed_at))
+        )
         order = self.db.scalar(select(Order).where(Order.email == normalized_email).order_by(desc(Order.updated_at)))
         order_has_access = bool(order and (order.access_status == "active" or order.status in {"paid", "active"}))
 
@@ -74,19 +97,19 @@ class EntitlementService:
                 access_status=order.access_status,
                 expires_at=self._fallback_order_expires_at(order),
                 source="order",
-                manual_grant=manual_grant,
+                redemption=redemption,
                 order=order,
             )
 
-        if manual_grant is not None:
+        if redemption is not None:
             return EmailEntitlement(
                 has_access=True,
                 order_id=order.id if order is not None else None,
-                plan=order.plan if order is not None else "manual",
-                access_status="manual_active",
-                expires_at=manual_grant.expires_at,
-                source="manual_grant",
-                manual_grant=manual_grant,
+                plan=order.plan if order is not None else "promo",
+                access_status="promo_active",
+                expires_at=redemption.expires_at,
+                source="access_code",
+                redemption=redemption,
                 order=order,
             )
 
@@ -98,7 +121,7 @@ class EntitlementService:
                 access_status=order.access_status,
                 expires_at=self._fallback_order_expires_at(order),
                 source="order",
-                manual_grant=None,
+                redemption=None,
                 order=order,
             )
 
@@ -109,7 +132,7 @@ class EntitlementService:
             access_status=None,
             expires_at=None,
             source="none",
-            manual_grant=None,
+            redemption=None,
             order=None,
         )
 
@@ -121,6 +144,7 @@ class EntitlementService:
             "plan": entitlement.plan,
             "access_status": entitlement.access_status,
             "expires_at": entitlement.expires_at.isoformat() if entitlement.expires_at is not None else None,
+            "status_label": "Promo" if entitlement.source == "access_code" and entitlement.has_access else "Active" if entitlement.has_access else "Inactive",
         }
 
     def resolve_bot_access_status(self, telegram_user_id: str) -> dict[str, str | bool | None]:

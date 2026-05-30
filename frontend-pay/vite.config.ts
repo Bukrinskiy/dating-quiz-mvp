@@ -3,6 +3,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 const appDir = path.resolve(__dirname);
+const sharedDir = path.resolve(process.cwd(), "../shared");
 
 export default defineConfig({
   envDir: "..",
@@ -12,7 +13,7 @@ export default defineConfig({
     port: 5175,
     strictPort: true,
     fs: {
-      allow: [appDir],
+      allow: [appDir, sharedDir],
     },
   },
 });

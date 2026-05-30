@@ -1,14 +1,15 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 
+import { renderWithI18n } from "../../test/renderWithI18n";
 import { VoiceRecorder } from "./VoiceRecorder";
 
 test("VoiceRecorder falls back when media recording is unavailable", async () => {
   const user = userEvent.setup();
   const onDenied = vi.fn();
 
-  render(<VoiceRecorder busy={false} onDenied={onDenied} onRecorded={vi.fn(async () => undefined)} />);
+  renderWithI18n(<VoiceRecorder busy={false} onDenied={onDenied} onRecorded={vi.fn(async () => undefined)} />, { locale: "ru" });
 
   await user.click(screen.getByRole("button", { name: "Нажми для записи" }));
 
@@ -56,7 +57,7 @@ test("VoiceRecorder starts and stops recording on click", async () => {
 
   vi.stubGlobal("MediaRecorder", MediaRecorderMock as unknown as typeof MediaRecorder);
 
-  render(<VoiceRecorder busy={false} onDenied={vi.fn()} onRecorded={onRecorded} />);
+  renderWithI18n(<VoiceRecorder busy={false} onDenied={vi.fn()} onRecorded={onRecorded} />, { locale: "ru" });
 
   await user.click(screen.getByRole("button", { name: "Нажми для записи" }));
 
@@ -116,7 +117,7 @@ test("VoiceRecorder calls onFinish immediately when stopping", async () => {
 
   vi.stubGlobal("MediaRecorder", MediaRecorderMock as unknown as typeof MediaRecorder);
 
-  render(<VoiceRecorder busy={false} onDenied={vi.fn()} onFinish={onFinish} onRecorded={onRecorded} />);
+  renderWithI18n(<VoiceRecorder busy={false} onDenied={vi.fn()} onFinish={onFinish} onRecorded={onRecorded} />, { locale: "ru" });
 
   await user.click(screen.getByRole("button", { name: "Нажми для записи" }));
   await waitFor(() => expect(screen.getByRole("button", { name: "Запись" })).toBeInTheDocument());

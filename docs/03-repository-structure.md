@@ -20,7 +20,7 @@
 - `frontend-site/src/pages/*` — страницы `home`, `legal`, `not-found`.
 - `frontend-site/src/widgets/*` — `site-header`, `site-footer`, `legal-layout`, `hero-cta`.
 - `frontend-site/src/shared/*` — runtime config, routes, i18n content и UI primitives без зависимости от верхних FSD-слоев.
-- `frontend-site/Dockerfile` / `frontend-site/nginx.conf` / `frontend-site/runtime-config.js.template` — отдельные container/runtime артефакты нового surface.
+- `frontend-site/Dockerfile` / `frontend-site/nginx.conf` / `frontend-site/runtime-config.js.template` — отдельные container/runtime артефакты нового surface c runtime contract `API_BASE_URL`, `APP_PUBLIC_BASE_URL`, `PRIMARY_LANDING_URL`.
 
 ## Legacy Frontend
 - `frontend_old/src/app/App.tsx` — основной роутинг legacy SPA.
@@ -49,7 +49,7 @@
 
 ## Frontend App
 - `frontend-app/src/app/App.tsx` — router, auth bootstrap, paywall и advice workspace.
-- `frontend-app/src/shared/runtime.ts` — runtime config для `APP_SURFACE`, `API_BASE_URL`, `PAY_PUBLIC_BASE_URL`, `APP_PUBLIC_BASE_URL`.
+- `frontend-app/src/shared/runtime.ts` — runtime config для `APP_SURFACE`, `API_BASE_URL`, `PAY_PUBLIC_BASE_URL`, `APP_PUBLIC_BASE_URL`, `LANDING_PUBLIC_BASE_URL`.
 - `frontend-app/src/styles/app.css` — мобильный PWA shell и layout tokens.
 - `frontend-app/runtime-config.js.template` — runtime contract для `app.flirto.guru`.
 - `frontend-app/Dockerfile` / `frontend-app/nginx.conf` — отдельная сборка и SPA shell PWA surface.

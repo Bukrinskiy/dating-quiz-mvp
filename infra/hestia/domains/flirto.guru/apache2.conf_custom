@@ -1,0 +1,9 @@
+ProxyPreserveHost On
+RequestHeader set X-Forwarded-Proto "http"
+RequestHeader set X-Forwarded-Port "80"
+
+ProxyPass        /tg/webhook/ http://127.0.0.1:18081/webhook/
+ProxyPassReverse /tg/webhook/ http://127.0.0.1:18081/webhook/
+
+ProxyPass        / http://127.0.0.1:18182/
+ProxyPassReverse / http://127.0.0.1:18182/

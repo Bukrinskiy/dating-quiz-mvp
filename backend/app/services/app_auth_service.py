@@ -19,6 +19,16 @@ def normalize_email(email: str) -> str:
     return email.strip().lower()
 
 
+def normalize_app_locale(locale: str | None) -> str:
+    if not locale:
+        return "en"
+    normalized = locale.strip().lower()
+    for supported in ("en", "ru", "fr", "es"):
+        if normalized.startswith(supported):
+            return supported
+    return "en"
+
+
 def _ensure_utc(value):
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
@@ -99,7 +109,7 @@ class AppAuthService:
             email=normalized_email,
             code=code,
             allow_plain_code=self.settings.log_otp_in_nonprod,
-            locale="ru",
+            locale="en",
         )
         return {"status": "code_sent"}
 
@@ -123,13 +133,20 @@ class AppAuthService:
         record.used_at = utcnow()
         user = self.db.scalar(select(AppUser).where(AppUser.email == normalized_email))
         if user is None:
-            user = AppUser(email=normalized_email, locale="ru")
+            user = AppUser(email=normalized_email, locale="en")
             self.db.add(user)
             self.db.flush()
+        user.locale = normalize_app_locale(user.locale)
         user.last_login_at = utcnow()
         _, refresh_token = self._issue_refresh_session(user=user, request=request)
         self.db.commit()
         return self._auth_response(user), refresh_token
+
+    def update_locale(self, *, user: AppUser, locale: str) -> dict[str, Any]:
+        user.locale = normalize_app_locale(locale)
+        self.db.commit()
+        self.db.refresh(user)
+        return self._auth_response(user)
 
     def refresh(self, *, refresh_token: str, request: Request | None) -> tuple[dict[str, Any], str]:
         token_hash = hash_value(refresh_token)

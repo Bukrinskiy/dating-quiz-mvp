@@ -7,9 +7,19 @@ import { LegalPage } from "../pages/legal/LegalPage";
 import { LandingNotFoundPage } from "../pages/not-found/LandingNotFoundPage";
 import { QuizPage } from "../pages/quiz/QuizPage";
 import { DEFAULT_QUIZ_LANG, canonicalQuizLang, isQuizLang, quizRoutes } from "../shared/config/routes";
-import { propagateClickIdToLinks } from "../entities/tracking-attribution/model";
+import { getClickId, propagateClickIdToLinks } from "../entities/tracking-attribution/model";
+import { linkGaClientIdOnce } from "../shared/lib/tracking";
 import { logTracking } from "../shared/lib/trackingLogger";
 import { hitYandexMetrikaPage } from "../shared/lib/yandexMetrika";
+
+type GtagFn = (
+  command: "get",
+  targetId: string,
+  fieldName: "client_id",
+  callback: (value: string | undefined) => void,
+) => void;
+
+type BPixelTokens = { bcid?: string | null } | undefined;
 
 const RedirectWithSearch = ({ to }: { to: string }) => {
   const location = useLocation();
@@ -131,17 +141,57 @@ const HostBoundary = () => {
   }, [location.pathname, location.search]);
 
   useEffect(() => {
-    const bPixel = (window as Window & { BPixelJS?: { useTokens?: (fn: () => void) => void } }).BPixelJS;
+    const bPixel = (window as Window & {
+      BPixelJS?: { useTokens?: (fn: (tokens: BPixelTokens) => void) => void };
+    }).BPixelJS;
     if (!bPixel?.useTokens) {
       logTracking("mobi-slon", "BPixelJS.useTokens is not available", undefined, "warn");
       return;
     }
 
+    const ga4Id = ((window.__APP_CONFIG__ && window.__APP_CONFIG__.VITE_GOOGLE_ADS_ID) || "").trim();
+    const sourceParam = new URLSearchParams(window.location.search).get("source")?.trim().toLowerCase();
+    const isGaSource = sourceParam === "ga";
+    let gaClientId: string | undefined;
+    let bcid: string | undefined;
+    let linkFired = false;
+    const tryLink = () => {
+      if (linkFired || !gaClientId || !bcid) return;
+      linkFired = true;
+      linkGaClientIdOnce(bcid, gaClientId);
+    };
+
     logTracking("mobi-slon", "BPixelJS.useTokens callback registered");
-    bPixel.useTokens(() => {
+    bPixel.useTokens((tokens) => {
       propagateClickIdToLinks(window.location.search);
       logTracking("mobi-slon", "BPixelJS.useTokens callback fired");
+      const resolved = (tokens?.bcid ?? "").toString().trim() || getClickId(window.location.search)?.trim();
+      if (resolved) {
+        bcid = resolved;
+        tryLink();
+      }
     });
+
+    if (ga4Id && isGaSource) {
+      const gtag = (window as Window & { gtag?: GtagFn }).gtag;
+      if (typeof gtag === "function") {
+        try {
+          gtag("get", ga4Id, "client_id", (value) => {
+            const resolved = value?.trim();
+            if (resolved) {
+              gaClientId = resolved;
+              tryLink();
+            } else {
+              logTracking("binom-ga-link", "ga4 client_id is empty", undefined, "warn");
+            }
+          });
+        } catch (error) {
+          logTracking("binom-ga-link", "gtag get failed", { error: String(error) }, "warn");
+        }
+      } else {
+        logTracking("binom-ga-link", "gtag is not available", undefined, "warn");
+      }
+    }
   }, []);
 
   if (!manifest) {

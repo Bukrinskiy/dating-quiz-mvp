@@ -5,6 +5,7 @@ interface WindowAppConfig {
   API_BASE_URL?: string;
   PAY_PUBLIC_BASE_URL?: string;
   APP_PUBLIC_BASE_URL?: string;
+  LANDING_PUBLIC_BASE_URL?: string;
   VAPID_PUBLIC_KEY?: string;
 }
 

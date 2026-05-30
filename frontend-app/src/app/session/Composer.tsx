@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import { appCopy } from "../copy";
+import { useI18n } from "../i18n";
 import type { RoleMeta } from "../types";
 import { PrototypeIcon } from "../ui/icons";
 import { triggerHaptic } from "../../shared/haptics";
@@ -17,6 +17,7 @@ type ComposerProps = {
 };
 
 export function Composer({ busy, meta, onAudioDenied, onSendAudio, onSendImage, onOpenRoleMeta, onSend }: ComposerProps) {
+  const { messages } = useI18n();
   const [value, setValue] = useState("");
   const [voiceMode, setVoiceMode] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -39,7 +40,7 @@ export function Composer({ busy, meta, onAudioDenied, onSendAudio, onSendImage, 
       <div className={`composer__shell${isVoiceRecordingMode ? " composer__shell--voice" : ""}`}>
         {isVoiceRecordingMode ? null : (
           <button
-            aria-label={appCopy.session.attach}
+            aria-label={messages.session.attach}
             className="composer__icon"
             onClick={() => imageInputRef.current?.click()}
             type="button"
@@ -78,7 +79,7 @@ export function Composer({ busy, meta, onAudioDenied, onSendAudio, onSendImage, 
           <textarea
             ref={textareaRef}
             className="composer__input"
-            placeholder={appCopy.session.composerPlaceholder}
+            placeholder={messages.session.composerPlaceholder}
             rows={1}
             value={value}
             onChange={(event) => {
@@ -100,7 +101,7 @@ export function Composer({ busy, meta, onAudioDenied, onSendAudio, onSendImage, 
         )}
         {value.trim() ? (
           <button
-            aria-label={appCopy.session.send}
+            aria-label={messages.session.send}
             className="composer__icon composer__icon--primary"
             disabled={busy}
             onClick={async () => {
@@ -114,7 +115,7 @@ export function Composer({ busy, meta, onAudioDenied, onSendAudio, onSendImage, 
           </button>
         ) : voiceMode ? null : (
           <button
-            aria-label={appCopy.session.voiceHoldToRecord}
+            aria-label={messages.session.voiceHoldToRecord}
             className="composer__icon"
             disabled={busy}
             onClick={() => setVoiceMode(true)}

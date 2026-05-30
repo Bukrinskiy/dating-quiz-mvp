@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { appCopy } from "../copy";
+import { useI18n } from "../i18n";
 import { PrototypeIcon } from "../ui/icons";
 import { triggerHaptic } from "../../shared/haptics";
 
@@ -41,6 +41,7 @@ const buildAudioFile = (blob: Blob) => {
 };
 
 export function VoiceRecorder({ busy, expanded = false, autoStart = false, onFinish, onRecorded, onDenied }: VoiceRecorderProps) {
+  const { messages } = useI18n();
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -157,7 +158,7 @@ export function VoiceRecorder({ busy, expanded = false, autoStart = false, onFin
 
   return (
     <button
-      aria-label={stopLabel ? appCopy.session.voiceRecording : appCopy.session.voiceHoldToRecord}
+      aria-label={stopLabel ? messages.session.voiceRecording : messages.session.voiceHoldToRecord}
       className={`voice-recorder${stopLabel ? " is-recording" : " is-idle"}${expanded ? " voice-recorder--expanded" : ""}`}
       disabled={busy}
       onClick={() => void handleToggle()}
@@ -167,7 +168,7 @@ export function VoiceRecorder({ busy, expanded = false, autoStart = false, onFin
         <PrototypeIcon.mic color="var(--accent)" />
       </span>
       <span className="voice-recorder__label">
-        {stopLabel ? `${appCopy.session.voiceRecording} ${formatDuration(seconds)}` : appCopy.session.voiceHoldToRecord}
+        {stopLabel ? `${messages.session.voiceRecording} ${formatDuration(seconds)}` : messages.session.voiceHoldToRecord}
       </span>
       {stopLabel ? (
         <span className="voice-recorder__meter" aria-hidden="true">

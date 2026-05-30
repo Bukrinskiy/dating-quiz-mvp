@@ -87,6 +87,7 @@ class SessionStatusResponse(BaseModel):
     fulfillment_status: str
     access_status: str
     activation_link: str | None = None
+    access_link: str | None = None
 
 
 class OrderStatusResponse(BaseModel):
@@ -94,6 +95,7 @@ class OrderStatusResponse(BaseModel):
     fulfillment_status: str
     access_status: str
     activation_link: str | None = None
+    access_link: str | None = None
 
 
 class MobiSlonEventRequest(BaseModel):
@@ -105,6 +107,18 @@ class MobiSlonEventRequest(BaseModel):
 
 
 class MobiSlonEventResponse(BaseModel):
+    accepted: bool
+    forwarded: bool
+
+
+class BinomGaLinkRequest(BaseModel):
+    clickid: str = Field(min_length=1, max_length=256)
+    ga_client_id: str = Field(min_length=1, max_length=128)
+    session_id: str | None = Field(default=None, max_length=128)
+    page_path: str | None = None
+
+
+class BinomGaLinkResponse(BaseModel):
     accepted: bool
     forwarded: bool
 

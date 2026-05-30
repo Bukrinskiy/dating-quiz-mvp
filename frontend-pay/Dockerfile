@@ -23,6 +23,7 @@ COPY frontend-pay/vite.config.ts ./vite.config.ts
 COPY frontend-pay/index.html ./index.html
 COPY frontend-pay/src ./src
 COPY frontend-pay/public ./public
+COPY shared /shared
 
 RUN corepack enable && pnpm install --no-frozen-lockfile && pnpm build
 

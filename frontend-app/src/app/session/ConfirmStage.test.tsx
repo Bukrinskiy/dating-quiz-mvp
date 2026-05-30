@@ -1,7 +1,8 @@
-import { render, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 
+import { renderWithI18n } from "../../test/renderWithI18n";
 import { ConfirmStage } from "./ConfirmStage";
 
 const messages = [
@@ -13,7 +14,7 @@ test("ConfirmStage calls onEdit when user wants to уточнить", async () =
   const user = userEvent.setup();
   const onEdit = vi.fn();
 
-  render(
+  renderWithI18n(
     <ConfirmStage
       busy={false}
       messages={messages}
@@ -22,6 +23,7 @@ test("ConfirmStage calls onEdit when user wants to уточнить", async () =
       onEdit={onEdit}
       preview="[text] Контекст\n[edit] Уточнение"
     />,
+    { locale: "ru" },
   );
 
   const contextSection = screen.getByRole("region", { name: "Контекст" });

@@ -9,6 +9,7 @@ type BottomSheetProps = PropsWithChildren<{
 }>;
 
 const DISMISS_THRESHOLD = 90;
+// Keep in sync with --sheet-motion-duration in sheets.css.
 const EXIT_DURATION_MS = 420;
 
 export function BottomSheet({ open, title, onClose, children }: BottomSheetProps) {
